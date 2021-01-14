@@ -9,12 +9,146 @@ You can use the standard WAT instructions within the WA#, plus a number of exten
 - Additional types: `bool`, `i8` (`sbyte`), `u8` (`byte`), `i16` (`word`), `u16` (`uword`), `i32` (`int`), `u32` (`uint`), `i64` (`long`), `u64` (`ulong`), `f32` (`float`), `f64` (`double`)
 - Constant value definitions
 - Include directive (`#include`) to allow using include source files
-- Conditional directives (`#ifdef`, `#ifndef`, `#else`, `#elseif`, `#endif`) to define conditional compilation based on symbols
+- Conditional directives (`#define`, `#undef`, `#if`, `#else`, `#elseif`, `#endif`) to define conditional compilation based on symbols
 - Memory variable, memory arrays
 - Simple pointer arithmetic
 - Control flow statements: `if..else`, `do..while`, `while`, `for`
 - Expression evaluation
 - Inline functions
+
+## Comments and whitespaces
+
+The space, tabulator, carriage return (0x0d) and new line (0x0a) characters are all whitespaces. 
+
+WA# supports two types of comments:
+
+Block comments can be multi-line but cannot nested into each other.
+
+```
+blockComment :=
+    "/*" any* "*/"
+    ;
+```
+
+End-of-line comments can start at any point of the current line and comple with the end of the line
+
+```
+eolComment :=
+    ( "//" | ";;" ) (^newLine)*
+    ;
+```
+
+## Preprocessor directives
+
+When you start the compilation of a WA# code, you can pass predefined symbols to the compiler. Those symbols can be used in conditional preprocessor directives. WA# supports these preprocessor directives:
+
+- `#define`: Defines a symbol
+- `#undef`: Removes a symbol (is if it were not defined)
+- `#if`: Checks if condition is satisfied
+- `#else`: A branch for an unsatisfied condition
+- `#elseif`: A branch for an alternative test
+- `#endif`: End of an `#if` condition
+- `#include`: includes the contents of another file in the compilation
+
+A directive must start at the first non-whitespace character of a source code line. Directives cannot contain comments, they must be completed on the same line they start.
+
+### `#define` and `#undef`
+
+Use these directives to define new symbols or remove exsiting symbols.
+
+Syntax:
+
+```
+ppDefine :=
+    "#define" ppIdentifier
+    ;
+
+ppUndef :=
+    "#undef" ppIdentifier
+    ;
+
+ppIdentifier :=
+    ppIdStart ppIdCont*
+    ;
+
+ppIdStart :=
+    | "a" .. "z"
+    | "A" .. "Z"
+    | "_"
+    ;
+
+ppIdCont :=
+    | "a" .. "z"
+    | "A" .. "Z"
+    | "0" .. "9"
+    | "_"
+    ;
+```
+
+### `#if`, `#else`, `#elseif`, and `#endif`
+
+These preprocessor directives allow you to define conditional compilation:
+
+```
+#if Symbol1
+  // Declare code when Symbol1 is declared
+#elseif Symbol2 && !Symbol3
+  // Declare here code when Symbol2 is declared, but not Symbol3
+#else
+  // All other cases
+#endif
+```
+
+Syntax:
+```
+ppIf :=
+    "#if" ppExpr
+    waSharpCode
+    (
+        "#elseif" ppExpr
+        waSharpCode
+    )*
+    (
+        "#else" ppExpr
+        waSharpCode
+    )?
+    "#endif"
+    ;
+
+ppExpr :=
+    | "(" ppExpr ")"
+    | ppOrExpr
+    ;
+
+ppOrExpr :=
+    ppXorExpr ( "|" ppXorExpr )?
+    ;
+
+ppXorExpr :=
+    ppAndExpr ( "^" ppAndExpr )?
+    ;
+
+ppAndExpr :=
+    ppPrimaryuExpr ( "&" ppPrimaryExpr )?
+    ;
+
+ppPrimaryExpr :=
+    | ppIdentifier
+    | "!" ppIdentifier
+    ;
+```
+
+### `#include`
+
+This directive includes the contents of another file in the compilation.
+
+Syntax:
+
+```
+#include :=
+    '"' string '"'
+    ;
+```
 
 ## Types
 
@@ -173,6 +307,37 @@ unaryExpr :=
 
 typeCast :=
     valueType "(" expr ")"
+    ;
+
+binaryLiteral :=
+    "0b" ("_"? binaryDigit)+
+    ;
+
+decimalLiteral :=
+    decimalDigit ("_" ? decimalDigit)*
+    ;
+
+hexaDecimalLiteral :=
+    "0x" ("_"? hexaDigit)+
+    ;
+
+realLiteral :=
+    | decimalDigit* "." decimalDigit+ (("e" | "E") ("+" | "-")? decimalDigit+)?
+    | decimalDigit+ (("e" | "E") ("+" | "-")? decimalDigit+)
+    ;
+
+binaryDigit := 
+    "0" | "1"
+    ;
+
+decimalDigit :=
+    "0" .. "9"
+    ;
+
+hexaDigit :=
+    | "0" .. "9"
+    | "a" .. "f"
+    | "A" .. "F"
     ;
 ```
 
