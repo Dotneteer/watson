@@ -16,6 +16,25 @@ You can use the standard WAT instructions within the WA#, plus a number of exten
 - Expression evaluation
 - Inline functions
 
+1. **Preprocessing**. The preprocessor detects the conditional and include directives. Using the conditions and included files, it merges the raw input to be used as the next phase input. This phase focuses only on preprocessing and does not check the WA# syntax at all. However, preprocessing recognizes WA# multi-line block comments and does not search for preprocessor directives within them.
+2. **Syntax parsing**. The compiler parses the syntax of the raw WA# source code and collects parsing errors.
+3. **Semantic analysis**. The compiler checks if the code semantics satisfy the language specification and prepare it for code emission.
+4. **Code emission**. The compiler generates the WAT output.
+
+## Syntax Basics
+
+```
+watsharpCode
+    : globalCodeElement*
+    ;
+
+globalCodeElement
+    : watStatement
+    | watWatDeclaration
+    ;
+```
+
+
 ## Comments and whitespaces
 
 The space, tabulator, carriage return (0x0d) and new line (0x0a) characters are all whitespaces. 
@@ -68,19 +87,12 @@ ppUndef :=
     ;
 
 ppIdentifier :=
-    ppIdStart ppIdCont*
+    ppIdStart idCont*
     ;
 
 ppIdStart :=
     | "a" .. "z"
     | "A" .. "Z"
-    | "_"
-    ;
-
-ppIdCont :=
-    | "a" .. "z"
-    | "A" .. "Z"
-    | "0" .. "9"
     | "_"
     ;
 ```
@@ -193,14 +205,16 @@ Structures are compound types made from value types.
 Syntax:
 
 ```
-recordDeclaration :=
-    "record" typeIdentifier "{" fieldDeclaration ("," fieldDeclaration)* "}"
+structDeclaration :=
+    "struct" typeIdentifier "{" fieldDeclaration (";" fieldDeclaration)* ";"? "}"
     ;
 
 fieldDeclaration :=
-    type identifier ";"
+    type identifier ("[" expr "]")?
     ;
 ```
+
+Structures can be stored only in memory variables.
 
 ## Constant values
 
@@ -226,15 +240,53 @@ Syntax:
 
 ```
 variableDeclaration :=
-    type identifier dimension? ( "=" expr)?
-    ;
-
-dimension :=
-    "[" expr "]"
+    type identifier ("[" expr "]")? ( "=" expr)?
     ;
 ```
 
 > *Note*: If _dimension_ is used, the variable is a memory variable. The _dimension_ value must be an expression that can be evaluated compile time.
+
+## Data declaration
+
+Data declarations can be used to init memory the variables' data-
+
+Syntax:
+
+```
+dataDeclaration :=
+    "data" identifier "=" (integralType)? "[" expr? ("," expr)? "]"
+    ;
+```
+
+## Import declaration
+
+Syntax:
+
+```
+importDeclaration :=
+    "import" stringLiteral stringLiteral "(" integralType? ("," integralType)* ")"
+    ;
+```
+
+
+## Statements
+
+Syntax:
+
+```
+statement :=
+    | blockStatement
+    | variableDeclaration
+    | functionDeclaration
+    | jumpTableDeclaration
+    | assignment
+    | controlFlowStatement
+    ;
+
+blockStatement :=
+    "{" statement? (";" statement)* }
+    ;
+```
 
 ## Expressions
 
@@ -288,6 +340,7 @@ primaryExpr :=
     | identifier
     | unaryExpr
     | typeCast
+    | functionDispatch
     ;
 
 functionInvocation :=
@@ -307,6 +360,10 @@ unaryExpr :=
 
 typeCast :=
     valueType "(" expr ")"
+    ;
+
+functionDispatch :=
+    typeIdentifier "[" expr "]" "(" expr? ("," expr)* ")"
     ;
 
 binaryLiteral :=
@@ -341,6 +398,103 @@ hexaDigit :=
     ;
 ```
 
+## Assignments
+
+Syntax:
+
+```
+assignment :=
+    leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^|" | "&=" | "|=" | "~=" | "!=" ) expr
+    ;
+
+leftValue :=
+    addressable ("." addressable )*
+    ;
+
+addressable := 
+    identifier ("[" expr "]")?
+    ;
+```
+
+## Function declarations
+
+Syntax:
+
+```
+functionDeclaration :=
+    exportModifier? inlineModifier? identifier parameterList blockStatement
+    ;
+
+exportModifier :=
+    "export" ( stringLiteral )?
+    ;
+
+inlineModifier :=
+    "inline"
+    ;
+
+parameterList :=
+    "(" parameterDecl? ("," parameterDecl)* ")"
+    ;
+
+parameterDecl :=
+    type identifier
+    ;
+```
+
+## Jump tables
+
+Syntax:
+
+```
+jumpTableDeclaration :=
+    "table" tableIdentifier "{" identifier? ("," identifier)* "}"
+    ;
+
+tableIdentifier :=
+    "@" idCont+
+    ;
+```
+
+## Control flow statements
+
+Syntax:
+
+```
+controlFlowStatement :=
+    | ifStatement
+    | whileStatement
+    | doWhileStatement
+    | breakStatement
+    | continueStatement
+    | returnStatement
+    ;
+
+ifStatement :=
+    "if" "(" condition ")" statements ("else" statements)?
+    ;
+
+whileStatement :=
+    "while" "(" expr ")" statements
+    ;
+
+doWhileStatement :=
+    "do" statements "while" "(" expr ")"
+    ;
+
+breakStatement := 
+    "break"
+    ;
+
+continueStatement :=
+    "continue"
+    ;
+
+returnStatement :=
+    "return" expr?
+    ;
+```
+
 ## Reference
 
 ### Reserved keywords
@@ -354,8 +508,8 @@ constDeclaration :=
     "const" valueType identifier "=" expr
     ;
 
-recordDeclaration :=
-    "record" typeIdentifier "{" fieldDeclaration ("," fieldDeclaration)* "}"
+structDeclaration :=
+    "struct" structIdentifier "{" fieldDeclaration ("," fieldDeclaration)* "}"
     ;
 
 fieldDeclaration :=
@@ -372,7 +526,7 @@ dimension :=
 
 type :=
     | valueType
-    | typeIdentifier
+    | structIdentifier
     ;
 
 valueType :=
@@ -458,17 +612,11 @@ idCont :=
     | "a" .. "z"
     | "A" .. "Z"
     | "0" .. "9"
-    | "@"
     | "_"
+    | "."
     ;
 
-typeIdentifier := 
-    typeIdStart (idCont)*
-    ;
-
-typeIdStart :=
-    | "a" .. "z"
-    | "A" .. "Z"
-    | "_"
+structIdentifier := 
+    "#" idCont+
     ;
 ```
