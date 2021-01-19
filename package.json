@@ -1,0 +1,33 @@
+{
+  "name": "watsharp",
+  "version": "0.1.0",
+  "description": "This utility is a prototype design and implementation of the WA# programming language. WA# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-mocha -p ./tsconfig.json ./test/**/*.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dotneteer/watsharp.git"
+  },
+  "keywords": [
+    "WebAssembly"
+  ],
+  "author": "Istvan Novak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Dotneteer/watsharp/issues"
+  },
+  "homepage": "https://github.com/Dotneteer/watsharp#readme",
+  "devDependencies": {
+    "@types/expect": "^24.3.0",
+    "@types/mocha": "^8.2.0",
+    "@types/node": "^14.14.20",
+    "expect": "^26.6.2",
+    "mocha": "^8.2.1",
+    "ts-loader": "^8.0.14",
+    "ts-mocha": "^8.0.0",
+    "typescript": "^4.1.3"
+  }
+}
