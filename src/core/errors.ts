@@ -28,7 +28,22 @@ export interface ParserErrorMessage {
 
 export type ErrorCodes =
   // --- Preprocessor errors
-  "P001" | "P002" | "P003" | "P004" | "P005" | "P006" | "P007" | "P008";
+  | "P001"
+  | "P002"
+  | "P003"
+  | "P004"
+  | "P005"
+  | "P006"
+  | "P007"
+  | "P008"
+  | "P009"
+  | "P010"
+  | "P011"
+  | "P012"
+  | "P013"
+  | "P014"
+  | "P015"
+  | "P016";
 
 /**
  * Error message type description
@@ -47,4 +62,12 @@ export const errorMessages: ErrorText = {
   P006: "Unexpected token: {0}",
   P007: "An expression expected",
   P008: "Missing ')'",
+  P009: "Cannot use #elseif without a correspondig #if",
+  P010: "Cannot use #elseif after #else",
+  P011: "Cannot use #else without a correspondig #if",
+  P012: "The current #if already has an #else",
+  P013: "Cannot use #endif without a correspondig #if",
+  P014: "Missing #endif",
+  P015: "String literal expected",
+  P016: "#include error: {0}",
 };

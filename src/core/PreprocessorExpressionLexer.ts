@@ -2,7 +2,7 @@ import { InputStream } from "./InputStream";
 import { isEof, isIdContinuation, isWs, Token, TokenType } from "./tokens";
 
 /**
- * This class implements the tokenizer (lexer) of the Z80 Assembler
+ * This class implements the tokenizer (lexer) of WA# preprocessor expresion handler
  */
 export class PreprocessorExpressionLexer {
   // --- Already fetched tokens
@@ -72,6 +72,13 @@ export class PreprocessorExpressionLexer {
         return token;
       }
     }
+  }
+
+  /**
+   * Resets the parser; drops read-ahead tokens.
+   */
+  reset(): void {
+    this._ahead = [];
   }
 
   /**

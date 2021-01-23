@@ -12,6 +12,7 @@ export enum TokenType {
   SourceChunk,
   PreprocDirective,
   PPIdentifier,
+  PPStringLiteral,
   NewLine,
 
   // --- Both the preprocessor and WA# uses these tokens
@@ -121,4 +122,30 @@ export function isIdContinuation(ch: string): boolean {
  */
 export function isBinaryDigit(ch: string): boolean {
   return ch === "0" || ch === "1" || ch === "_";
+}
+
+/**
+ * Tests if a character is a hexadecimal digit
+ * @param ch Character to test
+ */
+export function isHexadecimalDigit(ch: string): boolean {
+  return (
+    (ch >= "0" && ch <= "9") ||
+    (ch >= "A" && ch <= "F") ||
+    (ch >= "a" && ch <= "f")
+  );
+}
+
+/**
+ * Tests if a character is restricted in a string
+ * @param ch Character to test
+ */
+export function isRestrictedInString(ch: string): boolean {
+  return (
+    ch === "\r" ||
+    ch === "\n" ||
+    ch === "\u0085" ||
+    ch === "\u2028" ||
+    ch === "\u2029"
+  );
 }
