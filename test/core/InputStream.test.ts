@@ -2,7 +2,7 @@ import "mocha";
 import * as expect from "expect";
 
 import { InputStream } from "../../src/core/InputStream";
-import { SourceChunk } from "../../src/core/SourceChunk";
+import { SourceChunk } from "../../src/preprocessor/SourceChunk";
 
 describe("InputStream", () => {
   it("Builds from string", () => {

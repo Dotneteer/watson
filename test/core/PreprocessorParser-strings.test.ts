@@ -1,7 +1,7 @@
 import "mocha";
 import * as expect from "expect";
 
-import { PreprocessorParser } from "../../src/core/PreprocessorParser";
+import { PreprocessorParser } from "../../src/preprocessor/PreprocessorParser";
 import { fail } from "assert";
 
 describe("PreprocessorParser - string literals", () => {
@@ -44,7 +44,7 @@ describe("PreprocessorParser - string literals", () => {
     '"\\vdef"',
     '"\\0def"',
     '"\\\'def"',
-    '"\\\"def"',
+    '"\\"def"',
     '"\\\\def"',
     '"\\qdef"',
     '"\\x40def"',
@@ -56,7 +56,7 @@ describe("PreprocessorParser - string literals", () => {
     '"abd\\vdef"',
     '"abd\\0def"',
     '"abd\\\'def"',
-    '"abd\\\"def"',
+    '"abd\\"def"',
     '"abd\\\\def"',
     '"abd\\qdef"',
     '"abd\\x40def"',
@@ -68,7 +68,7 @@ describe("PreprocessorParser - string literals", () => {
     '"abd\\v"',
     '"abd\\0"',
     '"abd\\\'"',
-    '"abd\\\""',
+    '"abd\\""',
     '"abd\\\\"',
     '"abd\\q"',
     '"abd\\x40"',

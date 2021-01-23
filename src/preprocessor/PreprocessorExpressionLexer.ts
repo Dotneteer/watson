@@ -1,10 +1,10 @@
-import { InputStream } from "./InputStream";
-import { isEof, isIdContinuation, isWs, Token, TokenType } from "./tokens";
+import { InputStream } from "../core/InputStream";
+import { isEof, isIdContinuation, isWs, Token, TokenType } from "../core/tokens";
 
 /**
- * This class implements the tokenizer (lexer) of the WA# preprocessor directives
+ * This class implements the tokenizer (lexer) of WA# preprocessor expresion handler
  */
-export class PreprocessorLexer {
+export class PreprocessorExpressionLexer {
   // --- Already fetched tokens
   private _ahead: Token[] = [];
 
@@ -75,6 +75,13 @@ export class PreprocessorLexer {
   }
 
   /**
+   * Resets the parser; drops read-ahead tokens.
+   */
+  reset(): void {
+    this._ahead = [];
+  }
+
+  /**
    * Fetches the next token from the input stream
    */
   private fetch(): Token {
@@ -89,7 +96,7 @@ export class PreprocessorLexer {
     let lastEndColumn = input.column;
     let ch: string | null = null;
 
-    let phase: LexerPhase = LexerPhase.LineStart;
+    let phase: LexerPhase = LexerPhase.Start;
     while (true) {
       // --- Get the next character
       ch = fetchNextChar();
@@ -109,35 +116,50 @@ export class PreprocessorLexer {
         // ====================================================================
         // We are at the beginning of a new line
 
-        case LexerPhase.LineStart:
+        case LexerPhase.Start:
           // --- We start a source code chunk
-          tokenType = TokenType.SourceChunk;
           switch (ch) {
             // --- Go on with whitespaces
             case " ":
             case "\t":
             case "\r":
+              tokenType = TokenType.Ws;
               phase = LexerPhase.InWhiteSpace;
               break;
 
-            // --- We stay in this phase with a new line
+            // --- End of the expression
             case "\n":
-              break;
+              return completeToken(TokenType.NewLine);
 
-            // --- May be the beginning of a comment
-            case "/":
-              phase = LexerPhase.CommentStart;
-              break;
+            // --- Single character tokens
+            case "(":
+              return completeToken(TokenType.LParent);
+            case ")":
+              return completeToken(TokenType.RParent);
+            case "!":
+              return completeToken(TokenType.NotOp);
+            case "^":
+              return completeToken(TokenType.XorOp);
+            case "|":
+              return completeToken(TokenType.OrOp);
+            case "&":
+              return completeToken(TokenType.AndOp);
 
-            // --- May be the beginning of a preprocessor directive
-            case "#":
-              phase = LexerPhase.PreprocStart;
-              break;
-
-            // --- This line may not be a preprocessor directive
+            // --- Identifier start
             default:
-              phase = LexerPhase.NoPreproc;
-              break;
+              if (
+                (ch >= "a" && ch <= "z") ||
+                (ch >= "A" && ch <= "Z") ||
+                ch === "_"
+              ) {
+                // --- This is a valid identifier start character
+                phase = LexerPhase.IdTail;
+                tokenType = TokenType.PPIdentifier;
+                break;
+              }
+
+              // --- Unknown token
+              return makeToken();
           }
           break;
 
@@ -149,91 +171,15 @@ export class PreprocessorLexer {
             case "\r":
               break;
 
-            // --- We stay in this phase with a new line
-            case "\n":
-              phase = LexerPhase.LineStart;
-              break;
-
-            // --- May be the beginning of a comment
-            case "/":
-              phase = LexerPhase.CommentStart;
-              break;
-
-            // --- May be the beginning of a preprocessor directive
-            case "#":
-              phase = LexerPhase.PreprocStart;
-              break;
-
             default:
-              phase = LexerPhase.NoPreproc;
-              break;
+              return makeToken();
           }
           break;
 
-        // --- May be the beginning of a comment
-        case LexerPhase.CommentStart:
-          switch (ch) {
-            // --- Starts an end-of-line comment
-            case "/":
-              phase = LexerPhase.InlineCommentTrail;
-              break;
-            // --- Starts a block comment
-            case "*":
-              phase = LexerPhase.BlockCommentTrail1;
-              break;
-          }
-          break;
-
-        // --- Wait for an "*" that may complete a block comment
-        case LexerPhase.BlockCommentTrail1:
-          if (ch === "*") {
-            phase = LexerPhase.BlockCommentTrail2;
-          }
-          break;
-
-        // --- Wait for a "/" that may complete a block comment
-        case LexerPhase.BlockCommentTrail2:
-          phase =
-            ch === "/" ? LexerPhase.NoPreproc : LexerPhase.BlockCommentTrail1;
-          break;
-
-        case LexerPhase.InlineCommentTrail:
-          if (ch === "\n") {
-            phase = LexerPhase.LineStart;
-          }
-          break;
-
-        // --- May be the start of a preprocessor directive
-        case LexerPhase.PreprocStart:
-          if (
-            (ch >= "a" && ch <= "z") ||
-            (ch >= "A" && ch <= "Z") ||
-            ch === "_"
-          ) {
-            phase = LexerPhase.PreprocIdStart;
-            tokenType = TokenType.PreprocDirective;
-          } else {
-            phase = LexerPhase.NoPreproc;
-          }
-          break;
-
-        case LexerPhase.PreprocIdStart:
+        // --- Wait for the completion of an ID
+        case LexerPhase.IdTail:
           if (!isIdContinuation(ch)) {
-            tokenType = TokenType.PreprocDirective;
-            return makeToken();
-          }
-
-        // --- Whatever comes, it cannot be a preprocessor directive
-        case LexerPhase.NoPreproc:
-          switch (ch) {
-            // --- Maybe a comment
-            case "/":
-              phase = LexerPhase.CommentStart;
-              break;
-
-            // --- A new line, which may contain a directive
-            case "\n":
-              phase = LexerPhase.LineStart;
+            return makeToken()
           }
           break;
 
@@ -293,6 +239,19 @@ export class PreprocessorLexer {
         },
       };
     }
+
+    /**
+     * Add the last character to the token and return it
+     */
+    function completeToken(suggestedType?: TokenType): Token {
+      appendTokenChar();
+
+      // --- Send back the token
+      if (suggestedType !== undefined) {
+        tokenType = suggestedType;
+      }
+      return makeToken();
+    }
   }
 }
 
@@ -300,13 +259,7 @@ export class PreprocessorLexer {
  * Represents the current lexer phase
  */
 enum LexerPhase {
-  LineStart,
+  Start,
   InWhiteSpace,
-  NoPreproc,
-  CommentStart,
-  BlockCommentTrail1,
-  BlockCommentTrail2,
-  InlineCommentTrail,
-  PreprocStart,
-  PreprocIdStart,
+  IdTail,
 }

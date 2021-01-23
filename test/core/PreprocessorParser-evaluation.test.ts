@@ -1,12 +1,11 @@
 import "mocha";
 import * as expect from "expect";
 
-import { PreprocessorParser } from "../../src/core/PreprocessorParser";
+import { PreprocessorParser } from "../../src/preprocessor/PreprocessorParser";
 import {
   PPBinaryExpression,
   PPIdentifier,
-  PPNotExpression,
-} from "../../src/core/preprocessor-expression";
+} from "../../src/preprocessor/preprocessor-expression";
 
 describe("PreprocessorParser - evaluate expressions", () => {
   it("Symbol #1", () => {
@@ -455,7 +454,6 @@ describe("PreprocessorParser - evaluate expressions", () => {
       expect(val).toBe(c.exp);
     });
   });
-
 
   const orAnd1Cases = [
     { s1: false, s2: false, s3: false, exp: false },

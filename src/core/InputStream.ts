@@ -1,4 +1,4 @@
-import { SourceChunk } from "./SourceChunk";
+import { SourceChunk } from "../preprocessor/SourceChunk";
 
 /**
  * This class represents an input stream that takes characters from a

@@ -3,8 +3,8 @@ import {
   errorMessages,
   ParserError,
   ParserErrorMessage,
-} from "./errors";
-import { InputStream } from "./InputStream";
+} from "../core/errors";
+import { InputStream } from "../core/InputStream";
 import {
   PPBinaryExpression,
   PPEvaluationContext,
@@ -17,7 +17,7 @@ import { PreprocessorExpressionLexer } from "./PreprocessorExpressionLexer";
 import { PreprocessorLexer } from "./PreprocessorLexer";
 import { PreprocessorStringLiteralLexer } from "./PreprocessorStringLiteralLexer";
 import { SourceChunk } from "./SourceChunk";
-import { Token, TokenType } from "./tokens";
+import { Token, TokenType } from "../core/tokens";
 
 /**
  * This class implements the WA# preprocessor

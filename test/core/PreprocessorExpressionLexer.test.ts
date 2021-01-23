@@ -2,7 +2,7 @@ import "mocha";
 import * as expect from "expect";
 
 import { InputStream } from "../../src/core/InputStream";
-import { PreprocessorExpressionLexer } from "../../src/core/PreprocessorExpressionLexer";
+import { PreprocessorExpressionLexer } from "../../src/preprocessor/PreprocessorExpressionLexer";
 import { TokenType } from "../../src/core/tokens";
 
 describe("PreprocessorExpressionLexer", () => {

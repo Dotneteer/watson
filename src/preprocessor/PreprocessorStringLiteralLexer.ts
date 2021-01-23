@@ -1,4 +1,4 @@
-import { InputStream } from "./InputStream";
+import { InputStream } from "../core/InputStream";
 import {
   isEof,
   isHexadecimalDigit,
@@ -7,7 +7,7 @@ import {
   isWs,
   Token,
   TokenType,
-} from "./tokens";
+} from "../core/tokens";
 
 /**
  * This class implements the tokenizer (lexer) of the WA# string literal handler
