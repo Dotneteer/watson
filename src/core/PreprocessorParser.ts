@@ -12,8 +12,10 @@ import {
   PPIdentifier,
   PPNotExpression,
 } from "./preprocessor-expression";
+import { convertPPStringLiteralToRawString } from "./preprocessor-string";
 import { PreprocessorExpressionLexer } from "./PreprocessorExpressionLexer";
 import { PreprocessorLexer } from "./PreprocessorLexer";
+import { PreprocessorStringLiteralLexer } from "./PreprocessorStringLiteralLexer";
 import { SourceChunk } from "./SourceChunk";
 import { Token, TokenType } from "./tokens";
 
@@ -27,12 +29,13 @@ export class PreprocessorParser implements PPEvaluationContext {
   // --- Use these lexers
   private readonly _lexer: PreprocessorLexer;
   private readonly _exprLexer: PreprocessorExpressionLexer;
+  private readonly _stringLexer: PreprocessorStringLiteralLexer;
 
   // --- Keep track of error messages
   private readonly _parseErrors: ParserErrorMessage[] = [];
 
   // --- Preprocessor symbols already defined
-  private readonly _preprocessorSymbols: Record<string, boolean> = {};
+  private _preprocessorSymbols: Record<string, boolean> = {};
 
   // --- Stack of #if .. #elseif .. #else .. #endif constructs
   private readonly _ifStatusStack: IfStatus[] = [];
@@ -41,8 +44,13 @@ export class PreprocessorParser implements PPEvaluationContext {
    * Instantiates a parser for the preprocessor
    * @param source Source code to parse
    * @param fileIndex File index information
+   * @param includeHandler Optional handler managin include files
    */
-  constructor(public readonly source: string, public readonly fileIndex = 0) {
+  constructor(
+    public readonly source: string,
+    public readonly fileIndex = 0,
+    public readonly includeHandler?: (filename: string) => IncludeHandlerResult
+  ) {
     this._inputStream = new InputStream({
       fileIndex,
       sourceCode: source,
@@ -52,6 +60,7 @@ export class PreprocessorParser implements PPEvaluationContext {
     });
     this._lexer = new PreprocessorLexer(this._inputStream);
     this._exprLexer = new PreprocessorExpressionLexer(this._inputStream);
+    this._stringLexer = new PreprocessorStringLiteralLexer(this._inputStream);
   }
 
   /**
@@ -93,48 +102,33 @@ export class PreprocessorParser implements PPEvaluationContext {
     while ((token = this._lexer.get()).type !== TokenType.Eof) {
       // --- Obtain the next chunk of source code
       if (token.type === TokenType.SourceChunk) {
-        const loc = token.location;
-        sourceChunks.push({
-          sourceCode: token.text,
-          fileIndex: loc.fileIndex,
-          pos: loc.startPos,
-          line: loc.startLine,
-          col: loc.startColumn,
-        });
-      } else if (token.type === TokenType.PreprocDirective) {
-        // --- The lexer found a directive
-        const ppPos = token.text.lastIndexOf("#");
-        if (ppPos < 0) {
-          // --- Cannot extract directive name, it must be an error
-          this.reportError("P002");
-          return null;
-        }
-
-        // --- Add the source code chunk
-        if (ppPos > 0) {
+        const trimmedText = token.text.trim();
+        if (trimmedText.length > 0) {
           const loc = token.location;
           sourceChunks.push({
-            sourceCode: token.text.substr(0, ppPos),
+            sourceCode: trimmedText,
             fileIndex: loc.fileIndex,
             pos: loc.startPos,
             line: loc.startLine,
             col: loc.startColumn,
           });
         }
-
-        // --- Parse the directive found
-        this.parseDirective(token.text.substr(ppPos));
+      } else if (token.type === TokenType.PreprocDirective) {
+        this.parseDirective(sourceChunks, token);
       } else {
         // --- Any other token type must be an error
         this.reportError("P001", token, TokenType[token.type]);
         return null;
       }
     }
+    if (this._ifStatusStack.length > 0) {
+      this.reportError("P014");
+    }
     return sourceChunks;
   }
 
   /**
-   * Parses an expresion from the input stream
+   * Parses an expression from the input stream
    */
   parseExpression(): PPExpression | null {
     const token = this._exprLexer.peek();
@@ -146,11 +140,25 @@ export class PreprocessorParser implements PPEvaluationContext {
   }
 
   /**
+   * Parses a string literal from the input stream
+   */
+  parseStringLiteral(): string | null {
+    const token = this._stringLexer.peek();
+    this._stringLexer.reset();
+    if (token.type !== TokenType.PPStringLiteral) {
+      this.reportError("P015");
+      return null;
+    }
+    return token.text;
+  }
+
+  /**
    * Parses and evaluares the expression
    */
   evalExpression(): boolean {
     const parser = this;
     const expr = this.parseExpression();
+    this._exprLexer.reset();
     return evalInner(expr);
 
     function evalInner(expr: PPExpression): boolean {
@@ -181,61 +189,317 @@ export class PreprocessorParser implements PPEvaluationContext {
    * Parse a preprocessor directive
    * @param directive
    */
-  private parseDirective(directive: string): void {
+  private parseDirective(sourceChunks: SourceChunk[], token: Token): void {
+    // --- The lexer found a directive
+    const ppPos = token.text.lastIndexOf("#");
+    if (ppPos < 0) {
+      // --- Cannot extract directive name, it must be an error
+      this.reportError("P002");
+      return;
+    }
+
+    // --- By default, add source chunks
+    let addSourceChunk = true;
+
+    // --- Parse the directive found
+    const directive = token.text.substr(ppPos);
     switch (directive) {
       case "#define":
-        this.processDefine();
+        addSourceChunk = this.processDefine();
         break;
 
       case "#undef":
-        this.processUndef();
+        addSourceChunk = this.processUndef();
         break;
 
       case "#if":
+        addSourceChunk = this.processIf();
         break;
 
       case "#elseif":
+        addSourceChunk = this.processElseIf();
         break;
 
       case "#else":
+        addSourceChunk = this.processElse();
         break;
 
       case "#endif":
+        addSourceChunk = this.processEndIf();
         break;
 
       case "#include":
+        this.processInclude(sourceChunks, token);
+        addSourceChunk = false;
         break;
 
       default:
         this.reportError("P003", null, directive);
         return null;
     }
+
+    if (addSourceChunk) {
+      if (ppPos > 0) {
+        const trimmedText = token.text.substr(0, ppPos).trim();
+        if (trimmedText.length > 0) {
+          const loc = token.location;
+          sourceChunks.push({
+            sourceCode: trimmedText,
+            fileIndex: loc.fileIndex,
+            pos: loc.startPos,
+            line: loc.startLine,
+            col: loc.startColumn,
+          });
+        }
+      }
+    }
   }
 
   /**
    * Processes the #define directive
    */
-  private processDefine(): void {
+  private processDefine(): boolean {
     const idToken = this._exprLexer.get();
     if (idToken.type !== TokenType.PPIdentifier) {
       this.reportError("P004");
       return;
     }
-    this._preprocessorSymbols[idToken.text] = true;
     this.expectEnd();
+
+    // --- Should skip this directive?
+    const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+    if (ifStatus && (ifStatus.skip || !ifStatus.satisfied) ) {
+      return false;
+    }
+
+    // --- Define the symbol
+    this._preprocessorSymbols[idToken.text] = true;
+
+    // --- Ensure that a previously satisifed condition branch is injected
+    if (ifStatus?.satisfied) {
+      ifStatus.skip = true;
+      if (ifStatus.injected) {
+        return false;
+      } else {
+        ifStatus.injected = true;
+      }
+    }
+
+    // --- Add the chunk
+    return true;
   }
 
   /**
    * Processes the #under directive
    */
-  private processUndef(): void {
+  private processUndef(): boolean {
     const idToken = this._exprLexer.get();
     if (idToken.type !== TokenType.PPIdentifier) {
       this.reportError("P004");
       return;
     }
-    delete this._preprocessorSymbols[idToken.text];
     this.expectEnd();
+
+    // --- Should skip this directive?
+    const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+    if (ifStatus && (ifStatus.skip || !ifStatus.satisfied) ) {
+      return false;
+    }
+
+    // --- Define the symbol
+    delete this._preprocessorSymbols[idToken.text];
+
+    // --- Ensure that a previously satisifed condition branch is injected
+    if (ifStatus?.satisfied) {
+      ifStatus.skip = true;
+      if (ifStatus.injected) {
+        return false;
+      } else {
+        ifStatus.injected = true;
+      }
+    }
+
+    // --- Add the chunk
+    return true;
+  }
+
+  /**
+   * Processes the #if directive
+   */
+  private processIf(): boolean {
+    if (this._ifStatusStack.length === 0) {
+      const satisfied = this.evalExpression();
+      this._ifStatusStack.push({
+        satisfied,
+        elseReached: false,
+        injected: false,
+        skip: false,
+      });
+      return true;
+    } else {
+      const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+      const satisfied = this.evalExpression();
+      const skip = ifStatus.skip || !ifStatus.satisfied;
+      this._ifStatusStack.push({
+        satisfied: skip ? false : satisfied,
+        elseReached: false,
+        injected: false,
+        skip,
+      });
+      return !skip;
+    }
+  }
+
+  /**
+   * Processes the #elseif directive
+   */
+  private processElseIf(): boolean {
+    // --- Check if #elseif is valid here
+    if (this._ifStatusStack.length === 0) {
+      this.reportError("P009");
+      return;
+    }
+    const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+    if (ifStatus.elseReached) {
+      this.reportError("P010");
+      return;
+    }
+
+    // --- Evaluate the new condition
+    const satisfied = this.evalExpression();
+
+    // --- Should skip this branch?
+    if (ifStatus.skip) {
+      return false;
+    }
+
+    // --- Ensure that a previously satisifed condition branch is injected
+    if (ifStatus.satisfied) {
+      ifStatus.skip = true;
+      if (ifStatus.injected) {
+        return false;
+      } else {
+        ifStatus.injected = true;
+        return true;
+      }
+    }
+
+    // --- Store the result of evaluation
+    ifStatus.satisfied = satisfied;
+
+    // --- Do not inject the source chunk before the #elseif
+    return false;
+  }
+
+  /**
+   * Processes the #else directive
+   */
+  private processElse(): boolean {
+    // --- Check if #else is valid here
+    if (this._ifStatusStack.length === 0) {
+      this.reportError("P011");
+      return;
+    }
+    const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+    if (ifStatus.elseReached) {
+      this.reportError("P012");
+      return;
+    }
+
+    // --- Should skip this branch?
+    if (ifStatus.skip) {
+      return false;
+    }
+
+    // --- Ensure that a previously satisifed condition branch is injected
+    if (ifStatus.satisfied) {
+      ifStatus.skip = true;
+      if (ifStatus.injected) {
+        return false;
+      } else {
+        ifStatus.injected = true;
+        return true;
+      }
+    }
+
+    // --- The #else branch satisfies the condition
+    ifStatus.satisfied = true;
+
+    // --- Do not inject the source chunk before the #else
+    return false;
+  }
+
+  /**
+   * Processes the #endif directive
+   */
+  private processEndIf(): boolean {
+    // --- Check if #endif is valid here
+    if (this._ifStatusStack.length === 0) {
+      this.reportError("P013");
+      return;
+    }
+
+    // --- Remove the #if frame
+    const ifStatus = this._ifStatusStack.pop();
+
+    // --- Ensure that a previously satisfied condition branch is injected
+    return ifStatus.satisfied && !ifStatus.injected;
+  }
+
+  /**
+   * Processes the include directive
+   */
+  private processInclude(sourceChunks: SourceChunk[], token: Token): void {
+    const ppString = this.parseStringLiteral();
+    this.expectEnd();
+
+    // --- Check if this include should be processed
+    const ifStatus = this._ifStatusStack[this._ifStatusStack.length - 1];
+
+    // --- Should skip this branch?
+    if (ifStatus && (ifStatus.skip || !ifStatus.satisfied)) {
+      return;
+    }
+
+    // --- Ensure that the webchunk before #include is processed
+    const ppPos = token.text.lastIndexOf("#");
+    if (ppPos < 0) {
+      // --- Cannot extract directive name, it must be an error
+      this.reportError("P002");
+      return;
+    }
+    if (ppPos > 0) {
+      const trimmedText = token.text.substr(0, ppPos).trim();
+      if (trimmedText.length > 0) {
+        const loc = token.location;
+        sourceChunks.push({
+          sourceCode: trimmedText,
+          fileIndex: loc.fileIndex,
+          pos: loc.startPos,
+          line: loc.startLine,
+          col: loc.startColumn,
+        });
+      }
+    }
+
+    // --- Process the include file
+    const filename = convertPPStringLiteralToRawString(ppString);
+    if (this.includeHandler) {
+      let sourceInfo: IncludeHandlerResult | undefined;
+      try {
+        sourceInfo = this.includeHandler(filename);
+      } catch (err) {
+        this.reportError("P016", null, err.toString());
+      }
+      const includeParser = new PreprocessorParser(
+        sourceInfo.source,
+        sourceInfo.fileIndex,
+        this.includeHandler
+      );
+      includeParser._preprocessorSymbols = this._preprocessorSymbols;
+      const chunks = includeParser.preprocessSource();
+      sourceChunks.push(...chunks);
+    }
   }
 
   /**
@@ -475,16 +739,41 @@ export class PreprocessorParser implements PPEvaluationContext {
 }
 
 /**
+ * Result of an include handler
+ */
+export interface IncludeHandlerResult {
+  /**
+   * Include source to process
+   */
+  source: string;
+
+  /**
+   * File index information to store
+   */
+  fileIndex: number;
+}
+
+/**
  * Represents the status of an #if preprocessor directive
  */
 interface IfStatus {
   /**
    * Is any of the conditions already satisfied?
    */
-  satisifed: boolean;
+  satisfied: boolean;
 
   /**
    * Has the preprocessor already reached #else?
    */
   elseReached: boolean;
+
+  /**
+   * Has the satisfying branch injected?
+   */
+  injected: boolean;
+
+  /**
+   * An outer condition is unsatisfied, skip evaluation
+   */
+  skip: boolean;
 }

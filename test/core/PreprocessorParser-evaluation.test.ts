@@ -8,7 +8,7 @@ import {
   PPNotExpression,
 } from "../../src/core/preprocessor-expression";
 
-describe("PreprocessorParser - ecaluate expressions", () => {
+describe("PreprocessorParser - evaluate expressions", () => {
   it("Symbol #1", () => {
     // --- Arrange
     const source = "MY_SYMBOL";

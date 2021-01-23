@@ -30,9 +30,8 @@ describe("PreprocessorParser", () => {
 
     // --- Assert
     expect(ppParser.hasErrors).toBe(false);
-    expect(chunks.length).toBe(2);
-    expect(chunks[0].sourceCode.trim()).toBe("");
-    expect(chunks[1].sourceCode.trim()).toBe("u16 b;");
+    expect(chunks.length).toBe(1);
+    expect(chunks[0].sourceCode.trim()).toBe("u16 b;");
   });
 
   it("One chunk #2", () => {
@@ -48,9 +47,8 @@ describe("PreprocessorParser", () => {
 
     // --- Assert
     expect(ppParser.hasErrors).toBe(false);
-    expect(chunks.length).toBe(2);
-    expect(chunks[0].sourceCode.trim()).toBe("u16 b;");
-    expect(chunks[1].sourceCode.trim()).toBe("");
+    expect(chunks.length).toBe(1);
+    expect(chunks[0].sourceCode).toBe("u16 b;");
   });
 
   it("Two chunks", () => {
