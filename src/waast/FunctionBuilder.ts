@@ -1,5 +1,6 @@
 import {
   Add,
+  And,
   Branch,
   BranchIf,
   BranchTable,
@@ -8,21 +9,35 @@ import {
   Clz,
   ConstVal,
   Ctz,
+  Div,
   Drop,
+  Eq,
+  Eqz,
   Func,
+  Ge,
   GlobalGet,
   GlobalSet,
+  Gt,
+  Le,
   Load,
   Local,
   LocalGet,
   LocalSet,
   LocalTee,
+  Lt,
   MemoryGrow,
   MemorySize,
   Mul,
+  Ne,
   Nop,
+  Or,
+  Rem,
   Return,
+  Rotl,
+  Rotr,
   Select,
+  Shl,
+  Shr,
   Store,
   Sub,
   Unreachable,
@@ -30,6 +45,7 @@ import {
   WaInstruction,
   WaParameter,
   WaType,
+  Xor,
 } from "./wa-nodes";
 
 /**
@@ -443,6 +459,250 @@ export function mul(valueType: WaType, ...children: WaInstruction[]): Mul {
   return <Mul>{
     type: "Mul",
     valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a div WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function div(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Div {
+  return <Div>{
+    type: "Div",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for a rem WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function rem(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Rem {
+  return <Rem>{
+    type: "Rem",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an and WA instruction
+ * @param children Optional child nodes
+ */
+export function and(valueType: WaType, ...children: WaInstruction[]): And {
+  checkInteger(valueType, "and");
+  return <And>{
+    type: "And",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an xor WA instruction
+ * @param children Optional child nodes
+ */
+export function xor(valueType: WaType, ...children: WaInstruction[]): Xor {
+  checkInteger(valueType, "xor");
+  return <Xor>{
+    type: "Xor",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an or WA instruction
+ * @param children Optional child nodes
+ */
+export function or(valueType: WaType, ...children: WaInstruction[]): Or {
+  checkInteger(valueType, "or");
+  return <Or>{
+    type: "Or",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a shl WA instruction
+ * @param children Optional child nodes
+ */
+export function shl(valueType: WaType, ...children: WaInstruction[]): Shl {
+  checkInteger(valueType, "shl");
+  return <Shl>{
+    type: "Shl",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a shr WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function shr(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Shr {
+  checkInteger(valueType, "shr");
+  return <Shr>{
+    type: "Shr",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for a rotl WA instruction
+ * @param children Optional child nodes
+ */
+export function rotl(valueType: WaType, ...children: WaInstruction[]): Rotl {
+  checkInteger(valueType, "rotl");
+  return <Rotl>{
+    type: "Rotl",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a rotr WA instruction
+ * @param children Optional child nodes
+ */
+export function rotr(valueType: WaType, ...children: WaInstruction[]): Rotr {
+  checkInteger(valueType, "rotr");
+  return <Rotr>{
+    type: "Rotr",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an eqz WA instruction
+ * @param children Optional child nodes
+ */
+export function eqz(valueType: WaType, ...children: WaInstruction[]): Eqz {
+  checkInteger(valueType, "eqz");
+  return <Eqz>{
+    type: "Eqz",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an eq WA instruction
+ * @param children Optional child nodes
+ */
+export function eq(valueType: WaType, ...children: WaInstruction[]): Eq {
+  checkInteger(valueType, "eq");
+  return <Eq>{
+    type: "Eq",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an ne WA instruction
+ * @param children Optional child nodes
+ */
+export function ne(valueType: WaType, ...children: WaInstruction[]): Ne {
+  checkInteger(valueType, "ne");
+  return <Ne>{
+    type: "Ne",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a le WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function le(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Le {
+  return <Le>{
+    type: "Le",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for a lt WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function lt(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Lt {
+  return <Lt>{
+    type: "Lt",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for a ge WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function ge(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Ge {
+  return <Ge>{
+    type: "Ge",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for a ge WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function gt(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Gt {
+  return <Gt>{
+    type: "Gt",
+    valueType,
+    signed,
     children,
   };
 }

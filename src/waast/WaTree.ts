@@ -422,6 +422,59 @@ export class WaTree {
         return `${WaType[node.valueType]}.sub`;
       case "Mul":
         return `${WaType[node.valueType]}.mul`;
+      case "Div":
+        return `${WaType[node.valueType]}.div${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "Rem":
+        return `${WaType[node.valueType]}.rem${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "And":
+        return `${WaType[node.valueType]}.and`;
+      case "Xor":
+        return `${WaType[node.valueType]}.xor`;
+      case "Or":
+        return `${WaType[node.valueType]}.or`;
+      case "Shl":
+        return `${WaType[node.valueType]}.shl`;
+      case "Shr":
+        return `${WaType[node.valueType]}.shr${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "Rotl":
+        return `${WaType[node.valueType]}.rotl`;
+      case "Rotr":
+        return `${WaType[node.valueType]}.rotr`;
+      case "Eqz":
+        return `${WaType[node.valueType]}.eqz`;
+      case "Eq":
+        return `${WaType[node.valueType]}.eq`;
+      case "Ne":
+        return `${WaType[node.valueType]}.ne`;
+      case "Le":
+        return `${WaType[node.valueType]}.le${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "Lt":
+        return `${WaType[node.valueType]}.lt${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "Ge":
+        return `${WaType[node.valueType]}.ge${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
+      case "Gt":
+        return `${WaType[node.valueType]}.gt${signedTag(
+          node.valueType,
+          node.signed
+        )}`;
     }
 
     // --- Convert bit specification to string
@@ -436,6 +489,14 @@ export class WaTree {
         default:
           return "";
       }
+    }
+
+    function signedTag(type: WaType, signed?: boolean): string {
+      return type === WaType.i32 || type === WaType.i64
+        ? signed
+          ? "_s"
+          : "_u"
+        : "";
     }
   }
 }
