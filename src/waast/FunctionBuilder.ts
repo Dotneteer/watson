@@ -1,4 +1,5 @@
 import {
+  Abs,
   Add,
   And,
   Branch,
@@ -6,13 +7,20 @@ import {
   BranchTable,
   Call,
   CallIndirect,
+  Ceil,
   Clz,
   ConstVal,
+  Convert32,
+  Convert64,
+  CopySign,
   Ctz,
+  Demote64,
   Div,
   Drop,
   Eq,
   Eqz,
+  Extend32,
+  Floor,
   Func,
   Ge,
   GlobalGet,
@@ -25,12 +33,21 @@ import {
   LocalSet,
   LocalTee,
   Lt,
+  Max,
   MemoryGrow,
   MemorySize,
+  Min,
   Mul,
   Ne,
+  Nearest,
+  Neg,
   Nop,
   Or,
+  Promote32,
+  ReinterpretF32,
+  ReinterpretF64,
+  ReinterpretI32,
+  ReinterpretI64,
   Rem,
   Return,
   Rotl,
@@ -38,13 +55,18 @@ import {
   Select,
   Shl,
   Shr,
+  Sqrt,
   Store,
   Sub,
+  Trunc,
+  Trunc32,
+  Trunc64,
   Unreachable,
   WaBitSpec,
   WaInstruction,
   WaParameter,
   WaType,
+  Wrap64,
   Xor,
 } from "./wa-nodes";
 
@@ -707,11 +729,322 @@ export function gt(
   };
 }
 
+/**
+ * Factory method for an i32.wrap_i64 WA instruction
+ * @param children Optional child nodes
+ */
+export function wrap64(...children: WaInstruction[]): Wrap64 {
+  return <Wrap64>{
+    type: "Wrap64",
+    children,
+  };
+}
+
+/**
+ * Factory method for an extend32 WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function extend32(
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Extend32 {
+  return <Extend32>{
+    type: "Extend32",
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an i32.trunc WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function trunc32(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Trunc32 {
+  checkFloat(valueType, "trunc32");
+  return <Trunc32>{
+    type: "Trunc32",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an i64.trunc WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function trunc64(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Trunc64 {
+  checkFloat(valueType, "trunc64");
+  return <Trunc64>{
+    type: "Trunc64",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an f32.convert WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function convert32(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Convert32 {
+  checkInteger(valueType, "convert32");
+  return <Convert32>{
+    type: "Convert32",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an f64.convert WA instruction
+ * @param children Optional child nodes
+ * @param signed Use signed operation?
+ */
+export function convert64(
+  valueType: WaType,
+  signed?: boolean,
+  ...children: WaInstruction[]
+): Convert64 {
+  checkInteger(valueType, "convert64");
+  return <Convert64>{
+    type: "Convert64",
+    valueType,
+    signed,
+    children,
+  };
+}
+
+/**
+ * Factory method for an f64.demote WA instruction
+ * @param children Optional child nodes
+ */
+export function demote64(...children: WaInstruction[]): Demote64 {
+  return <Demote64>{
+    type: "Demote64",
+    children,
+  };
+}
+
+/**
+ * Factory method for an f32.promote WA instruction
+ * @param children Optional child nodes
+ */
+export function promote32(...children: WaInstruction[]): Promote32 {
+  return <Promote32>{
+    type: "Promote32",
+    children,
+  };
+}
+
+/**
+ * Factory method for an i32.reinterpret WA instruction
+ * @param children Optional child nodes
+ */
+export function reinterpretF32(...children: WaInstruction[]): ReinterpretF32 {
+  return <ReinterpretF32>{
+    type: "ReinterpretF32",
+    children,
+  };
+}
+
+/**
+ * Factory method for an i64.reinterpret WA instruction
+ * @param children Optional child nodes
+ */
+export function reinterpretF64(...children: WaInstruction[]): ReinterpretF64 {
+  return <ReinterpretF64>{
+    type: "ReinterpretF64",
+    children,
+  };
+}
+
+/**
+ * Factory method for an f32.reinterpret WA instruction
+ * @param children Optional child nodes
+ */
+export function reinterpretI32(...children: WaInstruction[]): ReinterpretI32 {
+  return <ReinterpretI32>{
+    type: "ReinterpretI32",
+    children,
+  };
+}
+
+/**
+ * Factory method for an f64.reinterpret WA instruction
+ * @param children Optional child nodes
+ */
+export function reinterpretI64(...children: WaInstruction[]): ReinterpretI64 {
+  return <ReinterpretI64>{
+    type: "ReinterpretI64",
+    children,
+  };
+}
+
+/**
+ * Factory method for an abs WA instruction
+ * @param children Optional child nodes
+ */
+export function abs(valueType: WaType, ...children: WaInstruction[]): Abs {
+  checkFloat(valueType, "abs");
+  return <Abs>{
+    type: "Abs",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a neg WA instruction
+ * @param children Optional child nodes
+ */
+export function neg(valueType: WaType, ...children: WaInstruction[]): Neg {
+  checkFloat(valueType, "neg");
+  return <Neg>{
+    type: "Neg",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a ceil WA instruction
+ * @param children Optional child nodes
+ */
+export function ceil(valueType: WaType, ...children: WaInstruction[]): Ceil {
+  checkFloat(valueType, "ceil");
+  return <Ceil>{
+    type: "Ceil",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a floor WA instruction
+ * @param children Optional child nodes
+ */
+export function floor(valueType: WaType, ...children: WaInstruction[]): Floor {
+  checkFloat(valueType, "floor");
+  return <Floor>{
+    type: "Floor",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a trunc WA instruction
+ * @param children Optional child nodes
+ */
+export function trunc(valueType: WaType, ...children: WaInstruction[]): Trunc {
+  checkFloat(valueType, "trunc");
+  return <Trunc>{
+    type: "Trunc",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a nearest WA instruction
+ * @param children Optional child nodes
+ */
+export function nearest(
+  valueType: WaType,
+  ...children: WaInstruction[]
+): Nearest {
+  checkFloat(valueType, "nearest");
+  return <Nearest>{
+    type: "Nearest",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for an sqrt WA instruction
+ * @param children Optional child nodes
+ */
+export function sqrt(valueType: WaType, ...children: WaInstruction[]): Sqrt {
+  checkFloat(valueType, "sqrt");
+  return <Sqrt>{
+    type: "Sqrt",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a min WA instruction
+ * @param children Optional child nodes
+ */
+export function min(valueType: WaType, ...children: WaInstruction[]): Min {
+  checkFloat(valueType, "min");
+  return <Min>{
+    type: "Min",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a max WA instruction
+ * @param children Optional child nodes
+ */
+export function max(valueType: WaType, ...children: WaInstruction[]): Max {
+  checkFloat(valueType, "max");
+  return <Max>{
+    type: "Max",
+    valueType,
+    children,
+  };
+}
+
+/**
+ * Factory method for a copysign WA instruction
+ * @param children Optional child nodes
+ */
+export function copysign(
+  valueType: WaType,
+  ...children: WaInstruction[]
+): CopySign {
+  checkFloat(valueType, "copysign");
+  return <CopySign>{
+    type: "CopySign",
+    valueType,
+    children,
+  };
+}
+
 // ============================================================================
 // Helpers
 
 function checkInteger(type: WaType, op: string): void {
   if (type !== WaType.i32 && type !== WaType.i64) {
     throw new Error(`Only i32 and i64 accepted for ${op}`);
+  }
+}
+
+function checkFloat(type: WaType, op: string): void {
+  if (type !== WaType.f32 && type !== WaType.f64) {
+    throw new Error(`Only f32 and f64 accepted for ${op}`);
   }
 }

@@ -475,6 +475,58 @@ export class WaTree {
           node.valueType,
           node.signed
         )}`;
+      case "Wrap64":
+        return "i32.wrap_i64";
+      case "Extend32":
+        return `i64.extend${signedTag(WaType.i32, node.signed)}/i32`;
+      case "Trunc32":
+        return `i32.trunc${signedTag(WaType.i32, node.signed)}/${
+          WaType[node.valueType]
+        }`;
+      case "Trunc64":
+        return `i64.trunc${signedTag(WaType.i32, node.signed)}/${
+          WaType[node.valueType]
+        }`;
+      case "Convert32":
+        return `f32.convert${signedTag(WaType.i32, node.signed)}/${
+          WaType[node.valueType]
+        }`;
+      case "Convert64":
+        return `f64.convert${signedTag(WaType.i32, node.signed)}/${
+          WaType[node.valueType]
+        }`;
+      case "Demote64":
+        return "f32.demote/f64";
+      case "Promote32":
+        return "f64.promote/f32";
+      case "ReinterpretF32":
+        return "i32.reinterpret/f32";
+      case "ReinterpretF64":
+        return "i64.reinterpret/f64";
+      case "ReinterpretI32":
+        return "f32.reinterpret/i32";
+      case "ReinterpretI64":
+        return "f64.reinterpret/i64";
+      case "Abs":
+        return `${WaType[node.valueType]}.abs`;
+      case "Neg":
+        return `${WaType[node.valueType]}.neg`;
+      case "Ceil":
+        return `${WaType[node.valueType]}.ceil`;
+      case "Floor":
+        return `${WaType[node.valueType]}.floor`;
+      case "Trunc":
+        return `${WaType[node.valueType]}.trunc`;
+      case "Nearest":
+        return `${WaType[node.valueType]}.nearest`;
+      case "Sqrt":
+        return `${WaType[node.valueType]}.sqrt`;
+      case "Min":
+        return `${WaType[node.valueType]}.min`;
+      case "Max":
+        return `${WaType[node.valueType]}.max`;
+      case "CopySign":
+        return `${WaType[node.valueType]}.copysign`;
     }
 
     // --- Convert bit specification to string

@@ -62,7 +62,6 @@ export type WaInstruction =
   | ReinterpretF64
   | ReinterpretI32
   | ReinterpretI64
-  | Extend
   | Abs
   | Neg
   | Ceil
@@ -596,8 +595,7 @@ export interface Wrap64 extends WaInstructionBase {
  * i32 to i64
  */
 export interface Extend32 extends WaInstructionBase {
-  type: "Extend64";
-  valueType: WaType;
+  type: "Extend32";
   signed?: boolean;
 }
 
@@ -680,16 +678,6 @@ export interface ReinterpretI64 extends WaInstructionBase {
 }
 
 /**
- * Extend integer
- */
-export interface Extend extends WaInstructionBase {
-  type: "Extend";
-  valueType: WaType;
-  bits: WaBitSpec;
-  signed?: boolean;
-}
-
-/**
  * Abs function
  */
 export interface Abs extends WaInstructionBase {
@@ -758,14 +746,6 @@ export interface Min extends WaInstructionBase {
  */
 export interface Max extends WaInstructionBase {
   type: "Max";
-  valueType: WaType;
-}
-
-/**
- * CopySign function
- */
-export interface CopySign extends WaInstructionBase {
-  type: "CopySign";
   valueType: WaType;
 }
 
