@@ -3,7 +3,13 @@
  */
 export type WaNode = Module | WaModuleField | WaFunctionBody;
 
-export type WaModuleField = WaImportNode | Table | Global | TypeDef | Func;
+export type WaModuleField =
+  | WaImportNode
+  | Table
+  | Global
+  | TypeDef
+  | Func
+  | Comment;
 
 export type WaFunctionBody = Local | WaInstruction;
 
@@ -74,7 +80,8 @@ export type WaInstruction =
   | CopySign
   | Block
   | Loop
-  | If;
+  | If
+  | Comment;
 
 export type WaImportNode = FuncImport;
 
@@ -99,7 +106,6 @@ export enum WaBitSpec {
   Bit8,
   Bit16,
   Bit32,
-
 }
 
 /**
@@ -368,7 +374,7 @@ export interface GlobalSet extends WaInstructionBase {
  */
 export interface Load extends WaInstructionBase {
   type: "Load";
-  valueType: WaType,
+  valueType: WaType;
   bits: WaBitSpec;
   offset?: number;
   align?: number;
@@ -380,7 +386,7 @@ export interface Load extends WaInstructionBase {
  */
 export interface Store extends WaInstructionBase {
   type: "Store";
-  valueType: WaType,
+  valueType: WaType;
   bits: WaBitSpec;
   offset?: number;
   align?: number;
@@ -782,8 +788,16 @@ export interface Loop extends WaInstructionBase {
  */
 export interface If extends WaInstructionBase {
   type: "If";
-  id: string;
   resultType?: WaType;
   consequtive: WaInstruction[];
   alternate?: WaInstruction[];
+}
+
+/**
+ * Block/end-of-line comment
+ */
+export interface Comment extends WaNodeBase {
+  type: "Comment";
+  isBlock?: boolean;
+  text: string;
 }

@@ -2,12 +2,12 @@ import { FunctionBuilder } from "./FunctionBuilder";
 import {
   Func,
   FuncImport,
+  Comment,
   Global,
   Local,
   Module,
   TypeDef,
   WaBitSpec,
-  WaFunctionBody,
   WaInstruction,
   WaModuleField,
   WaNode,
@@ -166,12 +166,20 @@ export class WaTree {
   }
 
   /**
-   * Injects a new instruction to the body of the specified function
-   * @param func Function
-   * @param instr Function body instructions
+   * Injects a comment into the tree
+   * @param id Type identifier
+   * @param params Function parameters
+   * @param resultType Optional result type
    */
-  body(func: Func, ...instr: WaInstruction[]): void {
-    func.body.push(...instr);
+  comment(text: string, isBlock?: boolean): Comment {
+    this.ensureFields();
+    const newNode = <Comment>{
+      type: "Comment",
+      text,
+      isBlock,
+    };
+    this._module.fields.push(newNode);
+    return newNode;
   }
 
   /**
@@ -228,15 +236,17 @@ export class WaTree {
     parenthesized = false
   ): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
-    if (node.children.length > 0) {
+    if (node.children && node.children.length > 0) {
       return `${indentation}(${this.renderPureBodyNode(
-        node
+        node,
+        indent
       )}\n${node.children
         .map((ch) => this.renderInstructionNode(ch, indent + 1, true))
         .join("\n")}\n${indentation})`;
     }
     return `${indentation}${parenthesized ? "(" : ""}${this.renderPureBodyNode(
-      node
+      node,
+      indent
     )}${parenthesized ? ")" : ""}`;
   }
 
@@ -320,6 +330,12 @@ export class WaTree {
 
       case "Func":
         return this.renderFunctionNode(field, indent);
+
+      case "Comment":
+        return (
+          indentation +
+          (field.isBlock ? `(; ${field.text} ;)` : `;; ${field.text}`)
+        );
     }
   }
 
@@ -360,7 +376,10 @@ export class WaTree {
    * Renders a function body node without its children
    * @param node
    */
-  private renderPureBodyNode(node: WaInstruction): string {
+  private renderPureBodyNode(
+    node: WaInstruction | Comment,
+    indent: number
+  ): string {
     switch (node.type) {
       case "ConstVal":
         return `${WaType[node.valueType]}.const ${node.value}`;
@@ -527,6 +546,53 @@ export class WaTree {
         return `${WaType[node.valueType]}.max`;
       case "CopySign":
         return `${WaType[node.valueType]}.copysign`;
+      case "Block":
+        const body = node.body
+          .map((inst) => this.renderInstructionNode(inst, indent + 1))
+          .join("\n");
+        return `block ${node.id}${
+          node.resultType === undefined
+            ? ""
+            : " (result " + WaType[node.resultType] + ")"
+        }\n${body}${body.length > 0 ? "\n" : ""}${"".padStart(
+          indent * this._indentSpaces,
+          " "
+        )}end`;
+      case "Loop":
+        const loop = node.body
+          .map((inst) => this.renderInstructionNode(inst, indent + 1))
+          .join("\n");
+        return `loop ${node.id}${
+          node.resultType === undefined
+            ? ""
+            : " (result " + WaType[node.resultType] + ")"
+        }\n${loop}${loop.length > 0 ? "\n" : ""}${"".padStart(
+          indent * this._indentSpaces,
+          " "
+        )}end`;
+      case "If":
+        const consequtive = node.consequtive
+          ? node.consequtive
+              .map((inst) => this.renderInstructionNode(inst, indent + 1))
+              .join("\n")
+          : "";
+        const alternate = node.alternate
+          ? node.alternate
+              .map((inst) => this.renderInstructionNode(inst, indent + 1))
+              .join("\n")
+          : "";
+        return `if${
+          node.resultType === undefined
+            ? ""
+            : " (result " + WaType[node.resultType] + ")"
+        }\n${consequtive}${consequtive.length > 0 ? "\n" : ""}${
+          node.alternate ? "else\n" : ""
+        }${alternate}${alternate.length > 0 ? "\n" : ""}${"".padStart(
+          indent * this._indentSpaces,
+          " "
+        )}end`;
+      case "Comment":
+        return node.isBlock ? `(; ${node.text} ;)` : `;; ${node.text}`;
     }
 
     // --- Convert bit specification to string

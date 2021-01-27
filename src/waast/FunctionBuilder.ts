@@ -2,6 +2,7 @@ import {
   Abs,
   Add,
   And,
+  Block,
   Branch,
   BranchIf,
   BranchTable,
@@ -9,6 +10,7 @@ import {
   CallIndirect,
   Ceil,
   Clz,
+  Comment,
   ConstVal,
   Convert32,
   Convert64,
@@ -26,12 +28,14 @@ import {
   GlobalGet,
   GlobalSet,
   Gt,
+  If,
   Le,
   Load,
   Local,
   LocalGet,
   LocalSet,
   LocalTee,
+  Loop,
   Lt,
   Max,
   MemoryGrow,
@@ -1031,6 +1035,69 @@ export function copysign(
     type: "CopySign",
     valueType,
     children,
+  };
+}
+
+/**
+ * Factory method for a block WA instruction
+ * @param children Optional child nodes
+ */
+export function block(
+  id: string,
+  body: WaInstruction[],
+  resultType?: WaType
+): Block {
+  return <Block>{
+    type: "Block",
+    id,
+    body,
+    resultType,
+  };
+}
+
+/**
+ * Factory method for a loop WA instruction
+ * @param children Optional child nodes
+ */
+export function loop(
+  id: string,
+  body: WaInstruction[],
+  resultType?: WaType
+): Loop {
+  return <Loop>{
+    type: "Loop",
+    id,
+    body,
+    resultType,
+  };
+}
+
+/**
+ * Factory method for an if WA instruction
+ * @param children Optional child nodes
+ */
+export function ifBlock(
+  consequtive: WaInstruction[],
+  alternate?: WaInstruction[],
+  resultType?: WaType
+): If {
+  return <If>{
+    type: "If",
+    consequtive,
+    alternate,
+    resultType,
+  };
+}
+
+/**
+ * Factory method for a WA comment
+ * @param children Optional child nodes
+ */
+export function comment(text: string, isBlock?: boolean): Comment {
+  return <Comment>{
+    type: "Comment",
+    text,
+    isBlock,
   };
 }
 
