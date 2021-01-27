@@ -4,7 +4,7 @@ import * as expect from "expect";
 import {
   PreprocessorParser,
   IncludeHandlerResult,
-} from "../../src/core/PreprocessorParser";
+} from "../../src/preprocessor/PreprocessorParser";
 import { fail } from "assert";
 
 describe("PreprocessorParser - include", () => {
@@ -632,7 +632,6 @@ describe("PreprocessorParser - include", () => {
     expect(chunks[3].sourceCode).toBe("inc2;");
     expect(chunks[3].fileIndex).toBe(4);
   });
-
 });
 
 const includeFiles: Record<string, string> = {

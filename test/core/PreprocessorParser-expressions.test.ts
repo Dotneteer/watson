@@ -1,9 +1,13 @@
 import "mocha";
 import * as expect from "expect";
 
-import { PreprocessorParser } from "../../src/core/PreprocessorParser";
+import { PreprocessorParser } from "../../src/preprocessor/PreprocessorParser";
 import { fail } from "assert";
-import { PPBinaryExpression, PPIdentifier, PPNotExpression } from "../../src/core/preprocessor-expression";
+import {
+  PPBinaryExpression,
+  PPIdentifier,
+  PPNotExpression,
+} from "../../src/preprocessor/preprocessor-expression";
 
 describe("PreprocessorParser - expressions", () => {
   it("Empty source", () => {
@@ -101,10 +105,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("|");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -127,10 +131,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("|");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -155,10 +159,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("|");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });
@@ -199,10 +203,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -225,10 +229,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -253,10 +257,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });
@@ -297,10 +301,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("^");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -323,10 +327,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("^");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -351,10 +355,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("^");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });
@@ -375,10 +379,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("^");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -403,10 +407,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("^");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });
@@ -427,10 +431,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -455,10 +459,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });
@@ -479,10 +483,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.leftOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    let id = binExpr2.leftOperand as PPIdentifier
+    let id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S1");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr.rightOperand.type === "Id").toBe(true);
     id = binExpr.rightOperand as PPIdentifier;
@@ -507,10 +511,10 @@ describe("PreprocessorParser - expressions", () => {
     let binExpr2 = binExpr.rightOperand as PPBinaryExpression;
     expect(binExpr2.operator).toBe("&");
     expect(binExpr2.leftOperand.type === "Id").toBe(true);
-    id = binExpr2.leftOperand as PPIdentifier
+    id = binExpr2.leftOperand as PPIdentifier;
     expect(id.name).toBe("S2");
     expect(binExpr2.rightOperand.type === "Id").toBe(true);
-    id = binExpr2.rightOperand as PPIdentifier
+    id = binExpr2.rightOperand as PPIdentifier;
     expect(id.name).toBe("S3");
     expect(binExpr.leftOperand.type === "Id").toBe(true);
   });

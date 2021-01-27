@@ -1,7 +1,7 @@
 import "mocha";
 import * as expect from "expect";
 
-import { PreprocessorParser } from "../../src/core/PreprocessorParser";
+import { PreprocessorParser } from "../../src/preprocessor/PreprocessorParser";
 
 describe("PreprocessorParser", () => {
   it("Empty source", () => {
