@@ -1,8 +1,8 @@
 import "mocha";
 import * as expect from "expect";
-import { WaTree } from "../../src/waast/WaTree";
-import { WaType } from "../../src/waast/wa-nodes";
-import { constVal } from "../../src/waast/FunctionBuilder";
+import { WaTree } from "../../src/wa-ast/WaTree";
+import { WaType } from "../../src/wa-ast/wa-nodes";
+import { constVal } from "../../src/wa-ast/FunctionBuilder";
 
 describe("WaTree - render", () => {
   it("Empty source", () => {

@@ -796,7 +796,7 @@ export interface If extends WaInstructionBase {
 /**
  * Block/end-of-line comment
  */
-export interface Comment extends WaNodeBase {
+export interface Comment extends WaInstructionBase {
   type: "Comment";
   isBlock?: boolean;
   text: string;

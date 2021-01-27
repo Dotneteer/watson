@@ -1,8 +1,8 @@
 import "mocha";
 import * as expect from "expect";
-import { WaTree } from "../../src/waast/WaTree";
-import { load, memGrow, memSize, store } from "../../src/waast/FunctionBuilder";
-import { WaBitSpec, WaType } from "../../src/waast/wa-nodes";
+import { WaTree } from "../../src/wa-ast/WaTree";
+import { load, memGrow, memSize, store } from "../../src/wa-ast/FunctionBuilder";
+import { WaBitSpec, WaType } from "../../src/wa-ast/wa-nodes";
 import { fail } from "assert";
 
 describe("WaTree - render instructions #2", () => {

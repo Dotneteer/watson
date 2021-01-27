@@ -1,14 +1,14 @@
 import "mocha";
 import * as expect from "expect";
-import { WaTree } from "../../src/waast/WaTree";
+import { WaTree } from "../../src/wa-ast/WaTree";
 import {
   block,
   comment,
   constVal,
   ifBlock,
   loop,
-} from "../../src/waast/FunctionBuilder";
-import { WaType } from "../../src/waast/wa-nodes";
+} from "../../src/wa-ast/FunctionBuilder";
+import { WaType } from "../../src/wa-ast/wa-nodes";
 
 describe("WaTree - render instructions #5", () => {
   it("block #1", () => {
