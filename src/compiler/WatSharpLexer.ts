@@ -701,6 +701,8 @@ enum LexerPhase {
 }
 
 const resolverHash: Record<string, TokenType> = {
+  export: TokenType.Export,
+
   i8: TokenType.I8,
   sbyte: TokenType.I8,
   u8: TokenType.U8,
@@ -721,4 +723,11 @@ const resolverHash: Record<string, TokenType> = {
   float: TokenType.F32,
   f64: TokenType.F64,
   double: TokenType.F64,
+  void: TokenType.Void,
+
+  "function": TokenType.Function,
+  inline: TokenType.Inline,
+  type: TokenType.Type,
+  struct: TokenType.Struct,
+
 };

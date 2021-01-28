@@ -1,25 +1,160 @@
-# WebAssembly transpiler from WA# to WebAssembly text format
+# WebAssembly transpiler from WAT# to WebAssembly text format
 
-This utility is a prototype design and implementation of the WA# programming language. WA# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.
+This utility is a prototype design and implementation of the WAT# programming language. WAT# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.
+
+WAT# implements only simple programming constructs that do not need any WebAssembly Runtime. The programming language avoids concepts that are not straightforward in WebAssembly.
 
 ## Main Features
 
 You can use the standard WAT instructions within the WA#, plus a number of extensions:
 
-- Additional types: `bool`, `i8` (`sbyte`), `u8` (`byte`), `i16` (`word`), `u16` (`uword`), `i32` (`int`), `u32` (`uint`), `i64` (`long`), `u64` (`ulong`), `f32` (`float`), `f64` (`double`)
+- Additional simple types: `bool`, `i8` (`sbyte`), `u8` (`byte`), `i16` (`word`), `u16` (`uword`), `i32` (`int`), `u32` (`uint`), `i64` (`long`), `u64` (`ulong`), `f32` (`float`), `f64` (`double`)
+- Compound types: arrays, structs, pointers
 - Constant value definitions
 - Include directive (`#include`) to allow using include source files
 - Conditional directives (`#define`, `#undef`, `#if`, `#else`, `#elseif`, `#endif`) to define conditional compilation based on symbols
 - Memory variable, memory arrays
 - Simple pointer arithmetic
-- Control flow statements: `if..else`, `do..while`, `while`, `for`
+- Control flow statements: `if..else`, `do..while`, `while`, and `for`.
 - Expression evaluation
 - Inline functions
+
+These are the steps the WAT# transpiler generates its output:
 
 1. **Preprocessing**. The preprocessor detects the conditional and include directives. Using the conditions and included files, it merges the raw input to be used as the next phase input. This phase focuses only on preprocessing and does not check the WA# syntax at all. However, preprocessing recognizes WA# multi-line block comments and does not search for preprocessor directives within them.
 2. **Syntax parsing**. The compiler parses the syntax of the raw WA# source code and collects parsing errors.
 3. **Semantic analysis**. The compiler checks if the code semantics satisfy the language specification and prepare it for code emission.
 4. **Code emission**. The compiler generates the WAT output.
+
+## WAT# Program Structure
+
+WAT# follows the semantics of WebAssembly. The result of the WAT# compilation is a WebAssembly module that contains module fields (global declarations, type declarations, memory description, tables, data elements, functions, etc.). One particular field type is a function, which may declare parameters, result types, local variables, and instrcutions.
+
+A WAT# code has this structure:
+
+```
+watsharpCode
+    : declaration*
+    ;
+
+declaration
+    : constDeclaration
+    | globalDeclaration
+    | typeDeclaration
+    | variableDeclaration
+    | jumpTableDeclaration
+    | functionDeclaration
+    ;
+
+functionDeclaration
+    : "function" (exportSpecification)? ("inline")? (intrinsicType | "void" )? 
+        parameterList locals functionBody
+    ;
+
+locals
+    : local*
+    ;
+
+functionBody
+    : statement*
+    ;
+
+exportSpecification
+    : "export" (stringLiteral)?
+    ;
+```
+
+- `declaration`: Declarations define language constructs that build up the structure of the code, but do not contain directly any executable code.
+    - `constDeclaration`: You can assign a constant value to a name. During the compilation process, the transpiler replaces the occurrences of the constans's name with its value. Contansts do not generate any WebAssembly elements.
+    - `globalDeclaration`: You can create variables that the transpiler handle as `global` WebAssembly declarations. Though WebAssembly allows constant `global` declarations, WAT# allows only mutables.
+    - `typeDeclaration`: You can create type aliases or compound type declarations that are entirely WAT# constructs.
+    - `variableDeclaration`: You can define variables that are stored in the linear memory of WebAssembly.
+    - `jumpTableDeclaration`: WAT# provides programming constructs that allow indirect function calls based on the `table` concept of WebAssembly. Jump tables define the tables used for an indirect call.
+    - `functionDeclaration`: The transpiler creates a WebAssembly function from each WAT# function. Thus, functions can have parameters, an optional result type, and local declarations. Functions are the only constructs that contain statements.
+
+## WAT# Type System
+
+WAT# provides additional types to the four intrinsic WebAssembly type (`i32`, `i64`, `f32`, `f64`) so that every extra type's operations can be implemented with the WA's types &mdash; without any runtime code.
+
+WAT# deliberately does not support strings and characters.
+
+### Simple WAT# Types
+
+WAT# supports these types:
+
+1. Types that leverage the `i32` WA type:
+    - `bool`: Boolean value. Any non-zero `i32` value is considered as `true`. Zero is `false`.
+    - `sbyte` or `i8`: 8-bit signed integer (-128 .. 127)
+    - `byte` or `u8`: 8-bit unsigned integer (0 .. 255)
+    - `short` or `i16`: 16-bit signed integer (-32768 .. 32767)
+    - `ushort` or `u16`: 16-bit unsigned integer (0 .. 65535)
+    - `int` or `i32`: 32-bit signed integer (-2 147 483 648 .. -2 147 483 647)
+    - `uint` or `u32`: 32-bit unsigned integer (0 .. 4 294 967 295)
+
+2. Types that leverage the `i64` WA type:
+    - `long` or `i64`: 32-bit signed integer (-9 223 372 036 854 775 808 .. 9 223 372 036 854 775 807)
+    - `ulong` or `u64`: 64-bit unsigned integer (0 .. 18 446 744 073 709 551 615)
+
+3. Types that leverage the floating-point types in WA:
+    - `float` or `f32`: 32-bit floating-point type
+    - `double` or  `f64`: 64-bit floating point type 
+
+### Arrays
+
+WAT# allows declaring arrays with one or more dimension. Array items can be an instance of any types.
+
+### Structures
+
+WAT# structures are records with fields. Each field has a name and a type. Record fields can be accessed individually.
+
+### Pointers
+
+You can have pointers to instances of a specific type. A pointer is a 32-bit value that points to a WebAssembly linear memory location (using the `i32` WebAssembly type). When you execute operations with a pointer, those consider the underlying type. For example, when you increment the value of a pointer, that leverage the byte-length of the underlying instance.
+
+### Compound Types
+
+You can build compound types from single types by combining them. For example, you may have an array of pointers of structures. Structure fields may be arrays and pointer, or even other structures, and so on.
+
+### Type Declaration Syntax
+
+```
+typeDeclaration
+    : "type" identifier "=" typeSpecification ";"
+    ;
+
+typeSpecification
+    : simpleType
+    | pointerType
+    | arrayType
+    | structType
+    | "(" typeSpecification ")"
+    ;
+
+simpleType
+    : "i8" | "sbyte" | "u8" | "byte"
+    | "i16" | "short" | "u16" | "ushort"
+    | "i32" | "int" | "u32" | "uint"
+    | "i64" | "long" | "u64" | "ulong"
+    | "f32" | "float"
+    | "f64" | "double"
+
+pointerType
+    : "*" typeSpecification
+    ;
+
+arrayType
+    : typeSpecification "[" expr "]"
+    ;
+
+structType
+    : "struct" "{" structField ("," structField)* "}"
+    ;
+
+structField
+    : identifier ":" typeSpecification
+    ;
+```
+
 
 ## Syntax Basics
 

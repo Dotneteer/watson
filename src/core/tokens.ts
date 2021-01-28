@@ -74,12 +74,20 @@ export enum TokenType {
   U64,
   F32,
   F64,
+  Void,
 
   DecimalLiteral,
   HexadecimalLiteral,
   BinaryLiteral,
   RealLiteral,
   StringLiteral,
+
+  Function,
+  Inline,
+  Export, 
+  Type,
+  Struct,
+
 }
 
 /**

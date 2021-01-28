@@ -18,17 +18,16 @@ export class InputStream {
   private readonly _posOffset: number;
 
   // --- Current line number
-  private _line;
+  private _line: number;
 
   // --- Current column number
-  private _column;
+  private _column: number;
 
   /**
    * Creates a stream that uses the specified source code
    * @param chunkOrSourceCode The input to use with this stream
    */
-  constructor(chunkOrSource: string  | SourceChunk) 
-  {
+  constructor(chunkOrSource: string | SourceChunk) {
     if (typeof chunkOrSource === "string") {
       this._fileIndex = 0;
       this._posOffset = 0;
@@ -93,18 +92,7 @@ export class InputStream {
    * @returns null, if EOF; otherwise the current source code character
    */
   peek(): string | null {
-    return this.ahead(0);
-  }
-
-  /**
-   * Looks ahead with `n` characters in the stream.
-   * @param n Number of positions to look ahead. Default: 1
-   * @returns null, if EOF; otherwise the look-ahead character
-   */
-  ahead(n: number = 1): string | null {
-    return this._pos + n > this._source.length - 1
-      ? null
-      : this._source[this._pos + n];
+    return this._pos > this._source.length - 1 ? null : this._source[this._pos];
   }
 
   /**
