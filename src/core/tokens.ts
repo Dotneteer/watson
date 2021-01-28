@@ -62,6 +62,7 @@ export enum TokenType {
   GreaterThanOrEqual,
   ShiftRight,
   SignedShiftRight,
+  Dot,
 
   I8,
   U8,
@@ -73,6 +74,12 @@ export enum TokenType {
   U64,
   F32,
   F64,
+
+  DecimalLiteral,
+  HexadecimalLiteral,
+  BinaryLiteral,
+  RealLiteral,
+  StringLiteral,
 }
 
 /**
@@ -183,7 +190,15 @@ export function isIdContinuation(ch: string): boolean {
  * @param ch Character to test
  */
 export function isBinaryDigit(ch: string): boolean {
-  return ch === "0" || ch === "1" || ch === "_";
+  return ch === "0" || ch === "1";
+}
+
+/**
+ * Tests if a character is a decimal digit
+ * @param ch Character to test
+ */
+export function isDecimalDigit(ch: string): boolean {
+  return ch >= "0" && ch <= "9";
 }
 
 /**

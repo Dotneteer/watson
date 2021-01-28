@@ -117,7 +117,6 @@ end`);
 
     // --- Act
     const text = tree.renderInstructionNode(instr);
-    console.log(text);
 
     // --- Assert
     expect(text).toBe(`block $myBlock (result f64)
@@ -235,7 +234,6 @@ end`);
 
     // --- Act
     const text = tree.renderInstructionNode(instr);
-    console.log(text);
 
     // --- Assert
     expect(text).toBe(`loop $myLoop (result f64)
