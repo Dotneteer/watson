@@ -1,6 +1,6 @@
 import "mocha";
 import * as expect from "expect";
-import { WaTree } from "../../src/waast/WaTree";
+import { WaTree } from "../../src/wa-ast/WaTree";
 import {
   abs,
   ceil,
@@ -32,8 +32,8 @@ import {
   trunc32,
   trunc64,
   wrap64,
-} from "../../src/waast/FunctionBuilder";
-import { WaType } from "../../src/waast/wa-nodes";
+} from "../../src/wa-ast/FunctionBuilder";
+import { WaType } from "../../src/wa-ast/wa-nodes";
 import { fail } from "assert";
 
 describe("WaTree - render instructions #4", () => {
