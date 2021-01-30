@@ -10,7 +10,7 @@ import {
   Token,
   TokenType,
 } from "../core/tokens";
-import { InputStream } from "../core/InputStream";
+import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 
 /**
  * This class implements the lexer of WAT#
@@ -35,16 +35,7 @@ export class WatSharpLexer {
    * Initializes the tokenizer with the input stream
    * @param input Input source code stream
    */
-  constructor(public readonly input: InputStream) {}
-
-  /**
-   * Gets the specified part of the source code
-   * @param start Start position
-   * @param end End position
-   */
-  getSourceSpan(start: number, end: number): string {
-    return this.input.getSourceSpan(start, end);
-  }
+  constructor(public readonly input: MultiChunkInputStream) {}
 
   /**
    * Resets the last comment
@@ -729,5 +720,5 @@ const resolverHash: Record<string, TokenType> = {
   inline: TokenType.Inline,
   type: TokenType.Type,
   struct: TokenType.Struct,
-
+  sizeof: TokenType.Sizeof,
 };

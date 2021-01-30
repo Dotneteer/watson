@@ -615,5 +615,4 @@ describe("PreprocessorLexer", () => {
     expect(next.location.startColumn).toBe(0);
     expect(next.location.endColumn).toBe(source.length - 8);
   });
-
 });

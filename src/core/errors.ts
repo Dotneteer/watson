@@ -43,7 +43,14 @@ export type ErrorCodes =
   | "P013"
   | "P014"
   | "P015"
-  | "P016";
+  | "P016"
+
+  // --- WAT# errors
+
+  | "W001"
+  | "W002"
+  | "W003"
+  | "W004";
 
 /**
  * Error message type description
@@ -70,4 +77,9 @@ export const errorMessages: ErrorText = {
   P014: "Missing #endif",
   P015: "String literal expected",
   P016: "#include error: {0}",
+
+  W001: "A comma expected",
+  W002: "An expression expected",
+  W003: "Unexpected token: {0}",
+  W004: "An identifier expected",
 };

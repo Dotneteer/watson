@@ -63,6 +63,7 @@ export enum TokenType {
   ShiftRight,
   SignedShiftRight,
   Dot,
+  Sizeof,
 
   I8,
   U8,

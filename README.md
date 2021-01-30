@@ -154,21 +154,7 @@ structField
     : identifier ":" typeSpecification
     ;
 ```
-
-
 ## Syntax Basics
-
-```
-watsharpCode
-    : globalCodeElement*
-    ;
-
-globalCodeElement
-    : watStatement
-    | watWatDeclaration
-    ;
-```
-
 
 ## Comments and whitespaces
 
@@ -428,106 +414,110 @@ blockStatement :=
 Syntax:
 
 ```
-expr :=
-    | "(" expr ")"
-    | conditionalExpr
+expr
+    : conditionalExpr
     ;
 
-conditionalExpr :=
-    orExpr ( "?" expr ":" expr )?
+conditionalExpr
+    : orExpr ( "?" expr ":" expr )?
     ;
 
-orExpr :=
-    xorExpr ( "|" xorExpr )?
+orExpr
+    : xorExpr ( "|" xorExpr )?
     ;
 
-xorExpr :=
-    andExpr ( "^" andExpr )?
+xorExpr
+    : andExpr ( "^" andExpr )?
     ;
 
-andExpr :=
-    equExpr ( "&" equExpr )?
+andExpr
+    : equExpr ( "&" equExpr )?
     ;
 
-equExpr :=
-    relExpr ( ( "==" | "===" | "!=" | "!==" ) relExpr )?
+equExpr
+    :  relExpr ( ( "==" | "!=" ) relExpr )?
     ;
 
-relExpr :=
-    shiftExpr ( ( "<" | "<=" | ">" | ">=" ) shiftExpr )?
+relExpr
+    : shiftExpr ( ( "<" | "<=" | ">" | ">=" ) shiftExpr )?
     ;
 
-shiftExpr :=
-    addExpr ( ( "<<" | ">>" | ">>>" ) addExpr )?
+shiftExpr
+    : addExpr ( ( "<<" | ">>" | ">>>" ) addExpr )?
     ;
 
-addExpr :=
-    multExpr ( ( "+" | "-" ) multExpr )?
+addExpr
+    : multExpr ( ( "+" | "-" ) multExpr )?
     ;
 
-multExpr :=
-    primaryExpr ( ( "*" | "/" | "%") primaryExpr )?
+multExpr
+    : memberOrIndexExpr ( ( "*" | "/" | "%") memberOrIndexExpr )?
     ;
 
-primaryExpr :=
+memberOrIndexExpression
+    : memberExpression
+    | indexExpression
+    ;
+ 
+memberExpression
+    : primaryExpression "." expr
+    ;
+ 
+indexExpression
+    : primaryExpression "[" expr "]"
+    ;
+
+primaryExpr
+    : "sizeof" "(" typeSpec ")"
     | funcInvocation
     | literal
     | identifier
     | unaryExpr
-    | typeCast
-    | functionDispatch
+    | "(" expr ")"
     ;
 
 functionInvocation :=
     identifier "(" expr? ("," expr)* ")"
     ;
 
-literal :=
-    | binaryLiteral
+literal
+    : binaryLiteral
     | decimalLiteral
     | hexadecimalLiteral
     | realLiteral
     ;
 
-unaryExpr :=
-    ( | "+" | "-" | "~" | "!" ) expr
+unaryExpr
+    : ( | "+" | "-" | "~" | "!" | "&" | "*" ) unaryExpr
     ;
 
-typeCast :=
-    valueType "(" expr ")"
+binaryLiteral
+    : "0b" binaryDigit ("_"? binaryDigit)*
     ;
 
-functionDispatch :=
-    typeIdentifier "[" expr "]" "(" expr? ("," expr)* ")"
+decimalLiteral
+    : decimalDigit ("_" ? decimalDigit)*
     ;
 
-binaryLiteral :=
-    "0b" ("_"? binaryDigit)+
+hexaDecimalLiteral
+    : "0x" hexaDigit ("_"? hexaDigit)*
     ;
 
-decimalLiteral :=
-    decimalDigit ("_" ? decimalDigit)*
-    ;
-
-hexaDecimalLiteral :=
-    "0x" ("_"? hexaDigit)+
-    ;
-
-realLiteral :=
-    | decimalDigit* "." decimalDigit+ (("e" | "E") ("+" | "-")? decimalDigit+)?
+realLiteral
+    : decimalDigit ("_"? decimalDigit)* "." decimalDigit+ (("e" | "E") ("+" | "-")? decimalDigit+)?
     | decimalDigit+ (("e" | "E") ("+" | "-")? decimalDigit+)
     ;
 
-binaryDigit := 
-    "0" | "1"
+binaryDigit
+    : "0" | "1"
     ;
 
-decimalDigit :=
-    "0" .. "9"
+decimalDigit
+    : "0" .. "9"
     ;
 
-hexaDigit :=
-    | "0" .. "9"
+hexaDigit
+    : "0" .. "9"
     | "a" .. "f"
     | "A" .. "F"
     ;
