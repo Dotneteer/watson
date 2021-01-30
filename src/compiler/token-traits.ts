@@ -96,9 +96,15 @@ tokenTraits.set(TokenType.Plus, { expressionStart: true, unaryOp: true });
 tokenTraits.set(TokenType.RealLiteral, { expressionStart: true });
 
 // ----------------------------------------------------------------------------
+// S
+
+tokenTraits.set(TokenType.Sizeof, { expressionStart: true });
+
+// ----------------------------------------------------------------------------
 // U
 
 tokenTraits.set(TokenType.U8, { intrinsicType: true });
 tokenTraits.set(TokenType.U16, { intrinsicType: true });
 tokenTraits.set(TokenType.U32, { intrinsicType: true });
 tokenTraits.set(TokenType.U64, { intrinsicType: true });
+

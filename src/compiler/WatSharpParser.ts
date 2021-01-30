@@ -13,15 +13,23 @@ import {
 import { Token, TokenType } from "../core/tokens";
 import { getTokenTraits, TokenTraits } from "./token-traits";
 import {
+  ArrayType,
   BinaryExpression,
   ConditionalExpression,
   Expression,
   ExpressionBase,
   Identifier,
+  IntrinsicType,
   ItemAccessExpression,
   Literal,
   MemberAccessExpression,
+  PointerType,
+  SizeOfExpression,
+  StructField,
+  StructType,
+  TypeSpec,
   UnaryExpression,
+  UnresolvedType,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 import { Address } from "cluster";
@@ -107,8 +115,7 @@ export class WatSharpParser {
    *   ;
    */
   parseExpr(): Expression | null {
-    const parsePoint = this.getParsePoint();
-    const { start, traits } = parsePoint;
+    const traits = this.getParsePoint().traits;
     if (traits.expressionStart) {
       return this.parseCondExpr();
     }
@@ -442,11 +449,11 @@ export class WatSharpParser {
    *   : memberExpression
    *   | indexExpression
    *   ;
-   * 
+   *
    * memberExpression
    *   : primaryExpression "." expr
    *   ;
-   * 
+   *
    * indexExpression
    *   : primaryExpression "[" expr "]"
    *   ;
@@ -456,9 +463,7 @@ export class WatSharpParser {
     if (!operand) {
       return null;
     }
-    let carryOn = false;
     do {
-      carryOn = false;
       const next = this._lexer.peek();
       if (next.type === TokenType.Dot) {
         // --- Process member access
@@ -478,7 +483,6 @@ export class WatSharpParser {
           next,
           idToken
         );
-        carryOn = true;
       } else if (next.type === TokenType.LSquare) {
         // --- Process index access
         this._lexer.get();
@@ -493,9 +497,10 @@ export class WatSharpParser {
           next,
           this._lexer.peek()
         );
-        carryOn = true;
+      } else {
+        break;
       }
-    } while (carryOn);
+    } while (true);
     return operand;
   }
 
@@ -505,7 +510,7 @@ export class WatSharpParser {
    *   ;
    */
   private parseUnaryExpr(): Expression | null {
-    const { start, traits} = this.getParsePoint();
+    const { start, traits } = this.getParsePoint();
     if (!traits.unaryOp) {
       return this.parsePrimaryExpr();
     }
@@ -539,8 +544,13 @@ export class WatSharpParser {
     const start = this._lexer.peek();
     switch (start.type) {
       case TokenType.Sizeof:
-        // TODO: Parse sizeof
-        return null;
+        this._lexer.get();
+        this.expectToken(TokenType.LParent);
+        const typeSpec = this.parseTypeSpecification();
+        this.expectToken(TokenType.RParent);
+        return this.createExpressionNode<SizeOfExpression>("SizeOfExpression", {
+          spec: typeSpec
+        }, start, start);
 
       case TokenType.LParent:
         this._lexer.get();
@@ -715,6 +725,145 @@ export class WatSharpParser {
   }
 
   // ==========================================================================
+  // Type specification parsing
+
+  /**
+   * typeSpecification
+   *   : primaryTypeSpecification ("[" expr "]")*
+   *   ;
+   */
+  parseTypeSpecification(): TypeSpec | null {
+    let typeSpec = this.parsePrimaryTypeSpec();
+    if (!typeSpec) {
+      return null;
+    }
+    do {
+      const next = this._lexer.peek();
+      if (next.type !== TokenType.LSquare) {
+        break;
+      }
+      this._lexer.get();
+      const size = this.parseExpr();
+      this.expectToken(TokenType.RSquare);
+      typeSpec = this.createTypeSpecNode<ArrayType>(
+        "Array",
+        {
+          spec: typeSpec,
+          size,
+        },
+        next,
+        next
+      );
+    } while (true);
+    return typeSpec;
+  }
+
+  /**
+   * primaryTypeSpecification
+   *   : instrinsicType
+   *   | identifier
+   *   | "*" primaryTypeSpecification
+   *   | "(" typeSpecification ")"
+   *   | structType
+   *   ;
+   */
+  private parsePrimaryTypeSpec(): TypeSpec | null {
+    const { start, traits } = this.getParsePoint();
+    if (traits.intrinsicType) {
+      this._lexer.get();
+      return this.createTypeSpecNode<IntrinsicType>(
+        "Intrinsic",
+        {
+          underlying: TokenType[start.type].toLowerCase(),
+        },
+        start,
+        start
+      );
+    }
+    switch (start.type) {
+      case TokenType.Identifier:
+        this._lexer.get();
+        return this.createTypeSpecNode<UnresolvedType>(
+          "UnresolvedType",
+          {
+            name: start.text,
+          },
+          start,
+          start
+        );
+
+      case TokenType.Asterisk:
+        this._lexer.get();
+        return this.createTypeSpecNode<PointerType>(
+          "Pointer",
+          {
+            spec: this.parsePrimaryTypeSpec(),
+          },
+          start,
+          start
+        );
+
+      case TokenType.LParent:
+        this._lexer.get();
+        const typeSpec = this.parseTypeSpecification();
+        this.expectToken(TokenType.RParent);
+        return typeSpec;
+
+      case TokenType.Struct:
+        return this.parseStructType();
+    }
+    return null;
+  }
+
+  /**
+   * structType
+   *   : "struct" "{" fieldDef ("," fieldDef)* "}"
+   *   ;
+   
+   * fieldDef
+   *   : typeSpecification identifier
+   *   ;
+   */
+  private parseStructType(): TypeSpec | null {
+    const start = this._lexer.get();
+    this.expectToken(TokenType.LBrace);
+    const struct = this.createTypeSpecNode<StructType>(
+      "Struct",
+      {
+        fields: [],
+      },
+      start,
+      start
+    );
+    while (true) {
+      // --- Get field type
+      const fieldSpec = this.parseTypeSpecification();
+      const id = this._lexer.peek();
+      if (id.type !== TokenType.Identifier) {
+        this.reportError("W004");
+        return null;
+      }
+      this._lexer.get();
+      struct.fields.push(
+        this.createTypeSpecNode<StructField>(
+          "StructField",
+          {
+            id: id.text,
+            spec: fieldSpec,
+          },
+          id,
+          id
+        )
+      );
+      if (!this.skipToken(TokenType.Comma)) {
+        break;
+      }
+    }
+    this.expectToken(TokenType.RBrace);
+    return struct;
+  }
+
+  // ==========================================================================
   // Default include file handling
 
   /**
@@ -793,7 +942,7 @@ export class WatSharpParser {
    * @param startToken The token that starts the expression
    * @param endToken The token that ends the expression
    */
-  private createExpressionNode<T extends ExpressionBase>(
+  private createExpressionNode<T extends Expression>(
     type: Expression["type"],
     stump: any,
     startToken: Token,
@@ -801,7 +950,33 @@ export class WatSharpParser {
   ): T {
     const startPosition = startToken.location.startPos;
     const endPosition = endToken.location.startPos;
-    return Object.assign({}, stump, <ExpressionBase>{
+    return Object.assign({}, stump, <Expression>{
+      type,
+      startPosition,
+      endPosition,
+      startLine: startToken.location.startLine,
+      startColumn: startToken.location.startColumn,
+      endLine: endToken.location.endLine,
+      endColumn: endToken.location.startColumn,
+    });
+  }
+
+  /**
+   * Creates an expression node
+   * @param type Expression type
+   * @param stump Stump properties
+   * @param startToken The token that starts the expression
+   * @param endToken The token that ends the expression
+   */
+  private createTypeSpecNode<T extends TypeSpec>(
+    type: TypeSpec["type"],
+    stump: any,
+    startToken: Token,
+    endToken: Token
+  ): T {
+    const startPosition = startToken.location.startPos;
+    const endPosition = endToken.location.startPos;
+    return Object.assign({}, stump, <TypeSpec>{
       type,
       startPosition,
       endPosition,

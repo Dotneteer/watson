@@ -55,6 +55,7 @@ export type TypeSpec =
   | PointerType
   | ArrayType
   | StructType
+  | StructField
   | UnresolvedType;
 
 /**
@@ -72,10 +73,13 @@ export type Instrinsics =
   | "f32"
   | "u32";
 
+export interface TypeSpaceBase extends BaseNode {
+}
+
 /**
  * Instrinsic type specification
  */
-export interface IntrinsicType extends BaseNode {
+export interface IntrinsicType extends TypeSpaceBase {
   type: "Intrinsic";
   underlying: Instrinsics;
 }
@@ -83,7 +87,7 @@ export interface IntrinsicType extends BaseNode {
 /**
  * Pointer type specification
  */
-export interface PointerType extends BaseNode {
+export interface PointerType extends TypeSpaceBase {
   type: "Pointer";
   spec: TypeSpec;
 }
@@ -91,16 +95,16 @@ export interface PointerType extends BaseNode {
 /**
  * Array type specification
  */
-export interface ArrayType extends BaseNode {
+export interface ArrayType extends TypeSpaceBase {
   type: "Array";
   spec: TypeSpec;
-  size: number;
+  size: Expression;
 }
 
 /**
  * Struct type specification
  */
-export interface StructType extends BaseNode {
+export interface StructType extends TypeSpaceBase {
   type: "Struct";
   fields: StructField[];
 }
@@ -108,7 +112,7 @@ export interface StructType extends BaseNode {
 /**
  * Describes a structure field
  */
-export interface StructField extends BaseNode {
+export interface StructField extends TypeSpaceBase {
   type: "StructField";
   id: string;
   spec: TypeSpec;
@@ -117,7 +121,7 @@ export interface StructField extends BaseNode {
 /**
  * Unresolved type specification
  */
-export interface UnresolvedType extends BaseNode {
+export interface UnresolvedType extends TypeSpaceBase {
   type: "UnresolvedType";
   name: string;
 }

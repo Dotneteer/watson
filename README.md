@@ -123,10 +123,10 @@ typeDeclaration
     ;
 
 typeSpecification
-    : simpleType
-    | pointerType
-    | arrayType
+    : arrayType
     | structType
+    | pointerType
+    | simpleType
     | "(" typeSpecification ")"
     ;
 

@@ -8,6 +8,7 @@ import {
   Identifier,
   ItemAccessExpression,
   MemberAccessExpression,
+  SizeOfExpression,
   UnaryExpression,
 } from "../../src/compiler/source-tree";
 
@@ -729,5 +730,28 @@ describe("WatSharpParser - expressions", () => {
       expect(binExpr.alternate.type).toBe(c.r);
     });
   });
+
+  const sizeofCases = [
+    { src: "sizeof(u32)", spec: "Intrinsic" },
+    { src: "sizeof(myStruct)", spec: "UnresolvedType" },
+    { src: "sizeof(*i64)", spec: "Pointer" },
+    { src: "sizeof(*i64[2])", spec: "Array" },
+    { src: "sizeof(struct{u8 l})", spec: "Struct" },
+  ];
+  sizeofCases.forEach((c) => {
+    it(`sizeof: ${c.src}`, () => {
+      // --- Arrange
+      const wParser = new WatSharpParser(c.src);
+
+      // --- Act
+      const expr = wParser.parseExpr();
+
+      // --- Assert
+      expect(expr.type).toBe("SizeOfExpression");
+      const sizeof = expr as SizeOfExpression;
+      expect(sizeof.spec.type).toBe(c.spec);
+    });
+  });
+
 
 });
