@@ -50,7 +50,11 @@ export type ErrorCodes =
   | "W001"
   | "W002"
   | "W003"
-  | "W004";
+  | "W004"
+  | "W005"
+  | "W006"
+  | "W007"
+  | "W008";
 
 /**
  * Error message type description
@@ -82,4 +86,8 @@ export const errorMessages: ErrorText = {
   W002: "An expression expected",
   W003: "Unexpected token: {0}",
   W004: "An identifier expected",
+  W005: "An intrinsic type specifier expected but {0} received.",
+  W006: "Missing semicolon closing the declaration",
+  W007: "Expected '=', but received '{0}'",
+  W008: "Type specification expected",
 };
