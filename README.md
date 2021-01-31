@@ -303,6 +303,15 @@ Variable can be one of these types:
 - Local variables of WebAssembly functions
 - Memory variables. They are stored in the linear memory of WebAssembly
 
+### Globals
+
+```
+globalDeclaration
+    : "global" intrinsicType identifier ("=" expr)? ";"
+    ;
+```
+
+
 Syntax:
 
 ```

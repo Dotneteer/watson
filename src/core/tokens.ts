@@ -102,6 +102,10 @@ export enum TokenType {
   Min,
   Max,
   CopySign,
+
+  Const,
+  Global,
+  
 }
 
 /**

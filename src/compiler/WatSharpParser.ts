@@ -17,9 +17,11 @@ import {
   BinaryExpression,
   BuiltInFunctionInvocationExpression,
   ConditionalExpression,
+  ConstDeclaration,
+  Declaration,
   Expression,
-  ExpressionBase,
   FunctionInvocationExpression,
+  GlobalDeclaration,
   Identifier,
   IntrinsicType,
   ItemAccessExpression,
@@ -30,12 +32,12 @@ import {
   StructField,
   StructType,
   TypeCastExpression,
+  TypeDeclaration,
   TypeSpec,
   UnaryExpression,
   UnresolvedType,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
-import { Address } from "cluster";
 
 export class WatSharpParser {
   // --- Use this preprocessor
@@ -51,6 +53,9 @@ export class WatSharpParser {
 
   // --- Use this lexer
   private _lexer: WatSharpLexer | null = null;
+
+  // --- Declarations parsed
+  private readonly _declarations = new Map<string, Declaration>();
 
   constructor(
     public readonly source: string,
@@ -91,6 +96,13 @@ export class WatSharpParser {
   }
 
   /**
+   * Gets the declarations of the WAT# program
+   */
+  get declarations(): Map<string, Declaration> {
+    return this._declarations;
+  }
+
+  /**
    * Preprocesses the source files
    */
   preprocessFiles(): void {
@@ -105,6 +117,173 @@ export class WatSharpParser {
     this._lexer = new WatSharpLexer(
       new MultiChunkInputStream(this._sourceChunks)
     );
+  }
+
+  /**
+   * Parse the entire WAT# program
+   */
+  parseProgram(): void {
+    while (this._lexer.peek().type !== TokenType.Eof) {
+      try {
+        this.parseDeclaration();
+      } catch {
+        const lastErr = this._parseErrors[this._parseErrors.length - 1];
+        // --- Skip the remaining part of the declaration
+        if (lastErr?.code !== "W006") {
+          let token: Token;
+          while (
+            (token = this._lexer.get()).type !== TokenType.Eof &&
+            token.type !== TokenType.Semicolon &&
+            token.type !== TokenType.RBrace
+          );
+        }
+      }
+    }
+  }
+
+  // ==========================================================================
+  // Declarations
+
+  /**
+   * declaration
+   *   : constDeclaration
+   *   ;
+   */
+  private parseDeclaration(): void {
+    const next = this._lexer.peek();
+    switch (next.type) {
+      case TokenType.Eof:
+        return;
+
+      case TokenType.Const:
+        this.parseConstDeclaration();
+        return;
+
+      case TokenType.Global:
+        this.parseGlobalDeclaration();
+        return;
+
+      case TokenType.Type:
+        this.parseTypeDeclaration();
+        return;
+
+      default:
+        this.reportError("W003", next, next.text);
+        return;
+    }
+  }
+
+  /**
+   * constDeclaration
+   *   : "const" intrinsicType identifier "=" expr ";"
+   *   ;
+   */
+  private parseConstDeclaration(): void {
+    const keyword = this._lexer.get();
+    const { start, traits } = this.getParsePoint();
+    if (!traits.intrinsicType) {
+      this.reportError("W005", start, start.text);
+      return;
+    }
+    this._lexer.get();
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    this.expectToken(TokenType.Asgn, "W007");
+    const expr = this.parseExpr();
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<ConstDeclaration>(
+      "ConstDeclaration",
+      {
+        name: id.text,
+        underlyingType: TokenType[start.type].toLowerCase(),
+        expr,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * globalDeclaration
+   *   : "global" intrinsicType identifier ("=" expr)? ";"
+   *   ;
+   */
+  private parseGlobalDeclaration(): void {
+    const keyword = this._lexer.get();
+    const { start, traits } = this.getParsePoint();
+    if (!traits.intrinsicType) {
+      this.reportError("W005", start, start.text);
+      return;
+    }
+    this._lexer.get();
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    let initExpr: Expression | undefined;
+    if (this._lexer.peek().type === TokenType.Asgn) {
+      this._lexer.get();
+      initExpr = this.parseExpr();
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<GlobalDeclaration>(
+      "GlobalDeclaration",
+      {
+        name: id.text,
+        underlyingType: TokenType[start.type].toLowerCase(),
+        initExpr,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * typeDeclaration
+   *  : "type" identifier "=" typeSpecification ";"
+   *  ;
+   */
+  private parseTypeDeclaration(): void {
+    const keyword = this._lexer.get();
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    this.expectToken(TokenType.Asgn, "W007");
+    const spec = this.parseTypeSpecification();
+    if (spec === null) {
+      this.reportError("W008");
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<TypeDeclaration>(
+      "TypeDeclaration",
+      {
+        name: id.text,
+        spec,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * Adds a new declaration to the existing ones
+   * @param type Declaration type
+   * @param stump Declaration to add
+   * @param startToken: Start token
+   * @param endToken: End token
+   */
+  private addDeclaration<T extends Declaration>(
+    type: Declaration["type"],
+    stump: any,
+    startToken: Token,
+    endToken: Token
+  ): T {
+    const updatedDecl = Object.assign({}, stump, <Declaration>{
+      type,
+      startPosition: startToken.location.startPos,
+      endPosition: endToken.location.endPos,
+      startLine: startToken.location.startLine,
+      startColumn: startToken.location.startColumn,
+      endLine: endToken.location.endLine,
+      endColumn: endToken.location.startColumn,
+      order: this._declarations.size,
+    });
+    this._declarations.set(stump.name, updatedDecl);
+    return updatedDecl;
   }
 
   // ==========================================================================
@@ -987,14 +1166,14 @@ export class WatSharpParser {
     type: TokenType,
     errorCode?: ErrorCodes,
     allowEof?: boolean
-  ) {
+  ): Token | null {
     const next = this._lexer.peek();
     if (next.type === type || (allowEof && next.type === TokenType.Eof)) {
       // --- Skip the expected token
-      this._lexer.get();
-      return;
+      return this._lexer.get();
     }
     this.reportError(errorCode ?? "W003", next, next.text);
+    return null;
   }
 
   /**

@@ -731,9 +731,12 @@ const resolverHash: Record<string, TokenType> = {
   copysign: TokenType.CopySign,
 
 
-  "function": TokenType.Function,
   inline: TokenType.Inline,
-  type: TokenType.Type,
   struct: TokenType.Struct,
   sizeof: TokenType.Sizeof,
+
+  const: TokenType.Const,
+  global: TokenType.Global,
+  type: TokenType.Type,
+  "function": TokenType.Function,
 };

@@ -2,7 +2,7 @@
  * This type represents the discriminated union of all WAT# source tree
  * node types
  */
-export type Node = TypeSpec | Expression | StructField;
+export type Node = TypeSpec | Expression | Declaration;
 
 /**
  * This class represents the root class of all source tree nodes
@@ -73,13 +73,12 @@ export type Instrinsics =
   | "f32"
   | "u32";
 
-export interface TypeSpaceBase extends BaseNode {
-}
+export interface TypeSpecBase extends BaseNode {}
 
 /**
  * Instrinsic type specification
  */
-export interface IntrinsicType extends TypeSpaceBase {
+export interface IntrinsicType extends TypeSpecBase {
   type: "Intrinsic";
   underlying: Instrinsics;
 }
@@ -87,7 +86,7 @@ export interface IntrinsicType extends TypeSpaceBase {
 /**
  * Pointer type specification
  */
-export interface PointerType extends TypeSpaceBase {
+export interface PointerType extends TypeSpecBase {
   type: "Pointer";
   spec: TypeSpec;
 }
@@ -95,7 +94,7 @@ export interface PointerType extends TypeSpaceBase {
 /**
  * Array type specification
  */
-export interface ArrayType extends TypeSpaceBase {
+export interface ArrayType extends TypeSpecBase {
   type: "Array";
   spec: TypeSpec;
   size: Expression;
@@ -104,7 +103,7 @@ export interface ArrayType extends TypeSpaceBase {
 /**
  * Struct type specification
  */
-export interface StructType extends TypeSpaceBase {
+export interface StructType extends TypeSpecBase {
   type: "Struct";
   fields: StructField[];
 }
@@ -112,7 +111,7 @@ export interface StructType extends TypeSpaceBase {
 /**
  * Describes a structure field
  */
-export interface StructField extends TypeSpaceBase {
+export interface StructField extends TypeSpecBase {
   type: "StructField";
   id: string;
   spec: TypeSpec;
@@ -121,7 +120,7 @@ export interface StructField extends TypeSpaceBase {
 /**
  * Unresolved type specification
  */
-export interface UnresolvedType extends TypeSpaceBase {
+export interface UnresolvedType extends TypeSpecBase {
   type: "UnresolvedType";
   name: string;
 }
@@ -312,4 +311,46 @@ export interface Identifier extends ExpressionBase {
 export interface Literal extends ExpressionBase {
   type: "Literal";
   value: number | BigInt;
+}
+
+// ============================================================================
+// Declarations
+
+export type Declaration =
+  | ConstDeclaration
+  | GlobalDeclaration
+  | TypeDeclaration;
+
+/**
+ * Represents the base information for all declaration
+ */
+export interface DeclarationBase extends BaseNode {
+  name: string;
+  order?: number;
+}
+
+/**
+ * Constant declaration
+ */
+export interface ConstDeclaration extends DeclarationBase {
+  type: "ConstDeclaration";
+  underlyingType: Instrinsics;
+  expr: Expression;
+}
+
+/**
+ * Global declaration
+ */
+export interface GlobalDeclaration extends DeclarationBase {
+  type: "GlobalDeclaration";
+  underlyingType: Instrinsics;
+  initExpr?: Expression;
+}
+
+/**
+ * Type declaration
+ */
+export interface TypeDeclaration extends DeclarationBase {
+  type: "TypeDeclaration";
+  spec: TypeSpec;
 }
