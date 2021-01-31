@@ -1,7 +1,7 @@
 import "mocha";
 import * as expect from "expect";
 
-import { InputStream } from "../../src/core/InputStream";
+import { MultiChunkInputStream } from "../../src/core/MultiChunkInputStream";
 import { WatSharpLexer } from "../../src/compiler/WatSharpLexer";
 import { TokenType } from "../../src/core/tokens";
 
@@ -9,6 +9,7 @@ describe("WatSharpLexer - literal", () => {
   const literalCases = [
     { src: "0", exp: TokenType.DecimalLiteral },
     { src: "1", exp: TokenType.DecimalLiteral },
+    { src: "2", exp: TokenType.DecimalLiteral },
     { src: "3", exp: TokenType.DecimalLiteral },
     { src: "4", exp: TokenType.DecimalLiteral },
     { src: "5", exp: TokenType.DecimalLiteral },
@@ -74,7 +75,7 @@ describe("WatSharpLexer - literal", () => {
   literalCases.forEach((c) => {
     it(`Token ${c.src} #1`, () => {
       const source = c.src;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -93,7 +94,7 @@ describe("WatSharpLexer - literal", () => {
 
     it(`Token ${c.src} #2`, () => {
       const source = ` \t \r ${c.src}`;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -112,7 +113,7 @@ describe("WatSharpLexer - literal", () => {
 
     it(`Token ${c.src} #3`, () => {
       const source = ` /* c */ ${c.src}`;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -131,7 +132,7 @@ describe("WatSharpLexer - literal", () => {
 
     it(`Token ${c.src} #4`, () => {
       const source = `${c.src} \t \r `;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -150,7 +151,7 @@ describe("WatSharpLexer - literal", () => {
 
     it(`Token ${c.src} #5`, () => {
       const source = `${c.src} // c`;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -203,7 +204,7 @@ describe("WatSharpLexer - literal", () => {
   errorCases.forEach((c) => {
     it(`Token error ${c} #1`, () => {
       const source = c;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();
@@ -258,7 +259,7 @@ describe("WatSharpLexer - literal", () => {
     it(`String #${idx + 1}: ${c}`, () => {
       // --- Arrange
       const source = c;
-      const wLexer = new WatSharpLexer(new InputStream(source));
+      const wLexer = new WatSharpLexer(new MultiChunkInputStream(source));
 
       // --- Act
       const next = wLexer.get();

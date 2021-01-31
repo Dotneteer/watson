@@ -63,6 +63,7 @@ export enum TokenType {
   ShiftRight,
   SignedShiftRight,
   Dot,
+  Sizeof,
 
   I8,
   U8,
@@ -74,12 +75,33 @@ export enum TokenType {
   U64,
   F32,
   F64,
+  Void,
 
   DecimalLiteral,
   HexadecimalLiteral,
   BinaryLiteral,
   RealLiteral,
   StringLiteral,
+
+  Function,
+  Inline,
+  Export, 
+  Type,
+  Struct,
+
+  Clz, 
+  Ctz,
+  PopCnt,
+  Abs,
+  Neg,
+  Ceil,
+  Floor,
+  Trunc,
+  Nearest,
+  Sqrt,
+  Min,
+  Max,
+  CopySign,
 }
 
 /**
