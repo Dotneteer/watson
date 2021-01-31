@@ -89,6 +89,19 @@ export enum TokenType {
   Type,
   Struct,
 
+  Clz, 
+  Ctz,
+  PopCnt,
+  Abs,
+  Neg,
+  Ceil,
+  Floor,
+  Trunc,
+  Nearest,
+  Sqrt,
+  Min,
+  Max,
+  CopySign,
 }
 
 /**

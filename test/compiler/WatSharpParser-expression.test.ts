@@ -4,11 +4,14 @@ import * as expect from "expect";
 import { WatSharpParser } from "../../src/compiler/WatSharpParser";
 import {
   BinaryExpression,
+  BuiltInFunctionInvocationExpression,
   ConditionalExpression,
+  FunctionInvocationExpression,
   Identifier,
   ItemAccessExpression,
   MemberAccessExpression,
   SizeOfExpression,
+  TypeCastExpression,
   UnaryExpression,
 } from "../../src/compiler/source-tree";
 
@@ -709,10 +712,30 @@ describe("WatSharpParser - expressions", () => {
   const condCases = [
     { src: "3 ? a : b", c: "Literal", l: "Identifier", r: "Identifier" },
     { src: "b ? a : 3", c: "Identifier", l: "Identifier", r: "Literal" },
-    { src: "c < d ? a.b : 3", c: "BinaryExpression", l: "MemberAccess", r: "Literal" },
-    { src: "c < d ? a.b[c] : 3", c: "BinaryExpression", l: "ItemAccess", r: "Literal" },
-    { src: "+4 ? a|b : c", c: "UnaryExpression", l: "BinaryExpression", r: "Identifier" },
-    { src: "b[3] ? a : (b|c)", c: "ItemAccess", l: "Identifier", r: "BinaryExpression" },
+    {
+      src: "c < d ? a.b : 3",
+      c: "BinaryExpression",
+      l: "MemberAccess",
+      r: "Literal",
+    },
+    {
+      src: "c < d ? a.b[c] : 3",
+      c: "BinaryExpression",
+      l: "ItemAccess",
+      r: "Literal",
+    },
+    {
+      src: "+4 ? a|b : c",
+      c: "UnaryExpression",
+      l: "BinaryExpression",
+      r: "Identifier",
+    },
+    {
+      src: "b[3] ? a : (b|c)",
+      c: "ItemAccess",
+      l: "Identifier",
+      r: "BinaryExpression",
+    },
   ];
   condCases.forEach((c) => {
     it(`condExpr: ${c.src}`, () => {
@@ -753,5 +776,142 @@ describe("WatSharpParser - expressions", () => {
     });
   });
 
+  const typeCastCases = [
+    { src: "i8(12)", name: "i8", arg: "Literal" },
+    { src: "i8(a)", name: "i8", arg: "Identifier" },
+    { src: "sbyte(12)", name: "i8", arg: "Literal" },
+    { src: "sbyte(a)", name: "i8", arg: "Identifier" },
+    { src: "u8(12)", name: "u8", arg: "Literal" },
+    { src: "u8(a)", name: "u8", arg: "Identifier" },
+    { src: "byte(12)", name: "u8", arg: "Literal" },
+    { src: "byte(a)", name: "u8", arg: "Identifier" },
+    { src: "i16(12)", name: "i16", arg: "Literal" },
+    { src: "i16(a)", name: "i16", arg: "Identifier" },
+    { src: "short(12)", name: "i16", arg: "Literal" },
+    { src: "short(a)", name: "i16", arg: "Identifier" },
+    { src: "u16(12)", name: "u16", arg: "Literal" },
+    { src: "u16(a)", name: "u16", arg: "Identifier" },
+    { src: "ushort(12)", name: "u16", arg: "Literal" },
+    { src: "ushort(a)", name: "u16", arg: "Identifier" },
+    { src: "i32(12)", name: "i32", arg: "Literal" },
+    { src: "i32(a)", name: "i32", arg: "Identifier" },
+    { src: "int(12)", name: "i32", arg: "Literal" },
+    { src: "int(a)", name: "i32", arg: "Identifier" },
+    { src: "u32(12)", name: "u32", arg: "Literal" },
+    { src: "u32(a)", name: "u32", arg: "Identifier" },
+    { src: "uint(12)", name: "u32", arg: "Literal" },
+    { src: "uint(a)", name: "u32", arg: "Identifier" },
+    { src: "i64(12)", name: "i64", arg: "Literal" },
+    { src: "i64(a)", name: "i64", arg: "Identifier" },
+    { src: "long(12)", name: "i64", arg: "Literal" },
+    { src: "long(a)", name: "i64", arg: "Identifier" },
+    { src: "u64(12)", name: "u64", arg: "Literal" },
+    { src: "u64(a)", name: "u64", arg: "Identifier" },
+    { src: "ulong(12)", name: "u64", arg: "Literal" },
+    { src: "ulong(a)", name: "u64", arg: "Identifier" },
+    { src: "f32(12)", name: "f32", arg: "Literal" },
+    { src: "f32(a)", name: "f32", arg: "Identifier" },
+    { src: "float(12)", name: "f32", arg: "Literal" },
+    { src: "float(a)", name: "f32", arg: "Identifier" },
+    { src: "f64(12)", name: "f64", arg: "Literal" },
+    { src: "f64(a)", name: "f64", arg: "Identifier" },
+    { src: "double(12)", name: "f64", arg: "Literal" },
+    { src: "double(a)", name: "f64", arg: "Identifier" },
+  ];
+  typeCastCases.forEach((c) => {
+    it(`type cast: ${c.src}`, () => {
+      // --- Arrange
+      const wParser = new WatSharpParser(c.src);
 
+      // --- Act
+      const expr = wParser.parseExpr();
+
+      // --- Assert
+      expect(expr.type).toBe("TypeCast");
+      const cast = expr as TypeCastExpression;
+      expect(cast.name).toBe(c.name);
+      expect(cast.operand.type).toBe(c.arg);
+    });
+  });
+
+  it("Function invocation #1", () => {
+    // --- Arrange
+    const source = "myFunc()";
+    const wParser = new WatSharpParser(source);
+
+    // --- Act
+    const expr = wParser.parseExpr();
+
+    // --- Assert
+    expect(expr.type).toBe("FunctionInvocation");
+    const cast = expr as FunctionInvocationExpression;
+    expect(cast.name).toBe("myFunc");
+    expect(cast.arguments.length).toBe(0);
+  });
+
+  it("Function invocation #2", () => {
+    // --- Arrange
+    const source = "myFunc(123)";
+    const wParser = new WatSharpParser(source);
+
+    // --- Act
+    const expr = wParser.parseExpr();
+
+    // --- Assert
+    expect(expr.type).toBe("FunctionInvocation");
+    const cast = expr as FunctionInvocationExpression;
+    expect(cast.name).toBe("myFunc");
+    expect(cast.arguments.length).toBe(1);
+    let arg = cast.arguments[0];
+    expect(arg.type).toBe("Literal");
+  });
+
+  it("Function invocation #3", () => {
+    // --- Arrange
+    const source = "myFunc(123, b)";
+    const wParser = new WatSharpParser(source);
+
+    // --- Act
+    const expr = wParser.parseExpr();
+
+    // --- Assert
+    expect(expr.type).toBe("FunctionInvocation");
+    const cast = expr as FunctionInvocationExpression;
+    expect(cast.name).toBe("myFunc");
+    expect(cast.arguments.length).toBe(2);
+    expect(cast.arguments[0].type).toBe("Literal");
+    expect(cast.arguments[1].type).toBe("Identifier");
+  });
+
+  const builtInFunc1Cases = [
+    { src: "abs(12)", name: "abs" },
+    { src: "clz(12)", name: "clz" },
+    { src: "ctz(12)", name: "ctz" },
+    { src: "popcnt(12)", name: "popcnt" },
+    { src: "neg(12)", name: "neg" },
+    { src: "ceil(12)", name: "ceil" },
+    { src: "floor(12)", name: "floor" },
+    { src: "trunc(12)", name: "trunc" },
+    { src: "nearest(12)", name: "nearest" },
+    { src: "sqrt(12)", name: "sqrt" },
+    { src: "min(12)", name: "min" },
+    { src: "max(12)", name: "max" },
+    { src: "copysign(12)", name: "copysign" },
+  ];
+  builtInFunc1Cases.forEach((c) => {
+    it(`built-in function: ${c.src}`, () => {
+      // --- Arrange
+      const wParser = new WatSharpParser(c.src);
+
+      // --- Act
+      const expr = wParser.parseExpr();
+
+      // --- Assert
+      expect(expr.type).toBe("BuiltInFunctionInvocation");
+      const cast = expr as BuiltInFunctionInvocationExpression;
+      expect(cast.name).toBe(c.name);
+      expect(cast.arguments.length).toBe(1);
+      expect(cast.arguments[0].type).toBe("Literal");
+    });
+  });
 });

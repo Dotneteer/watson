@@ -15,9 +15,11 @@ import { getTokenTraits, TokenTraits } from "./token-traits";
 import {
   ArrayType,
   BinaryExpression,
+  BuiltInFunctionInvocationExpression,
   ConditionalExpression,
   Expression,
   ExpressionBase,
+  FunctionInvocationExpression,
   Identifier,
   IntrinsicType,
   ItemAccessExpression,
@@ -27,6 +29,7 @@ import {
   SizeOfExpression,
   StructField,
   StructType,
+  TypeCastExpression,
   TypeSpec,
   UnaryExpression,
   UnresolvedType,
@@ -541,16 +544,41 @@ export class WatSharpParser {
    *   ;
    */
   private parsePrimaryExpr(): Expression | null {
-    const start = this._lexer.peek();
+    const { start, traits } = this.getParsePoint();
+    if (traits.intrinsicType) {
+      return this.parseTypeCastExpression();
+    }
+    if (traits.builtInFunc) {
+      this._lexer.get();
+      const args = this.parseFunctionArgs();
+      if (!args) {
+        return null;
+      }
+      return this.createExpressionNode<BuiltInFunctionInvocationExpression>(
+        "BuiltInFunctionInvocation",
+        {
+          name: start.text,
+          arguments: args,
+        },
+        start,
+        start
+      );
+    }
+
     switch (start.type) {
       case TokenType.Sizeof:
         this._lexer.get();
         this.expectToken(TokenType.LParent);
         const typeSpec = this.parseTypeSpecification();
         this.expectToken(TokenType.RParent);
-        return this.createExpressionNode<SizeOfExpression>("SizeOfExpression", {
-          spec: typeSpec
-        }, start, start);
+        return this.createExpressionNode<SizeOfExpression>(
+          "SizeOfExpression",
+          {
+            spec: typeSpec,
+          },
+          start,
+          start
+        );
 
       case TokenType.LParent:
         this._lexer.get();
@@ -564,8 +592,19 @@ export class WatSharpParser {
       case TokenType.Identifier:
         const idToken = this._lexer.get();
         if (this._lexer.peek().type === TokenType.LParent) {
-          // TODO: Implement function invocation
-          return null;
+          const args = this.parseFunctionArgs();
+          if (!args) {
+            return null;
+          }
+          return this.createExpressionNode<FunctionInvocationExpression>(
+            "FunctionInvocation",
+            {
+              name: idToken.text,
+              arguments: args,
+            },
+            idToken,
+            idToken
+          );
         }
         return this.createExpressionNode<Identifier>(
           "Identifier",
@@ -601,6 +640,57 @@ export class WatSharpParser {
         return this.parseUnaryExpr();
     }
     return null;
+  }
+
+  /**
+   * typeCastExpr
+   *   : intrinsicType "(" expr ")"
+   */
+  private parseTypeCastExpression(): Expression | null {
+    const start = this._lexer.get();
+    this.expectToken(TokenType.LParent);
+    const expr = this.parseExpr();
+    if (!expr) {
+      this.reportError("W002");
+      return null;
+    }
+    this.expectToken(TokenType.RParent);
+    return this.createExpressionNode<TypeCastExpression>(
+      "TypeCast",
+      {
+        name: TokenType[start.type].toLowerCase(),
+        operand: expr,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * functionArgsExpr
+   *   : "(" expr? ("," expr)* )"
+   *   ;
+   */
+  private parseFunctionArgs(): Expression[] | null {
+    const args: Expression[] = [];
+    this.expectToken(TokenType.LParent);
+    do {
+      const { traits } = this.getParsePoint();
+      if (!traits.expressionStart) {
+        break;
+      }
+      const expr = this.parseExpr();
+      if (!expr) {
+        this.reportError("W002");
+        return null;
+      }
+      args.push(expr);
+      if (!this.skipToken(TokenType.Comma)) {
+        break;
+      }
+    } while (true);
+    this.expectToken(TokenType.RParent);
+    return args;
   }
 
   /**

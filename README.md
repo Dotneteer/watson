@@ -26,6 +26,28 @@ These are the steps the WAT# transpiler generates its output:
 3. **Semantic analysis**. The compiler checks if the code semantics satisfy the language specification and prepare it for code emission.
 4. **Code emission**. The compiler generates the WAT output.
 
+## Comments and Whitespaces
+
+The space, tabulator, carriage return (0x0d) and new line (0x0a) characters are all whitespaces. 
+
+WA# supports two types of comments:
+
+Block comments can be multi-line but cannot nested into each other.
+
+```
+blockComment
+    : "/*" any* "*/"
+    ;
+```
+
+End-of-line comments can start at any point of the current line and comple with the end of the line
+
+```
+eolComment
+    : ( "//" | ";;" ) (^newLine)*
+    ;
+```
+
 ## WAT# Program Structure
 
 WAT# follows the semantics of WebAssembly. The result of the WAT# compilation is a WebAssembly module that contains module fields (global declarations, type declarations, memory description, tables, data elements, functions, etc.). One particular field type is a function, which may declare parameters, result types, local variables, and instrcutions.
@@ -71,6 +93,111 @@ exportSpecification
     - `variableDeclaration`: You can define variables that are stored in the linear memory of WebAssembly.
     - `jumpTableDeclaration`: WAT# provides programming constructs that allow indirect function calls based on the `table` concept of WebAssembly. Jump tables define the tables used for an indirect call.
     - `functionDeclaration`: The transpiler creates a WebAssembly function from each WAT# function. Thus, functions can have parameters, an optional result type, and local declarations. Functions are the only constructs that contain statements.
+
+## Preprocessor directives
+
+When you start the compilation of a WA# code, you can pass predefined symbols to the compiler. Those symbols can be used in conditional preprocessor directives. WA# supports these preprocessor directives:
+
+- `#define`: Defines a symbol
+- `#undef`: Removes a symbol (is if it were not defined)
+- `#if`: Checks if condition is satisfied
+- `#else`: A branch for an unsatisfied condition
+- `#elseif`: A branch for an alternative test
+- `#endif`: End of an `#if` condition
+- `#include`: includes the contents of another file in the compilation
+
+A directive must start at the first non-whitespace character of a source code line. Directives cannot contain comments, they must be completed on the same line they start.
+
+### `#define` and `#undef`
+
+Use these directives to define new symbols or remove exsiting symbols.
+
+Syntax:
+
+```
+ppDefine
+    : "#define" ppIdentifier
+    ;
+
+ppUndef
+    : "#undef" ppIdentifier
+    ;
+
+ppIdentifier
+    : ppIdStart idCont*
+    ;
+
+ppIdStart
+    : "a" .. "z"
+    | "A" .. "Z"
+    | "_"
+    ;
+```
+
+### `#if`, `#else`, `#elseif`, and `#endif`
+
+These preprocessor directives allow you to define conditional compilation:
+
+```
+#if Symbol1
+  // Declare code when Symbol1 is declared
+#elseif Symbol2 && !Symbol3
+  // Declare here code when Symbol2 is declared, but not Symbol3
+#else
+  // All other cases
+#endif
+```
+
+Syntax:
+```
+ppIf
+    : "#if" ppExpr
+    waSharpCode
+    (
+        "#elseif" ppExpr
+        waSharpCode
+    )*
+    (
+        "#else" ppExpr
+        waSharpCode
+    )?
+    "#endif"
+    ;
+
+ppExpr
+    : "(" ppExpr ")"
+    | ppOrExpr
+    ;
+
+ppOrExpr
+    :  ppXorExpr ( "|" ppXorExpr )?
+    ;
+
+ppXorExpr
+    : ppAndExpr ( "^" ppAndExpr )?
+    ;
+
+ppAndExpr
+    : ppPrimaryuExpr ( "&" ppPrimaryExpr )?
+    ;
+
+ppPrimaryExpr
+    : ppIdentifier
+    | "!" ppIdentifier
+    ;
+```
+
+### `#include`
+
+This directive includes the contents of another file in the compilation.
+
+Syntax:
+
+```
+#include
+    : "#include" stringLiteral
+    ;
+```
 
 ## WAT# Type System
 
@@ -123,27 +250,28 @@ typeDeclaration
     ;
 
 typeSpecification
-    : arrayType
-    | structType
-    | pointerType
-    | simpleType
-    | "(" typeSpecification ")"
-    ;
+   : primaryTypeSpecification ("[" expr "]")*
+   ;
 
-simpleType
+primaryTypeSpecification
+   : instrinsicType
+   | identifier
+   | pointerType
+   | "(" typeSpecification ")"
+   | structType
+   ;
+
+intrinsicType
     : "i8" | "sbyte" | "u8" | "byte"
     | "i16" | "short" | "u16" | "ushort"
     | "i32" | "int" | "u32" | "uint"
     | "i64" | "long" | "u64" | "ulong"
     | "f32" | "float"
     | "f64" | "double"
-
-pointerType
-    : "*" typeSpecification
     ;
 
-arrayType
-    : typeSpecification "[" expr "]"
+pointerType
+    : "*" primaryTypeSpecification
     ;
 
 structType
@@ -151,191 +279,9 @@ structType
     ;
 
 structField
-    : identifier ":" typeSpecification
+    : typeSpecification identifier
     ;
 ```
-## Syntax Basics
-
-## Comments and whitespaces
-
-The space, tabulator, carriage return (0x0d) and new line (0x0a) characters are all whitespaces. 
-
-WA# supports two types of comments:
-
-Block comments can be multi-line but cannot nested into each other.
-
-```
-blockComment :=
-    "/*" any* "*/"
-    ;
-```
-
-End-of-line comments can start at any point of the current line and comple with the end of the line
-
-```
-eolComment :=
-    ( "//" | ";;" ) (^newLine)*
-    ;
-```
-
-## Preprocessor directives
-
-When you start the compilation of a WA# code, you can pass predefined symbols to the compiler. Those symbols can be used in conditional preprocessor directives. WA# supports these preprocessor directives:
-
-- `#define`: Defines a symbol
-- `#undef`: Removes a symbol (is if it were not defined)
-- `#if`: Checks if condition is satisfied
-- `#else`: A branch for an unsatisfied condition
-- `#elseif`: A branch for an alternative test
-- `#endif`: End of an `#if` condition
-- `#include`: includes the contents of another file in the compilation
-
-A directive must start at the first non-whitespace character of a source code line. Directives cannot contain comments, they must be completed on the same line they start.
-
-### `#define` and `#undef`
-
-Use these directives to define new symbols or remove exsiting symbols.
-
-Syntax:
-
-```
-ppDefine :=
-    "#define" ppIdentifier
-    ;
-
-ppUndef :=
-    "#undef" ppIdentifier
-    ;
-
-ppIdentifier :=
-    ppIdStart idCont*
-    ;
-
-ppIdStart :=
-    | "a" .. "z"
-    | "A" .. "Z"
-    | "_"
-    ;
-```
-
-### `#if`, `#else`, `#elseif`, and `#endif`
-
-These preprocessor directives allow you to define conditional compilation:
-
-```
-#if Symbol1
-  // Declare code when Symbol1 is declared
-#elseif Symbol2 && !Symbol3
-  // Declare here code when Symbol2 is declared, but not Symbol3
-#else
-  // All other cases
-#endif
-```
-
-Syntax:
-```
-ppIf :=
-    "#if" ppExpr
-    waSharpCode
-    (
-        "#elseif" ppExpr
-        waSharpCode
-    )*
-    (
-        "#else" ppExpr
-        waSharpCode
-    )?
-    "#endif"
-    ;
-
-ppExpr :=
-    | "(" ppExpr ")"
-    | ppOrExpr
-    ;
-
-ppOrExpr :=
-    ppXorExpr ( "|" ppXorExpr )?
-    ;
-
-ppXorExpr :=
-    ppAndExpr ( "^" ppAndExpr )?
-    ;
-
-ppAndExpr :=
-    ppPrimaryuExpr ( "&" ppPrimaryExpr )?
-    ;
-
-ppPrimaryExpr :=
-    | ppIdentifier
-    | "!" ppIdentifier
-    ;
-```
-
-### `#include`
-
-This directive includes the contents of another file in the compilation.
-
-Syntax:
-
-```
-#include :=
-    '"' string '"'
-    ;
-```
-
-## Types
-
-WA# has only value types. Nonethless, integral value types can be used as offsets, so used together with memory variables, you can use indirect memory access, and emulate reference types.
-
-### The `bool` type
-
-Represent a Boolean value that can be used as a condition in control flow statements or conditional expressions. Every other type can be converted into a `bool`:
-- Zero integral, `float`, or `double` values represent `false`.
-- Any other integral, `float`, or `double` values represent `true`.
-
-### Integral types
-
-Integral types can be signed or unsigned; they have multiple type names that can be used according to your preference:
-
-- `i8` (`sbyte`): 8-bit signed integer
-- `u8` (`byte`): 8-bit unsigned integer
-- `i16` (`word`, `short`): 16-bit signed integer
-- `u16` (`uword`, `ushort`): 16-bit unsigned integer
-- `i32` (`int`): 32-bit signed integer
-- `u32` (`uint`): 32-bit unsigned integer
-- `i64` (`long`): 64-bit signed integer
-- `u64` (`ulong`): 64-bit unsigned integer
-
-Expression evaluation:
-- 8-bit, 16-bit, and 32-bit values use 32-bit arithmetic.
-- 64-bit values use 64-bit arithmetic. 
-- Operations that support signed and unsigned values, the type of operation is determined according to the current operands to preserve sign values.
-
-Explicit conversion: Values can be explicitly converted to other values.
-Implicit conversion: Values are automatically converted to 32-bit or 64-bit values while evaluating expressions. When storing values back to variables or memory, types are automatically converted back to their storage size.
-
-### Floating point types
-
-- `f32` (`float`, `real`): 32-bit floating-point value
-- `f64` (`doube`): 64-bit floating-point value
-
-### Structure types
-
-Structures are compound types made from value types.
-
-Syntax:
-
-```
-structDeclaration :=
-    "struct" typeIdentifier "{" fieldDeclaration (";" fieldDeclaration)* ";"? "}"
-    ;
-
-fieldDeclaration :=
-    type identifier ("[" expr "]")?
-    ;
-```
-
-Structures can be stored only in memory variables.
 
 ## Constant values
 
@@ -344,8 +290,8 @@ Constants are name and value pairs. Their value is calculated during compilation
 Syntax:
 
 ```
-constDeclaration := 
-    "const" type identifier "=" expr
+constDeclaration
+    : "const" intrinsicType identifier "=" expr
     ;
 ```
 

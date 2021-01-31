@@ -716,6 +716,21 @@ const resolverHash: Record<string, TokenType> = {
   double: TokenType.F64,
   void: TokenType.Void,
 
+  clz: TokenType.Clz,
+  ctz: TokenType.Ctz,
+  popcnt: TokenType.PopCnt,
+  abs: TokenType.Abs,
+  neg: TokenType.Neg,
+  ceil: TokenType.Ceil,
+  floor: TokenType.Floor,
+  trunc: TokenType.Trunc,
+  nearest: TokenType.Nearest,
+  sqrt: TokenType.Sqrt,
+  min: TokenType.Min,
+  max: TokenType.Max,
+  copysign: TokenType.CopySign,
+
+
   "function": TokenType.Function,
   inline: TokenType.Inline,
   type: TokenType.Type,
