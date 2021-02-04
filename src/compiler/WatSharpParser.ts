@@ -18,11 +18,16 @@ import {
   BuiltInFunctionInvocationExpression,
   ConditionalExpression,
   ConstDeclaration,
+  DataDeclaration,
   Declaration,
   Expression,
+  FunctionDeclaration,
   FunctionInvocationExpression,
+  FunctionParameter,
   GlobalDeclaration,
   Identifier,
+  ImportedFunctionDeclaration,
+  Intrinsics,
   IntrinsicType,
   ItemAccessExpression,
   Literal,
@@ -31,11 +36,13 @@ import {
   SizeOfExpression,
   StructField,
   StructType,
+  TableDeclaration,
   TypeCastExpression,
   TypeDeclaration,
   TypeSpec,
   UnaryExpression,
   UnresolvedType,
+  VariableDeclaration,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 
@@ -131,8 +138,10 @@ export class WatSharpParser {
         // --- Skip the remaining part of the declaration
         if (lastErr?.code !== "W006") {
           let token: Token;
-          while (
-            (token = this._lexer.get()).type !== TokenType.Eof &&
+          do {
+            token = this._lexer.get();
+          } while (
+            token.type !== TokenType.Eof &&
             token.type !== TokenType.Semicolon &&
             token.type !== TokenType.RBrace
           );
@@ -147,13 +156,45 @@ export class WatSharpParser {
   /**
    * declaration
    *   : constDeclaration
+   *   | globalDeclaration
+   *   | typeDeclaration
+   *   | tableDeclaration
    *   ;
    */
   private parseDeclaration(): void {
-    const next = this._lexer.peek();
-    switch (next.type) {
+    const { start, traits } = this.getParsePoint();
+
+    if (traits.typeStart) {
+      const spec = this.parseTypeSpecification();
+      if (!spec) {
+        this.reportError("W008");
+        return;
+      }
+      const idToken = this._lexer.peek();
+      if (idToken.type !== TokenType.Identifier) {
+        this.reportError("W004");
+        return;
+      }
+      this._lexer.get();
+      const next = this._lexer.peek();
+      if (next.type === TokenType.Asgn || next.type === TokenType.Semicolon) {
+        this.parseVariableDeclarationTail(start, idToken.text, spec);
+        return;
+      } else if (next.type === TokenType.LParent) {
+        this.parseFuntionDeclarationTail(start, idToken.text, spec);
+        return;
+      }
+      this.reportError("W018");
+      return;
+    }
+
+    switch (start.type) {
       case TokenType.Eof:
         return;
+
+      case TokenType.Semicolon:
+        this._lexer.get();
+        break;
 
       case TokenType.Const:
         this.parseConstDeclaration();
@@ -167,8 +208,26 @@ export class WatSharpParser {
         this.parseTypeDeclaration();
         return;
 
+      case TokenType.Table:
+        this.parseTableDeclaration();
+        return;
+
+      case TokenType.Data:
+        this.parseDataDeclaration();
+        return;
+
+      case TokenType.Import:
+        this.parseImportedFunctionDeclaration();
+        return;
+
+      case TokenType.Export:
+      case TokenType.Inline:
+      case TokenType.Void:
+        this.parseFunctionDeclaration();
+        return;
+
       default:
-        this.reportError("W003", next, next.text);
+        this.reportError("W003", start, start.text);
         return;
     }
   }
@@ -257,6 +316,312 @@ export class WatSharpParser {
       keyword,
       semicolon
     );
+  }
+
+  /**
+   * tableDeclaration
+   *  : "table" identifier "{" identifier ("," identifier)* "}" ";"
+   *  ;
+   */
+  private parseTableDeclaration(): void {
+    const keyword = this._lexer.get();
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    this.expectToken(TokenType.LBrace, "W009");
+    const ids: string[] = [];
+    do {
+      const idToken = this._lexer.peek();
+      if (idToken.type !== TokenType.Identifier) {
+        this.reportError("W004");
+        return;
+      }
+      ids.push(idToken.text);
+      this._lexer.get();
+      if (this._lexer.peek().type !== TokenType.Comma) {
+        break;
+      }
+      this._lexer.get();
+    } while (true);
+    this.expectToken(TokenType.RBrace, "W010");
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<TableDeclaration>(
+      "TableDeclaration",
+      {
+        name: id.text,
+        ids,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * dataDeclaration
+   *   : "data" (integralType)? identifier "[" expr? ("," expr)* "]"
+   *   ;
+   */
+  private parseDataDeclaration(): void {
+    const keyword = this._lexer.get();
+    const { start, traits } = this.getParsePoint();
+    let underlyingType: string | undefined;
+    if (traits.intrinsicType) {
+      // --- Intrinsic type definition found
+      if (start.type === TokenType.F32 || start.type === TokenType.F64) {
+        this.reportError("W013");
+        return;
+      }
+      underlyingType = TokenType[start.type].toLowerCase();
+      this._lexer.get();
+    }
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    this.expectToken(TokenType.LSquare, "W011");
+    const exprs: Expression[] = [];
+    do {
+      const expr = this.parseExpr();
+      if (expr) {
+        exprs.push(expr);
+      } else {
+        this.reportError("W002");
+        return;
+      }
+      if (this._lexer.peek().type !== TokenType.Comma) {
+        break;
+      }
+      this._lexer.get();
+    } while (true);
+    this.expectToken(TokenType.RSquare, "W012");
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<DataDeclaration>(
+      "DataDeclaration",
+      {
+        name: id.text,
+        underlyingType,
+        exprs,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * variableDeclaration
+   *   : typeSpecification identifier ("=" expr)? ";"
+   *   ;
+   */
+  private parseVariableDeclarationTail(
+    start: Token,
+    name: string,
+    spec: TypeSpec
+  ): void {
+    let expr: Expression | undefined;
+    if (this._lexer.peek().type === TokenType.Asgn) {
+      this._lexer.get();
+      expr = this.getExpression();
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<VariableDeclaration>(
+      "VariableDeclaration",
+      {
+        name,
+        spec,
+        expr,
+      },
+      start,
+      semicolon
+    );
+  }
+
+  /**
+   * importedFunctionDeclaration
+   *   : "import" ("void" | intrinsicType) identifier stringLiteral stringLiteral
+   *     "(" intrinsicType? ("," intrinsicType)* ")"
+   *   ;
+   */
+  private parseImportedFunctionDeclaration(): void {
+    const keyword = this._lexer.get();
+    let resultType: IntrinsicType | undefined;
+    if (this._lexer.peek().type === TokenType.Void) {
+      this._lexer.get();
+    } else {
+      const spec = this.parseTypeSpecification();
+      if (!spec) {
+        this.reportError("W014");
+        return;
+      }
+      if (spec.type !== "Intrinsic") {
+        this.reportError("W015");
+        return;
+      }
+      resultType = spec;
+    }
+    const id = this.expectToken(TokenType.Identifier, "W004");
+    const name1 = this.expectToken(TokenType.StringLiteral).text;
+    const name2 = this.expectToken(TokenType.StringLiteral).text;
+    this.expectToken(TokenType.LParent, "W016");
+    let parSpecs: IntrinsicType[] = [];
+    do {
+      if (this._lexer.peek().type === TokenType.RParent) {
+        break;
+      }
+      const parSpec = this.parseTypeSpecification();
+      if (!parSpec) {
+        this.reportError("W014");
+        return;
+      }
+      if (parSpec.type !== "Intrinsic") {
+        this.reportError("W015");
+        return;
+      }
+      parSpecs.push(parSpec);
+      if (this._lexer.peek().type !== TokenType.Comma) {
+        break;
+      }
+      this._lexer.get();
+    } while (true);
+    this.expectToken(TokenType.RParent, "W017");
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<ImportedFunctionDeclaration>(
+      "ImportedFunctionDeclaration",
+      {
+        name: id.text,
+        name1,
+        name2,
+        resultType,
+        parSpecs,
+      },
+      keyword,
+      semicolon
+    );
+  }
+
+  /**
+   * functionDeclaration
+   *   : functionModifier? ("void" | intrinsicType) identifier
+   *     "(" functionParam? ("," functionParam)* ")"
+   *     "{" bodyStatement* "}"
+   *   ;
+   *
+   * functionModifier
+   *   : "export"
+   *   | "inline"
+   *   ;
+   *
+   * functionParam
+   *   : typeSpecification identifier
+   *   ;
+   */
+  private parseFunctionDeclaration(): void {
+    let isExport: boolean | undefined;
+    let isInline: boolean | undefined;
+    let resultType: TypeSpec | undefined;
+    const keyword = this._lexer.peek();
+    if (keyword.type === TokenType.Void) {
+      this._lexer.get();
+    } else {
+      if (keyword.type === TokenType.Export) {
+        isExport = true;
+      } else if (keyword.type === TokenType.Inline) {
+        isInline = true;
+      }
+      this._lexer.get();
+      const { start, traits } = this.getParsePoint();
+      if (traits.typeStart) {
+        resultType = this.parseTypeSpecification();
+      } else if (start.type === TokenType.Void) {
+        this._lexer.get();
+      } else {
+        this.reportError("W008");
+        return;
+      }
+    }
+    const id = this.expectToken(TokenType.Identifier);
+    this.parseFuntionDeclarationTail(
+      keyword,
+      id.text,
+      resultType,
+      isExport,
+      isInline
+    );
+  }
+
+  /**
+   * Parses the tail of a function declaration
+   * @param id Function identifier
+   * @param resultType Function result type
+   */
+  private parseFuntionDeclarationTail(
+    start: Token,
+    name: string,
+    resultType: TypeSpec | undefined,
+    isExport: boolean = false,
+    isInline: boolean = false
+  ): void {
+    // --- We are before the opening parenthesis
+    this.expectToken(TokenType.LParent);
+
+    // --- Check the result type
+    if (
+      resultType &&
+      resultType.type !== "Intrinsic" &&
+      resultType.type !== "Pointer"
+    ) {
+      this.reportError("W020");
+      return;
+    }
+    let params: FunctionParameter[] = [];
+    do {
+      const { start, traits } = this.getParsePoint();
+      if (!traits.typeStart) {
+        break;
+      }
+      const paramType = this.parseTypeSpecification();
+      if (!paramType) {
+        this.reportError("W008");
+        return;
+      }
+      if (paramType.type !== "Intrinsic" && paramType.type !== "Pointer") {
+        this.reportError("W008");
+        return;
+      }
+      const id = this.expectToken(TokenType.Identifier);
+      params.push({
+        type: "FunctionParameter",
+        name: id.text,
+        spec: paramType,
+        startPosition: start.location.startPos,
+        endPosition: id.location.endPos,
+        startLine: start.location.startLine,
+        endLine: id.location.endLine,
+        startColumn: start.location.startColumn,
+        endColumn: id.location.endColumn,
+      });
+      if (this._lexer.peek().type !== TokenType.Comma) {
+        break;
+      }
+      this._lexer.get();
+    } while (true);
+    this.expectToken(TokenType.RParent, "W017");
+    this.parseFunctionBody();
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.addDeclaration<FunctionDeclaration>(
+      "FunctionDeclaration",
+      {
+        name,
+        resultType,
+        params,
+        isExport,
+        isInline,
+      },
+      start,
+      semicolon
+    );
+  }
+
+  /**
+   * Parses the body of a function
+   */
+  private parseFunctionBody(): void {
+    this.expectToken(TokenType.LBrace);
+    this.expectToken(TokenType.RBrace);
   }
 
   /**
@@ -747,7 +1112,7 @@ export class WatSharpParser {
     switch (start.type) {
       case TokenType.Sizeof:
         this._lexer.get();
-        this.expectToken(TokenType.LParent);
+        this.expectToken(TokenType.LParent, "W016");
         const typeSpec = this.parseTypeSpecification();
         this.expectToken(TokenType.RParent);
         return this.createExpressionNode<SizeOfExpression>(
@@ -765,7 +1130,7 @@ export class WatSharpParser {
         if (!parenthesizedExpr) {
           return null;
         }
-        this.expectToken(TokenType.RParent);
+        this.expectToken(TokenType.RParent, "W017");
         return parenthesizedExpr;
 
       case TokenType.Identifier:
@@ -827,7 +1192,7 @@ export class WatSharpParser {
    */
   private parseTypeCastExpression(): Expression | null {
     const start = this._lexer.get();
-    this.expectToken(TokenType.LParent);
+    this.expectToken(TokenType.LParent, "W016");
     const expr = this.parseExpr();
     if (!expr) {
       this.reportError("W002");
@@ -852,7 +1217,7 @@ export class WatSharpParser {
    */
   private parseFunctionArgs(): Expression[] | null {
     const args: Expression[] = [];
-    this.expectToken(TokenType.LParent);
+    this.expectToken(TokenType.LParent, "W016");
     do {
       const { traits } = this.getParsePoint();
       if (!traits.expressionStart) {
@@ -1095,7 +1460,7 @@ export class WatSharpParser {
    */
   private parseStructType(): TypeSpec | null {
     const start = this._lexer.get();
-    this.expectToken(TokenType.LBrace);
+    this.expectToken(TokenType.LBrace, "W009");
     const struct = this.createTypeSpecNode<StructType>(
       "Struct",
       {
@@ -1128,7 +1493,7 @@ export class WatSharpParser {
         break;
       }
     }
-    this.expectToken(TokenType.RBrace);
+    this.expectToken(TokenType.RBrace, "W010");
     return struct;
   }
 

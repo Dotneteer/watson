@@ -2,7 +2,7 @@
  * This type represents the discriminated union of all WAT# source tree
  * node types
  */
-export type Node = TypeSpec | Expression | Declaration;
+export type Node = TypeSpec | Expression | Declaration | FunctionParameter;
 
 /**
  * This class represents the root class of all source tree nodes
@@ -61,7 +61,7 @@ export type TypeSpec =
 /**
  * Type identifiers for intrinsic types
  */
-export type Instrinsics =
+export type Intrinsics =
   | "i8"
   | "u8"
   | "i16"
@@ -80,7 +80,7 @@ export interface TypeSpecBase extends BaseNode {}
  */
 export interface IntrinsicType extends TypeSpecBase {
   type: "Intrinsic";
-  underlying: Instrinsics;
+  underlying: Intrinsics;
 }
 
 /**
@@ -319,7 +319,12 @@ export interface Literal extends ExpressionBase {
 export type Declaration =
   | ConstDeclaration
   | GlobalDeclaration
-  | TypeDeclaration;
+  | TypeDeclaration
+  | TableDeclaration
+  | DataDeclaration
+  | VariableDeclaration
+  | ImportedFunctionDeclaration
+  | FunctionDeclaration;
 
 /**
  * Represents the base information for all declaration
@@ -334,7 +339,7 @@ export interface DeclarationBase extends BaseNode {
  */
 export interface ConstDeclaration extends DeclarationBase {
   type: "ConstDeclaration";
-  underlyingType: Instrinsics;
+  underlyingType: Intrinsics;
   expr: Expression;
 }
 
@@ -343,7 +348,7 @@ export interface ConstDeclaration extends DeclarationBase {
  */
 export interface GlobalDeclaration extends DeclarationBase {
   type: "GlobalDeclaration";
-  underlyingType: Instrinsics;
+  underlyingType: Intrinsics;
   initExpr?: Expression;
 }
 
@@ -352,5 +357,62 @@ export interface GlobalDeclaration extends DeclarationBase {
  */
 export interface TypeDeclaration extends DeclarationBase {
   type: "TypeDeclaration";
+  spec: TypeSpec;
+}
+
+/**
+ * Table declaration
+ */
+export interface TableDeclaration extends DeclarationBase {
+  type: "TableDeclaration";
+  ids: string[];
+}
+
+/**
+ * Data declaration
+ */
+export interface DataDeclaration extends DeclarationBase {
+  type: "DataDeclaration";
+  underlyingType?: Intrinsics;
+  exprs: Expression[];
+}
+
+/**
+ * Variable declaration
+ */
+export interface VariableDeclaration extends DeclarationBase {
+  type: "VariableDeclaration";
+  spec: TypeSpec;
+  expr: Expression;
+}
+
+/**
+ * Imported function declaration
+ */
+export interface ImportedFunctionDeclaration extends DeclarationBase {
+  type: "ImportedFunctionDeclaration";
+  name1: string;
+  name2: string;
+  resultType?: IntrinsicType;
+  parSpecs: IntrinsicType[];
+}
+
+/**
+ * Function declaration
+ */
+export interface FunctionDeclaration extends DeclarationBase {
+  type: "FunctionDeclaration";
+  resultType?: IntrinsicType;
+  params: FunctionParameter[];
+  isExport?: boolean;
+  isInline?: boolean;
+}
+
+/**
+ * Describes a structure field
+ */
+export interface FunctionParameter extends BaseNode {
+  type: "FunctionParameter";
+  name: string;
   spec: TypeSpec;
 }

@@ -29,12 +29,14 @@ describe("WatSharpLexer - keywords", () => {
     { src: "double", exp: TokenType.F64 },
     { src: "void", exp: TokenType.Void },
 
-    { src: "function", exp: TokenType.Function },
     { src: "inline", exp: TokenType.Inline },
     { src: "export", exp: TokenType.Export },
     { src: "type", exp: TokenType.Type },
     { src: "struct", exp: TokenType.Struct },
     { src: "sizeof", exp: TokenType.Sizeof },
+    { src: "table", exp: TokenType.Table },
+    { src: "data", exp: TokenType.Data },
+    { src: "import", exp: TokenType.Import },
   ];
   keywordCases.forEach((c) => {
     it(`Token ${c.src} #1`, () => {

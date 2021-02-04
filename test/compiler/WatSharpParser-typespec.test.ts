@@ -343,5 +343,4 @@ describe("WatSharpParser - type specifications", () => {
     expect(field.id).toBe("la");
     expect(field.spec.type).toBe("Array");
   });
-
 });

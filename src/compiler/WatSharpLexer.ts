@@ -738,5 +738,7 @@ const resolverHash: Record<string, TokenType> = {
   const: TokenType.Const,
   global: TokenType.Global,
   type: TokenType.Type,
-  "function": TokenType.Function,
+  table: TokenType.Table,
+  data: TokenType.Data,
+  import: TokenType.Import,
 };

@@ -63,14 +63,21 @@ declaration
     : constDeclaration
     | globalDeclaration
     | typeDeclaration
-    | variableDeclaration
     | jumpTableDeclaration
+    | dataDeclaration
+    | variableDeclaration
+    | importedFunctionDeclaration
     | functionDeclaration
+    | emptyDeclaration
     ;
 
 functionDeclaration
     : "function" (exportSpecification)? ("inline")? (intrinsicType | "void" )? 
         parameterList locals functionBody
+    ;
+
+emptyDeclaration
+    : ";" 
     ;
 
 locals
@@ -295,15 +302,7 @@ constDeclaration
     ;
 ```
 
-## Variables
-
-Variable can be one of these types:
-
-- Global variable. These are stored as global WebAssembly variables
-- Local variables of WebAssembly functions
-- Memory variables. They are stored in the linear memory of WebAssembly
-
-### Globals
+## Globals
 
 ```
 globalDeclaration
@@ -311,39 +310,69 @@ globalDeclaration
     ;
 ```
 
+## Jump tables
 
 Syntax:
 
 ```
-variableDeclaration :=
-    type identifier ("[" expr "]")? ( "=" expr)?
+jumpTableDeclaration
+    : "table" identifier "{" identifier? ("," identifier)* "}"
     ;
 ```
-
-> *Note*: If _dimension_ is used, the variable is a memory variable. The _dimension_ value must be an expression that can be evaluated compile time.
 
 ## Data declaration
 
-Data declarations can be used to init memory the variables' data-
+Data declarations can be used to init memory the variables' data
 
 Syntax:
 
 ```
-dataDeclaration :=
-    "data" identifier "=" (integralType)? "[" expr? ("," expr)? "]"
+dataDeclaration
+    : "data" (integralType)? identifier "[" expr? ("," expr)* "]"
     ;
 ```
 
-## Import declaration
+## Variables
 
 Syntax:
 
 ```
-importDeclaration :=
-    "import" stringLiteral stringLiteral "(" integralType? ("," integralType)* ")"
+variableDeclaration
+    : typeSpecification identifier ("=" expr)? ";"
     ;
 ```
 
+## Imported function declaration
+
+Syntax:
+
+```
+importedFunctionDeclaration
+    : "import" ("void" | intrinsicType) identifier stringLiteral stringLiteral  
+      "(" intrinsicType? ("," intrinsicType)* ")"
+    ;
+```
+
+## Function declarations
+
+Syntax:
+
+```
+functionDeclaration
+    : functionModifier? ("void" | intrinsicType) identifier 
+      "(" functionParam? ("," functionParam)* ")" 
+      "{" bodyStatement* "}"
+    ;
+
+functionModifier
+    : "export"
+    | "inline"
+    ;
+
+functionParam
+    : typeSpecification identifier
+    ;
+```
 
 ## Statements
 
@@ -501,8 +530,8 @@ addressable :=
 Syntax:
 
 ```
-functionDeclaration :=
-    exportModifier? inlineModifier? identifier parameterList blockStatement
+functionDeclaration
+    : exportModifier? inlineModifier? "function" identifier parameterList blockStatement
     ;
 
 exportModifier :=
@@ -519,20 +548,6 @@ parameterList :=
 
 parameterDecl :=
     type identifier
-    ;
-```
-
-## Jump tables
-
-Syntax:
-
-```
-jumpTableDeclaration :=
-    "table" tableIdentifier "{" identifier? ("," identifier)* "}"
-    ;
-
-tableIdentifier :=
-    "@" idCont+
     ;
 ```
 
