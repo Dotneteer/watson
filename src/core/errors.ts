@@ -54,7 +54,20 @@ export type ErrorCodes =
   | "W005"
   | "W006"
   | "W007"
-  | "W008";
+  | "W008"
+  | "W009"
+  | "W010"
+  | "W011"
+  | "W012"
+  | "W013"
+  | "W014"
+  | "W015"
+  | "W016"
+  | "W017"
+  | "W018"
+  | "W019"
+  | "W020"
+  | "W021";
 
 /**
  * Error message type description
@@ -88,6 +101,19 @@ export const errorMessages: ErrorText = {
   W004: "An identifier expected",
   W005: "An intrinsic type specifier expected but {0} received.",
   W006: "Missing semicolon closing the declaration",
-  W007: "Expected '=', but received '{0}'",
+  W007: "Expected '='",
   W008: "Type specification expected",
+  W009: "'{' expected",
+  W010: "'}' expected",
+  W011: "'[' expected",
+  W012: "']' expected",
+  W013: "Data declaration accepts only integral types",
+  W014: "Import function declaration must have a result type or 'void'",
+  W015: "Import functions can have only intrinsic result and parameter types",
+  W016: "'(' expected",
+  W017: "')' expected",
+  W018: "Unexpected token in variable/function declaration",
+  W019: "Function parameters can be intrinsic types of pointers only",
+  W020: "Function result types can be intrinsic types, pointers, or 'void'",
+  W021: "Missing function parameter name",
 };

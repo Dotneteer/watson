@@ -83,11 +83,13 @@ export enum TokenType {
   RealLiteral,
   StringLiteral,
 
-  Function,
   Inline,
   Export, 
   Type,
   Struct,
+  Table,
+  Data,
+  Import,
 
   Clz, 
   Ctz,
