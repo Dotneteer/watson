@@ -650,4 +650,155 @@ describe("WatSharpParser - function declarations", () => {
     expect(funcDecl.params.length).toBe(0);
     expect(funcDecl.isInline).toBe(true);
   });
+
+  it("function issue #1", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8[2] myFunc(){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W020");
+  });
+
+  it("function issue #2", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 (){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W004");
+  });
+
+  it("function issue #3", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W018");
+  });
+
+  it("function issue #4", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc({};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W017");
+  });
+
+  it("function issue #5", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc()};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W009");
+  });
+
+  it("function issue #6", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc(){;
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W010");
+  });
+
+  it("function issue #7", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc(u8[2] i){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W019");
+  });
+
+  it("function issue #8", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    u8 myFunc(u8){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W021");
+  });
+
+  it("function issue #9", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    export inline u8 myFunc(){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W008");
+  });
+
+  it("function issue #10", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    inline export u8 myFunc(){};
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(1);
+    expect(wParser.errors[0].code).toBe("W008");
+  });
+
 });

@@ -579,10 +579,10 @@ export class WatSharpParser {
         return;
       }
       if (paramType.type !== "Intrinsic" && paramType.type !== "Pointer") {
-        this.reportError("W008");
+        this.reportError("W019");
         return;
       }
-      const id = this.expectToken(TokenType.Identifier);
+      const id = this.expectToken(TokenType.Identifier, "W021");
       params.push({
         type: "FunctionParameter",
         name: id.text,
@@ -620,8 +620,8 @@ export class WatSharpParser {
    * Parses the body of a function
    */
   private parseFunctionBody(): void {
-    this.expectToken(TokenType.LBrace);
-    this.expectToken(TokenType.RBrace);
+    this.expectToken(TokenType.LBrace, "W009");
+    this.expectToken(TokenType.RBrace, "W010");
   }
 
   /**

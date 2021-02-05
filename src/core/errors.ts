@@ -66,7 +66,8 @@ export type ErrorCodes =
   | "W017"
   | "W018"
   | "W019"
-  | "W020";
+  | "W020"
+  | "W021";
 
 /**
  * Error message type description
@@ -114,4 +115,5 @@ export const errorMessages: ErrorText = {
   W018: "Unexpected token in variable/function declaration",
   W019: "Function parameters can be intrinsic types of pointers only",
   W020: "Function result types can be intrinsic types, pointers, or 'void'",
+  W021: "Missing function parameter name",
 };
