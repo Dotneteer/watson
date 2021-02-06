@@ -142,12 +142,12 @@ export interface TokenLocation {
   /**
    * Start position in the source stream
    */
-  readonly startPos: number;
+  readonly startPosition: number;
 
   /**
    * End position (exclusive) in the source stream
    */
-  readonly endPos: number;
+  readonly endPosition: number;
 
   /**
    * Start line number

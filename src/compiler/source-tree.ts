@@ -56,7 +56,7 @@ export type TypeSpec =
   | ArrayType
   | StructType
   | StructField
-  | UnresolvedType;
+  | NamedType;
 
 /**
  * Type identifiers for intrinsic types
@@ -71,9 +71,12 @@ export type Intrinsics =
   | "i64"
   | "u64"
   | "f32"
-  | "u32";
+  | "f64";
 
-export interface TypeSpecBase extends BaseNode {}
+export interface TypeSpecBase extends BaseNode {
+  resolved?: boolean;
+  sizeof?: number;
+}
 
 /**
  * Instrinsic type specification
@@ -115,13 +118,14 @@ export interface StructField extends TypeSpecBase {
   type: "StructField";
   id: string;
   spec: TypeSpec;
+  offset?: number;
 }
 
 /**
  * Unresolved type specification
  */
-export interface UnresolvedType extends TypeSpecBase {
-  type: "UnresolvedType";
+export interface NamedType extends TypeSpecBase {
+  type: "NamedType";
   name: string;
 }
 
@@ -332,6 +336,7 @@ export type Declaration =
 export interface DeclarationBase extends BaseNode {
   name: string;
   order?: number;
+  resolved?: boolean;
 }
 
 /**
@@ -415,4 +420,20 @@ export interface FunctionParameter extends BaseNode {
   type: "FunctionParameter";
   name: string;
   spec: TypeSpec;
+}
+
+/**
+ * Hash object for the size of intrinsic types
+ */
+export const instrisicSizes: Record<Intrinsics, number> = {
+  i8: 1,
+  u8: 1,
+  i16: 2,
+  u16: 2,
+  i32: 4,
+  u32: 4,
+  i64: 8,
+  u64: 8,
+  f32: 4,
+  f64: 8,
 }

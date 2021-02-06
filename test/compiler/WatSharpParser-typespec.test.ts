@@ -2,7 +2,7 @@ import "mocha";
 import * as expect from "expect";
 
 import { WatSharpParser } from "../../src/compiler/WatSharpParser";
-import { ArrayType, IntrinsicType, PointerType, StructType, UnresolvedType } from "../../src/compiler/source-tree";
+import { ArrayType, IntrinsicType, PointerType, StructType, NamedType } from "../../src/compiler/source-tree";
 
 describe("WatSharpParser - type specifications", () => {
   const instrinsicCases = [
@@ -52,8 +52,8 @@ describe("WatSharpParser - type specifications", () => {
       const typeSpec = wParser.parseTypeSpecification();
 
       // --- Assert
-      expect(typeSpec.type).toBe("UnresolvedType");
-      const unresolved = typeSpec as UnresolvedType;
+      expect(typeSpec.type).toBe("NamedType");
+      const unresolved = typeSpec as NamedType;
       expect(unresolved.name).toBe(c);
     });
   });
@@ -62,12 +62,12 @@ describe("WatSharpParser - type specifications", () => {
     { src: "*i8", type: "Intrinsic" },
     { src: "*i32", type: "Intrinsic" },
     { src: "*f64", type: "Intrinsic" },
-    { src: "*myType", type: "UnresolvedType" },
+    { src: "*myType", type: "NamedType" },
     { src: "**f64", type: "Pointer" },
     { src: "*(i8)", type: "Intrinsic" },
     { src: "*(i32)", type: "Intrinsic" },
     { src: "*(f64)", type: "Intrinsic" },
-    { src: "*(myType)", type: "UnresolvedType" },
+    { src: "*(myType)", type: "NamedType" },
     { src: "*(*f64)", type: "Pointer" },
     { src: "*(i8[2])", type: "Array" },
     { src: "*(i32[2])", type: "Array" },
@@ -95,9 +95,9 @@ describe("WatSharpParser - type specifications", () => {
     { src: "i8[2]", type: "Intrinsic" },
     { src: "i32[2]", type: "Intrinsic" },
     { src: "f64[2]", type: "Intrinsic" },
-    { src: "myType[2]", type: "UnresolvedType" },
+    { src: "myType[2]", type: "NamedType" },
     { src: "(*i8)[2]", type: "Pointer" },
-    { src: "(myType)[2]", type: "UnresolvedType" },
+    { src: "(myType)[2]", type: "NamedType" },
     { src: "f64[2][3]", type: "Array" },
     { src: "(myType[2])[3]", type: "Array" },
     { src: "(*myType[2])[3]", type: "Array" },
@@ -155,7 +155,7 @@ describe("WatSharpParser - type specifications", () => {
     expect(struct.fields.length).toBe(1);
     let field = struct.fields[0];
     expect(field.id).toBe("l");
-    expect(field.spec.type).toBe("UnresolvedType");
+    expect(field.spec.type).toBe("NamedType");
   });
 
   it("Simple struct #3", () => {
@@ -262,10 +262,10 @@ describe("WatSharpParser - type specifications", () => {
     expect(struct.fields.length).toBe(2);
     let field = struct.fields[0];
     expect(field.id).toBe("l");
-    expect(field.spec.type).toBe("UnresolvedType");
+    expect(field.spec.type).toBe("NamedType");
     field = struct.fields[1];
     expect(field.id).toBe("h");
-    expect(field.spec.type).toBe("UnresolvedType");
+    expect(field.spec.type).toBe("NamedType");
   });
 
   it("Compound struct #3", () => {

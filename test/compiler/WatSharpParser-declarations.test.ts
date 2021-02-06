@@ -720,7 +720,7 @@ describe("WatSharpParser - declarations", () => {
       const decl = wParser.declarations.get("myVar");
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
-      expect(varDecl.spec.type).toBe("UnresolvedType");
+      expect(varDecl.spec.type).toBe("NamedType");
       expect(varDecl.expr.type).toBe("BinaryExpression");
     });
   });
@@ -729,12 +729,12 @@ describe("WatSharpParser - declarations", () => {
     { src: "*i8", type: "Intrinsic" },
     { src: "*i32", type: "Intrinsic" },
     { src: "*f64", type: "Intrinsic" },
-    { src: "*myType", type: "UnresolvedType" },
+    { src: "*myType", type: "NamedType" },
     { src: "**f64", type: "Pointer" },
     { src: "*(i8)", type: "Intrinsic" },
     { src: "*(i32)", type: "Intrinsic" },
     { src: "*(f64)", type: "Intrinsic" },
-    { src: "*(myType)", type: "UnresolvedType" },
+    { src: "*(myType)", type: "NamedType" },
     { src: "*(*f64)", type: "Pointer" },
     { src: "*(i8[2])", type: "Array" },
     { src: "*(i32[2])", type: "Array" },
@@ -767,9 +767,9 @@ describe("WatSharpParser - declarations", () => {
     { src: "i8[2]", type: "Intrinsic" },
     { src: "i32[2]", type: "Intrinsic" },
     { src: "f64[2]", type: "Intrinsic" },
-    { src: "myType[2]", type: "UnresolvedType" },
+    { src: "myType[2]", type: "NamedType" },
     { src: "(*i8)[2]", type: "Pointer" },
-    { src: "(myType)[2]", type: "UnresolvedType" },
+    { src: "(myType)[2]", type: "NamedType" },
     { src: "f64[2][3]", type: "Array" },
     { src: "(myType[2])[3]", type: "Array" },
     { src: "(*myType[2])[3]", type: "Array" },

@@ -18,8 +18,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.Eof);
     expect(next.text).toBe(source);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -38,8 +38,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.LParent);
     expect(next.text).toBe(source);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -58,8 +58,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.LParent);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -77,8 +77,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.RParent);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -97,8 +97,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.RParent);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -116,8 +116,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.NotOp);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -136,8 +136,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.NotOp);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -155,8 +155,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.XorOp);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -175,8 +175,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.XorOp);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -194,8 +194,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.OrOp);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -214,8 +214,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.OrOp);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -233,8 +233,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.AndOp);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -253,8 +253,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.AndOp);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);
@@ -272,8 +272,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.NewLine);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(2);
     expect(next.location.startColumn).toBe(0);
@@ -292,8 +292,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.NewLine);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(2);
     expect(next.location.endLine).toBe(2);
     expect(next.location.startColumn).toBe(5);
@@ -311,8 +311,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -330,8 +330,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -349,8 +349,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -368,8 +368,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -387,8 +387,8 @@ describe("PreprocessorExpressionLexer", () => {
     // --- Assert
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -407,8 +407,8 @@ describe("PreprocessorExpressionLexer", () => {
     expect(next.type).toBe(TokenType.PPIdentifier);
     expect(next.text).toBe(source.substring(5));
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(5);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(5);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(5);

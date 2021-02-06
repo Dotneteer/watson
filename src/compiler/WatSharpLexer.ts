@@ -621,8 +621,8 @@ export class WatSharpLexer {
         type: tokenType,
         location: {
           fileIndex: input.fileIndex,
-          startPos,
-          endPos: lastEndPos,
+          startPosition: startPos,
+          endPosition: lastEndPos,
           startLine: line,
           endLine: line,
           startColumn,

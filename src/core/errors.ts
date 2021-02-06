@@ -45,8 +45,7 @@ export type ErrorCodes =
   | "P015"
   | "P016"
 
-  // --- WAT# errors
-
+  // --- WAT# syntax errors
   | "W001"
   | "W002"
   | "W003"
@@ -67,7 +66,13 @@ export type ErrorCodes =
   | "W018"
   | "W019"
   | "W020"
-  | "W021";
+  | "W021"
+
+  // --- WAT# semantic errors
+  | "W100"
+  | "W101"
+  | "W102"
+  | "W103";
 
 /**
  * Error message type description
@@ -78,6 +83,7 @@ type ErrorText = Record<string, string>;
  * The error messages of error codes
  */
 export const errorMessages: ErrorText = {
+  // --- Preprocessor errors
   P001: "Unknown source code token found during preprocessing: {0}",
   P002: "Cannot find preprocessor directive",
   P003: "Unknown preprocessor directive: {0}",
@@ -95,6 +101,7 @@ export const errorMessages: ErrorText = {
   P015: "String literal expected",
   P016: "#include error: {0}",
 
+  // --- WAT# syntax issues
   W001: "A comma expected",
   W002: "An expression expected",
   W003: "Unexpected token: {0}",
@@ -116,4 +123,10 @@ export const errorMessages: ErrorText = {
   W019: "Function parameters can be intrinsic types of pointers only",
   W020: "Function result types can be intrinsic types, pointers, or 'void'",
   W021: "Missing function parameter name",
+
+  // --- WAT# semantic issues
+  W100: "Duplicated declaration identifier: '{0}'",
+  W101: "Unknonw declaration: '{0}'",
+  W102: "'{0}' is not a type declaration",
+  W103: "Cannot resolve '{0}' because of circular declaration reference",
 };

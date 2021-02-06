@@ -27,7 +27,6 @@ import {
   GlobalDeclaration,
   Identifier,
   ImportedFunctionDeclaration,
-  Intrinsics,
   IntrinsicType,
   ItemAccessExpression,
   Literal,
@@ -41,7 +40,7 @@ import {
   TypeDeclaration,
   TypeSpec,
   UnaryExpression,
-  UnresolvedType,
+  NamedType,
   VariableDeclaration,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
@@ -136,7 +135,7 @@ export class WatSharpParser {
       } catch {
         const lastErr = this._parseErrors[this._parseErrors.length - 1];
         // --- Skip the remaining part of the declaration
-        if (lastErr?.code !== "W006") {
+        if (lastErr && lastErr.code !== "W006" && !lastErr.code.startsWith("W1")) {
           let token: Token;
           do {
             token = this._lexer.get();
@@ -587,8 +586,8 @@ export class WatSharpParser {
         type: "FunctionParameter",
         name: id.text,
         spec: paramType,
-        startPosition: start.location.startPos,
-        endPosition: id.location.endPos,
+        startPosition: start.location.startPosition,
+        endPosition: id.location.endPosition,
         startLine: start.location.startLine,
         endLine: id.location.endLine,
         startColumn: start.location.startColumn,
@@ -637,10 +636,16 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
+    if (!stump.name) {
+      throw new Error("A declaration must have a name.");
+    }
+    if (this._declarations.has(stump.name)) {
+      this.reportError("W100", undefined, stump.name);
+    }
     const updatedDecl = Object.assign({}, stump, <Declaration>{
       type,
-      startPosition: startToken.location.startPos,
-      endPosition: endToken.location.endPos,
+      startPosition: startToken.location.startPosition,
+      endPosition: endToken.location.endPosition,
       startLine: startToken.location.startLine,
       startColumn: startToken.location.startColumn,
       endLine: endToken.location.endLine,
@@ -1417,8 +1422,8 @@ export class WatSharpParser {
     switch (start.type) {
       case TokenType.Identifier:
         this._lexer.get();
-        return this.createTypeSpecNode<UnresolvedType>(
-          "UnresolvedType",
+        return this.createTypeSpecNode<NamedType>(
+          "NamedType",
           {
             name: start.text,
           },
@@ -1582,8 +1587,8 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
-    const startPosition = startToken.location.startPos;
-    const endPosition = endToken.location.startPos;
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
     return Object.assign({}, stump, <Expression>{
       type,
       startPosition,
@@ -1608,8 +1613,8 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
-    const startPosition = startToken.location.startPos;
-    const endPosition = endToken.location.startPos;
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
     return Object.assign({}, stump, <TypeSpec>{
       type,
       startPosition,
@@ -1647,7 +1652,7 @@ export class WatSharpParser {
       text: errorText,
       line: token.location.startLine,
       column: token.location.startColumn,
-      position: token.location.startPos,
+      position: token.location.startPosition,
     });
     throw new ParserError(errorText, errorCode);
 

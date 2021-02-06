@@ -756,7 +756,7 @@ describe("WatSharpParser - expressions", () => {
 
   const sizeofCases = [
     { src: "sizeof(u32)", spec: "Intrinsic" },
-    { src: "sizeof(myStruct)", spec: "UnresolvedType" },
+    { src: "sizeof(myStruct)", spec: "NamedType" },
     { src: "sizeof(*i64)", spec: "Pointer" },
     { src: "sizeof(*i64[2])", spec: "Array" },
     { src: "sizeof(struct{u8 l})", spec: "Struct" },
