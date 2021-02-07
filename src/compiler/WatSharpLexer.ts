@@ -715,6 +715,8 @@ const resolverHash: Record<string, TokenType> = {
   f64: TokenType.F64,
   double: TokenType.F64,
   void: TokenType.Void,
+  Infinity: TokenType.Infinity,
+  NaN: TokenType.NaN,
 
   clz: TokenType.Clz,
   ctz: TokenType.Ctz,

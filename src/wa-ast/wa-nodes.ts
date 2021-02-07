@@ -182,7 +182,7 @@ export interface Global extends WaNodeBase {
   readonly type: "Global";
   readonly id: string;
   readonly valueType?: WaType;
-  readonly initialValue?: BigInt;
+  readonly initialValue?: bigint;
   readonly exportSpec?: WaExport;
 }
 
@@ -249,7 +249,7 @@ export interface Local extends WaNodeBase {
 export interface ConstVal extends WaInstructionBase {
   type: "ConstVal";
   valueType: WaType;
-  value: number | BigInt;
+  value: number | bigint;
 }
 
 /**

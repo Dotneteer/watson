@@ -143,7 +143,6 @@ export type Expression =
   | BuiltInFunctionInvocationExpression
   | TypeCastExpression
   | FunctionInvocationExpression
-  | UnresolvedInvocationExpression
   | MemberAccessExpression
   | ItemAccessExpression
   | Identifier
@@ -154,15 +153,10 @@ export type Expression =
  */
 export interface ExpressionBase extends BaseNode {
   /**
-   * Indicates if the expression is a constant expression
-   */
-  constant?: boolean;
-
-  /**
    * The value of the expression. If defined, the expression has
    * been evaluated; otherwise, not
    */
-  value?: number | BigInt;
+  value?: number | bigint;
 }
 
 /**
@@ -275,15 +269,6 @@ export interface FunctionInvocationExpression extends ExpressionBase {
 }
 
 /**
- * Represents an unresolved invocation-like expression
- */
-export interface UnresolvedInvocationExpression extends ExpressionBase {
-  type: "UnresolvedInvocation";
-  name: string;
-  arguments: Expression[];
-}
-
-/**
  * Represents a member access expression
  */
 export interface MemberAccessExpression extends ExpressionBase {
@@ -314,7 +299,7 @@ export interface Identifier extends ExpressionBase {
  */
 export interface Literal extends ExpressionBase {
   type: "Literal";
-  value: number | BigInt;
+  value: number | bigint;
 }
 
 // ============================================================================
@@ -346,6 +331,7 @@ export interface ConstDeclaration extends DeclarationBase {
   type: "ConstDeclaration";
   underlyingType: Intrinsics;
   expr: Expression;
+  value?: number | bigint;
 }
 
 /**
@@ -388,7 +374,7 @@ export interface DataDeclaration extends DeclarationBase {
 export interface VariableDeclaration extends DeclarationBase {
   type: "VariableDeclaration";
   spec: TypeSpec;
-  expr: Expression;
+  expr?: Expression;
 }
 
 /**

@@ -82,6 +82,8 @@ export enum TokenType {
   BinaryLiteral,
   RealLiteral,
   StringLiteral,
+  Infinity,
+  NaN,
 
   Inline,
   Export, 

@@ -135,7 +135,11 @@ export class WatSharpParser {
       } catch {
         const lastErr = this._parseErrors[this._parseErrors.length - 1];
         // --- Skip the remaining part of the declaration
-        if (lastErr && lastErr.code !== "W006" && !lastErr.code.startsWith("W1")) {
+        if (
+          lastErr &&
+          lastErr.code !== "W006" &&
+          !lastErr.code.startsWith("W1")
+        ) {
           let token: Token;
           do {
             token = this._lexer.get();
@@ -1180,6 +1184,28 @@ export class WatSharpParser {
         this._lexer.get();
         return this.parseRealLiteral(start);
 
+      case TokenType.Infinity:
+        this._lexer.get();
+        return this.createExpressionNode<Literal>(
+          "Literal",
+          {
+            value: Infinity,
+          },
+          start,
+          start
+        );
+
+      case TokenType.NaN:
+        this._lexer.get();
+        return this.createExpressionNode<Literal>(
+          "Literal",
+          {
+            value: NaN,
+          },
+          start,
+          start
+        );
+
       case TokenType.Plus:
       case TokenType.Minus:
       case TokenType.BinaryNot:
@@ -1247,7 +1273,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseBinaryLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
@@ -1272,7 +1298,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseDecimalLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
@@ -1297,7 +1323,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseHexadecimalLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||

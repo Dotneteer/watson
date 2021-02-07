@@ -72,7 +72,11 @@ export type ErrorCodes =
   | "W100"
   | "W101"
   | "W102"
-  | "W103";
+  | "W103"
+  | "W104"
+  | "W105"
+  | "W106"
+  | "W107"
 
 /**
  * Error message type description
@@ -129,4 +133,8 @@ export const errorMessages: ErrorText = {
   W101: "Unknonw declaration: '{0}'",
   W102: "'{0}' is not a type declaration",
   W103: "Cannot resolve '{0}' because of circular declaration reference",
+  W104: "Invalid construct in constant expressions",
+  W105: "The '&' and '*' operators cannot be used in constant expressions",
+  W106: "The '~' operators cannot be used with a float value",
+  W107: "Error when evaluating an expression: {0}",
 };

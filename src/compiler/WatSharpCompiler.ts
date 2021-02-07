@@ -8,8 +8,8 @@ import {
 } from "./source-tree";
 import { WatSharpParser } from "./WatSharpParser";
 import { Node } from "../compiler/source-tree";
-import { Token, TokenLocation } from "../core/tokens";
-import { types } from "util";
+import { TokenLocation } from "../core/tokens";
+import { applyTypeCast, resolveConstantExpression } from "./expression-resolver";
 
 /**
  * This class implements the WAT# compiler
@@ -87,7 +87,11 @@ export class WatSharpCompiler {
 
     while (resolutionQueue.length > 0) {
       const decl = resolutionQueue.shift();
-      resolveDeclarationDependency(decl);
+      try {
+        resolveDeclarationDependency(decl);
+      } catch (err) {
+        this.reportError("W107", decl, err.toString());
+      }
     }
 
     /**
@@ -103,21 +107,35 @@ export class WatSharpCompiler {
       decl.resolved = true;
       switch (decl.type) {
         case "ConstDeclaration":
+          resolveExpression(decl.expr);
+          if (decl.expr.value !== undefined) {
+            decl.value = applyTypeCast(decl.underlyingType, decl.expr.value);
+          }
           break;
         case "DataDeclaration":
+          decl.exprs.forEach(expr => resolveExpression(expr));
           break;
         case "FunctionDeclaration":
+          // TODO: Implement this case
           break;
         case "GlobalDeclaration":
+          if (decl.initExpr) {
+            resolveExpression(decl.initExpr);
+          }
           break;
         case "ImportedFunctionDeclaration":
+          // TODO: Implement this case
           break;
         case "TableDeclaration":
+          // TODO: Implement this case
           break;
         case "TypeDeclaration":
           resolveTypeDeclaration(decl.spec);
           break;
         case "VariableDeclaration":
+          if (decl.expr) {
+            resolveExpression(decl.expr);
+          }
           break;
       }
       return;
@@ -211,11 +229,28 @@ export class WatSharpCompiler {
         }
       }
     }
+
+    /**
+     * Resolves the specified expression
+     * @param expr Expression to resolve
+     */
+    function resolveExpression(expr: Expression): void {
+      resolveConstantExpression(
+        expr,
+        (_name) => {
+          throw new Error("Not implemented yet");
+        },
+        (_spec) => {
+          return 0;
+        },
+        compiler.reportError.bind(compiler)
+      );
+    }
   }
 
   /**
    * Get the size of a type specification
-   * @param typeSpec 
+   * @param typeSpec
    */
   getSizeof(typeSpec: TypeSpec): number {
     if (typeSpec.type !== "NamedType") {
@@ -223,7 +258,7 @@ export class WatSharpCompiler {
     }
     const decl = this._parser.declarations.get(typeSpec.name);
     if (decl.type !== "TypeDeclaration" || !decl.spec.sizeof) {
-      return 0
+      return 0;
     }
     return decl.spec.sizeof;
   }

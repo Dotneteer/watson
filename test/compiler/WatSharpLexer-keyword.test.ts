@@ -28,6 +28,8 @@ describe("WatSharpLexer - keywords", () => {
     { src: "f64", exp: TokenType.F64 },
     { src: "double", exp: TokenType.F64 },
     { src: "void", exp: TokenType.Void },
+    { src: "Infinity", exp: TokenType.Infinity },
+    { src: "NaN", exp: TokenType.NaN },
 
     { src: "inline", exp: TokenType.Inline },
     { src: "export", exp: TokenType.Export },

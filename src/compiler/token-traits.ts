@@ -96,6 +96,7 @@ tokenTraits.set(TokenType.I16, { intrinsicType: true, expressionStart: true, typ
 tokenTraits.set(TokenType.I32, { intrinsicType: true, expressionStart: true, typeStart: true });
 tokenTraits.set(TokenType.I64, { intrinsicType: true, expressionStart: true, typeStart: true });
 tokenTraits.set(TokenType.Identifier, { expressionStart: true, typeStart: true });
+tokenTraits.set(TokenType.Infinity, { expressionStart: true });
 
 // ----------------------------------------------------------------------------
 // L
@@ -112,6 +113,7 @@ tokenTraits.set(TokenType.Minus, { expressionStart: true, unaryOp: true });
 // ----------------------------------------------------------------------------
 // N
 
+tokenTraits.set(TokenType.NaN, { expressionStart: true });
 tokenTraits.set(TokenType.Nearest, {
   expressionStart: true,
   builtInFunc: true,
