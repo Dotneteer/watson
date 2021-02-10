@@ -61,8 +61,8 @@ describe("WatSharpLexer - miscellaneous", () => {
     { src: "<<", exp: TokenType.ShiftLeft },
     { src: ">", exp: TokenType.GreaterThan },
     { src: ">=", exp: TokenType.GreaterThanOrEqual },
-    { src: ">>", exp: TokenType.ShiftRight },
-    { src: ">>>", exp: TokenType.SignedShiftRight },
+    { src: ">>", exp: TokenType.SignedShiftRight },
+    { src: ">>>", exp: TokenType.ShiftRight },
     { src: ".", exp: TokenType.Dot },
     { src: "thisId", exp: TokenType.Identifier },
   ];

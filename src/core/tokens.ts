@@ -97,7 +97,6 @@ export enum TokenType {
   Ctz,
   PopCnt,
   Abs,
-  Neg,
   Ceil,
   Floor,
   Trunc,
@@ -105,6 +104,7 @@ export enum TokenType {
   Sqrt,
   Min,
   Max,
+  Neg,
   CopySign,
 
   Const,

@@ -65,10 +65,7 @@ tokenTraits.set(TokenType.BinaryNot, { expressionStart: true, unaryOp: true });
 
 tokenTraits.set(TokenType.Ceil, { expressionStart: true, builtInFunc: true });
 tokenTraits.set(TokenType.Clz, { expressionStart: true, builtInFunc: true });
-tokenTraits.set(TokenType.CopySign, {
-  expressionStart: true,
-  builtInFunc: true,
-});
+tokenTraits.set(TokenType.CopySign, { expressionStart: true, builtInFunc: true });
 tokenTraits.set(TokenType.Ctz, { expressionStart: true, builtInFunc: true });
 
 // ----------------------------------------------------------------------------
@@ -114,11 +111,11 @@ tokenTraits.set(TokenType.Minus, { expressionStart: true, unaryOp: true });
 // N
 
 tokenTraits.set(TokenType.NaN, { expressionStart: true });
+tokenTraits.set(TokenType.Neg, { expressionStart: true, builtInFunc: true });
 tokenTraits.set(TokenType.Nearest, {
   expressionStart: true,
   builtInFunc: true,
 });
-tokenTraits.set(TokenType.Neg, { expressionStart: true, builtInFunc: true });
 tokenTraits.set(TokenType.Not, { expressionStart: true, unaryOp: true });
 
 // ----------------------------------------------------------------------------

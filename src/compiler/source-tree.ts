@@ -194,7 +194,6 @@ export type BuiltInFunctionNames =
   | "ctz"
   | "popcnt"
   | "abs"
-  | "neg"
   | "ceil"
   | "floor"
   | "trunc"
@@ -202,6 +201,7 @@ export type BuiltInFunctionNames =
   | "sqrt"
   | "min"
   | "max"
+  | "neg"
   | "copysign";
 
 /**

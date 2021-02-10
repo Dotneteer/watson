@@ -9,7 +9,10 @@ import {
 import { WatSharpParser } from "./WatSharpParser";
 import { Node } from "../compiler/source-tree";
 import { TokenLocation } from "../core/tokens";
-import { applyTypeCast, resolveConstantExpression } from "./expression-resolver";
+import {
+  applyTypeCast,
+  resolveConstantExpression,
+} from "./expression-resolver";
 
 /**
  * This class implements the WAT# compiler
@@ -82,15 +85,27 @@ export class WatSharpCompiler {
     // --- Declarations to resolve
     const compiler = this;
     const declarations = this._parser.declarations;
-    const resolutionQueue: Declaration[] = [...declarations.values()];
+    const resolutionQueue: ResolutionQueueItem[] = [
+      ...declarations.values(),
+    ].map((item) => <ResolutionQueueItem>{ decl: item });
     const namedStack: string[] = [];
 
     while (resolutionQueue.length > 0) {
-      const decl = resolutionQueue.shift();
+      const item = resolutionQueue.shift();
+      let itemToReport: Declaration | TypeSpec | Expression | undefined;
       try {
-        resolveDeclarationDependency(decl);
+        if (item.decl) {
+          itemToReport = item.decl;
+          resolveDeclarationDependency(item.decl);
+        } else if (item.typeSpec) {
+          itemToReport = item.typeSpec;
+          resolveTypeSpecification(item.typeSpec);
+        } else if (item.expr) {
+          itemToReport = item.expr;
+          resolveExpression(item.expr);
+        }
       } catch (err) {
-        this.reportError("W107", decl, err.toString());
+        this.reportError("W107", itemToReport, err.toString());
       }
     }
 
@@ -104,7 +119,7 @@ export class WatSharpCompiler {
         return;
       }
 
-      decl.resolved = true;
+      namedStack.push(decl.name);
       switch (decl.type) {
         case "ConstDeclaration":
           resolveExpression(decl.expr);
@@ -113,7 +128,7 @@ export class WatSharpCompiler {
           }
           break;
         case "DataDeclaration":
-          decl.exprs.forEach(expr => resolveExpression(expr));
+          decl.exprs.forEach((expr) => resolveExpression(expr));
           break;
         case "FunctionDeclaration":
           // TODO: Implement this case
@@ -130,7 +145,7 @@ export class WatSharpCompiler {
           // TODO: Implement this case
           break;
         case "TypeDeclaration":
-          resolveTypeDeclaration(decl.spec);
+          resolveTypeSpecification(decl.spec);
           break;
         case "VariableDeclaration":
           if (decl.expr) {
@@ -138,6 +153,8 @@ export class WatSharpCompiler {
           }
           break;
       }
+      namedStack.pop();
+      decl.resolved = true;
       return;
     }
 
@@ -145,88 +162,67 @@ export class WatSharpCompiler {
      * Resolve the given type specification
      * @param typeSpec Type specification to resolve
      */
-    function resolveTypeDeclaration(typeSpec: TypeSpec): void {
+    function resolveTypeSpecification(spec: TypeSpec): void {
       // --- Type has already been resolved
-      if (typeSpec.resolved) {
+      if (spec.resolved) {
         return;
       }
 
-      const typeQueue: TypeSpec[] = [typeSpec];
-      while (typeQueue.length > 0) {
-        const spec = typeQueue.shift();
-        // --- Let's make the type is resolved
-        spec.resolved = true;
+      // --- Let's make the type is resolved
+      spec.resolved = true;
 
-        switch (spec.type) {
-          case "Intrinsic":
-            spec.sizeof = intrisicSizes[spec.underlying];
+      switch (spec.type) {
+        case "Intrinsic":
+          spec.sizeof = intrisicSizes[spec.underlying];
+          break;
+
+        case "Pointer":
+          spec.sizeof = 4;
+          resolutionQueue.push({ typeSpec: spec.spec });
+          break;
+
+        case "Struct":
+          spec.sizeof = 0;
+          for (let i = 0; i < spec.fields.length; i++) {
+            spec.fields[i].offset = spec.sizeof;
+            const typeSpec = spec.fields[i].spec;
+            resolveTypeSpecification(typeSpec);
+            spec.sizeof += compiler.getSizeof(typeSpec);
+          }
+          break;
+
+        case "Array":
+          resolveTypeSpecification(spec.spec);
+          resolveExpression(spec.size);
+          const arraySize = Number(spec.size.value ?? 0);
+          spec.sizeof = arraySize * compiler.getSizeof(spec.spec);
+          break;
+
+        case "NamedType":
+          // --- After circular reference check
+          if (namedStack.includes(spec.name)) {
+            compiler.reportError("W103", spec, spec.name);
             break;
-
-          case "Pointer":
-            spec.sizeof = 4;
-            typeQueue.push(spec.spec);
-            break;
-
-          case "Struct":
-            spec.sizeof = 0;
-            for (let i = 0; i < spec.fields.length; i++) {
-              spec.fields[i].offset = spec.sizeof;
-              const typeSpec = spec.fields[i].spec;
-              if (typeSpec.type === "NamedType") {
-                // --- Resolve named types of structs immediately
-                // --- After circular reference check
-                if (namedStack.includes(typeSpec.name)) {
-                  compiler.reportError("W103", typeSpec, typeSpec.name);
-                  break;
-                }
-
-                // --- Use a stack to detect circular references
-                namedStack.push(typeSpec.name);
-
-                const decl = declarations.get(typeSpec.name);
-                if (decl) {
-                  if (decl.type === "TypeDeclaration") {
-                    resolveDeclarationDependency(decl);
-                    spec.sizeof += compiler.getSizeof(decl.spec);
-                  } else {
-                    compiler.reportError("W102", typeSpec, typeSpec.name);
-                  }
-                } else {
-                  compiler.reportError("W101", typeSpec, typeSpec.name);
-                }
-                namedStack.pop();
-              } else {
-                resolveTypeDeclaration(typeSpec);
-                spec.sizeof += typeSpec.sizeof;
-              }
-            }
-            break;
-
-          case "Array":
-            resolveTypeDeclaration(spec.spec);
-            // TODO: Calculate array size
-            const arraySize = 1;
-            spec.sizeof = arraySize * spec.spec.sizeof;
-            break;
-
-          case "NamedType":
-            const decl = declarations.get(spec.name);
-            if (decl) {
-              if (decl.type === "TypeDeclaration") {
-                typeQueue.push(decl.spec);
-                return;
-              } else {
-                compiler.reportError("W102", spec, spec.name);
-              }
+          }
+          const decl = declarations.get(spec.name);
+          if (decl) {
+            if (decl.type === "TypeDeclaration") {
+              // --- Use a stack to detect circular references
+              namedStack.push(spec.name);
+              resolveDeclarationDependency(decl);
+              namedStack.pop();
+              break;
             } else {
-              compiler.reportError("W101", spec, spec.name);
+              compiler.reportError("W102", spec, spec.name);
             }
-            break;
+          } else {
+            compiler.reportError("W101", spec, spec.name);
+          }
+          break;
 
-          default:
-            spec.resolved = false;
-            return;
-        }
+        default:
+          spec.resolved = false;
+          break;
       }
     }
 
@@ -237,11 +233,29 @@ export class WatSharpCompiler {
     function resolveExpression(expr: Expression): void {
       resolveConstantExpression(
         expr,
-        (_name) => {
-          throw new Error("Not implemented yet");
+        (id) => {
+          if (namedStack.includes(id.name)) {
+            compiler.reportError("W103", id, id.name);
+            return;
+          }
+          const decl = declarations.get(id.name);
+          if (decl) {
+            if (decl.type === "ConstDeclaration") {
+              // --- Use a stack to detect circular references
+              namedStack.push(id.name);
+              resolveDeclarationDependency(decl);
+              id.value = decl.value;
+              namedStack.pop();
+            } else {
+              compiler.reportError("W102", id, id.name);
+            }
+          } else {
+            compiler.reportError("W101", id, id.name);
+          }
         },
-        (_spec) => {
-          return 0;
+        (typeSpec) => {
+          resolveTypeSpecification(typeSpec);
+          return typeSpec.resolved ? compiler.getSizeof(typeSpec) : 0;
         },
         compiler.reportError.bind(compiler)
       );
@@ -303,4 +317,13 @@ export class WatSharpCompiler {
       return input;
     }
   }
+}
+
+/**
+ * An item within the resolution queue
+ */
+interface ResolutionQueueItem {
+  decl?: Declaration;
+  typeSpec?: TypeSpec;
+  expr?: Expression;
 }

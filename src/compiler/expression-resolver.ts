@@ -7,6 +7,7 @@ import {
   UnaryOpSymbols,
   BinaryOpSymbols,
   BuiltInFunctionNames,
+  Identifier,
 } from "./source-tree";
 
 /**
@@ -17,7 +18,7 @@ import {
  */
 export function resolveConstantExpression(
   expr: Expression,
-  constResolver: (name: string) => Expression,
+  constResolver: (id: Identifier) => void,
   sizeOfResolver: (spec: TypeSpec) => number,
   reportError: (
     code: ErrorCodes,
@@ -49,7 +50,7 @@ export function resolveConstantExpression(
         allResolved = allResolved && arg.value !== undefined;
       });
       if (allResolved) {
-        applyBuiltInFunction(
+        expr.value = applyBuiltInFunction(
           expr.name,
           expr.arguments.map((arg) => arg.value)
         );
@@ -89,7 +90,7 @@ export function resolveConstantExpression(
       return;
 
     case "Identifier":
-      constResolver(expr.name);
+      constResolver(expr);
       return;
 
     case "SizeOfExpression":
@@ -344,35 +345,60 @@ function applyBuiltInFunction(
   name: BuiltInFunctionNames,
   args: (number | bigint)[]
 ): number | bigint {
+  let arg: number | bigint;
   switch (name) {
     case "abs":
-      break;
+      arg = singleArg();
+      return arg < 0 ? -arg : arg;
+
     case "ceil":
-      break;
-    case "clz":
-      break;
-    case "copysign":
-      break;
-    case "ctz":
-      break;
+      arg = singleArg();
+      return typeof arg === "number" ? Math.ceil(arg) : arg;
+
     case "floor":
-      break;
+      arg = singleArg();
+      return typeof arg === "number" ? Math.floor(arg) : arg;
+
     case "max":
-      break;
+      atLeastOneArg();
+      return bigIntMax(...args);
+
     case "min":
-      break;
+      atLeastOneArg();
+      return bigIntMin(...args);
+
     case "nearest":
-      break;
-    case "neg":
-      break;
-    case "popcnt":
-      break;
+      arg = singleArg();
+      if (typeof arg === "bigint") return arg;
+      const ceil = Math.ceil(arg);
+      const floor = Math.floor(arg);
+      return Math.abs(ceil - arg) < Math.abs(floor - arg) ? ceil : floor;
+
     case "sqrt":
-      break;
+      arg = singleArg();
+      if (arg < 0) {
+        throw new Error("Argument of sqrt must be a non-zero number");
+      }
+      return typeof arg === "number" ? Math.sqrt(arg) : sqrtBigInt(arg);
+
     case "trunc":
-      break;
+      arg = singleArg();
+      return typeof arg === "number" ? Math.trunc(arg) : arg;
   }
-  return 0;
+  throw new Error(`The '${name}' function cannot be used in constant expressions`);
+
+  function singleArg(): number | bigint {
+    if (args.length != 1) {
+      throw new Error(`'${name}' must have a single argument`);
+    }
+    return args[0];
+  }
+
+  function atLeastOneArg(): void {
+    if (args.length == 0) {
+      throw new Error(`'${name}' must have at least one argument`);
+    }
+  }
 }
 
 /**
@@ -390,3 +416,43 @@ function toBits(arg: number | bigint): number | bigint {
   }
   return Number(BigInt.asIntN(32, BigInt(arg)));
 }
+
+/**
+ * Calculates the square root of a BigInt
+ * @param arg Argument
+ */
+function sqrtBigInt(arg: bigint): bigint {
+  if (arg < 0) {
+    throw new Error("Argument of sqrt must be a non-zero number");
+  }
+
+  if (arg < 2) {
+    return arg;
+  }
+
+  function newtonIteration(n: bigint, x0: bigint): bigint {
+    const x1 = (n / x0 + x0) >> 1n;
+    if (x0 === x1 || x0 === x1 - 1n) {
+      return x0;
+    }
+    return newtonIteration(n, x1);
+  }
+
+  return newtonIteration(arg, 1n);
+}
+
+/**
+ * Math.max alternative that works with number and BigInt
+ * @param args 
+ */
+function bigIntMax (...args: (number | bigint)[]) {
+  return args.reduce((m, e) => e > m ? e : m);
+} 
+
+/**
+ * Math.min alternative that works with number and BigInt
+ * @param args 
+ */
+function bigIntMin (...args: (number | bigint)[]) {
+  return args.reduce((m, e) => e < m ? e : m);
+} 

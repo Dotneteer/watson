@@ -386,12 +386,12 @@ export class WatSharpLexer {
             return makeToken();
           }
           phase = LexerPhase.ShiftRight;
-          tokenType = TokenType.ShiftRight;
+          tokenType = TokenType.SignedShiftRight;
           break;
 
         case LexerPhase.ShiftRight:
           return ch === ">"
-            ? completeToken(TokenType.SignedShiftRight)
+            ? completeToken(TokenType.ShiftRight)
             : makeToken();
 
         // ====================================================================
@@ -722,7 +722,6 @@ const resolverHash: Record<string, TokenType> = {
   ctz: TokenType.Ctz,
   popcnt: TokenType.PopCnt,
   abs: TokenType.Abs,
-  neg: TokenType.Neg,
   ceil: TokenType.Ceil,
   floor: TokenType.Floor,
   trunc: TokenType.Trunc,
@@ -730,8 +729,8 @@ const resolverHash: Record<string, TokenType> = {
   sqrt: TokenType.Sqrt,
   min: TokenType.Min,
   max: TokenType.Max,
+  neg: TokenType.Neg,
   copysign: TokenType.CopySign,
-
 
   inline: TokenType.Inline,
   struct: TokenType.Struct,

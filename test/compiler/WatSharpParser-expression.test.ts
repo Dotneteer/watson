@@ -888,7 +888,6 @@ describe("WatSharpParser - expressions", () => {
     { src: "clz(12)", name: "clz" },
     { src: "ctz(12)", name: "ctz" },
     { src: "popcnt(12)", name: "popcnt" },
-    { src: "neg(12)", name: "neg" },
     { src: "ceil(12)", name: "ceil" },
     { src: "floor(12)", name: "floor" },
     { src: "trunc(12)", name: "trunc" },
@@ -896,7 +895,6 @@ describe("WatSharpParser - expressions", () => {
     { src: "sqrt(12)", name: "sqrt" },
     { src: "min(12)", name: "min" },
     { src: "max(12)", name: "max" },
-    { src: "copysign(12)", name: "copysign" },
   ];
   builtInFunc1Cases.forEach((c) => {
     it(`built-in function: ${c.src}`, () => {
