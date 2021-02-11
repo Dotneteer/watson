@@ -230,8 +230,8 @@ export class PreprocessorExpressionLexer {
         type: tokenType,
         location: {
           fileIndex: input.fileIndex,
-          startPos,
-          endPos: lastEndPos,
+          startPosition: startPos,
+          endPosition: lastEndPos,
           startLine,
           endLine: input.line,
           startColumn,

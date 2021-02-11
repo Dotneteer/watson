@@ -56,7 +56,7 @@ export type TypeSpec =
   | ArrayType
   | StructType
   | StructField
-  | UnresolvedType;
+  | NamedType;
 
 /**
  * Type identifiers for intrinsic types
@@ -71,9 +71,12 @@ export type Intrinsics =
   | "i64"
   | "u64"
   | "f32"
-  | "u32";
+  | "f64";
 
-export interface TypeSpecBase extends BaseNode {}
+export interface TypeSpecBase extends BaseNode {
+  resolved?: boolean;
+  sizeof?: number;
+}
 
 /**
  * Instrinsic type specification
@@ -115,13 +118,14 @@ export interface StructField extends TypeSpecBase {
   type: "StructField";
   id: string;
   spec: TypeSpec;
+  offset?: number;
 }
 
 /**
  * Unresolved type specification
  */
-export interface UnresolvedType extends TypeSpecBase {
-  type: "UnresolvedType";
+export interface NamedType extends TypeSpecBase {
+  type: "NamedType";
   name: string;
 }
 
@@ -139,7 +143,6 @@ export type Expression =
   | BuiltInFunctionInvocationExpression
   | TypeCastExpression
   | FunctionInvocationExpression
-  | UnresolvedInvocationExpression
   | MemberAccessExpression
   | ItemAccessExpression
   | Identifier
@@ -150,15 +153,10 @@ export type Expression =
  */
 export interface ExpressionBase extends BaseNode {
   /**
-   * Indicates if the expression is a constant expression
-   */
-  constant?: boolean;
-
-  /**
    * The value of the expression. If defined, the expression has
    * been evaluated; otherwise, not
    */
-  value?: number | BigInt;
+  value?: number | bigint;
 }
 
 /**
@@ -196,7 +194,6 @@ export type BuiltInFunctionNames =
   | "ctz"
   | "popcnt"
   | "abs"
-  | "neg"
   | "ceil"
   | "floor"
   | "trunc"
@@ -204,6 +201,7 @@ export type BuiltInFunctionNames =
   | "sqrt"
   | "min"
   | "max"
+  | "neg"
   | "copysign";
 
 /**
@@ -271,15 +269,6 @@ export interface FunctionInvocationExpression extends ExpressionBase {
 }
 
 /**
- * Represents an unresolved invocation-like expression
- */
-export interface UnresolvedInvocationExpression extends ExpressionBase {
-  type: "UnresolvedInvocation";
-  name: string;
-  arguments: Expression[];
-}
-
-/**
  * Represents a member access expression
  */
 export interface MemberAccessExpression extends ExpressionBase {
@@ -310,7 +299,7 @@ export interface Identifier extends ExpressionBase {
  */
 export interface Literal extends ExpressionBase {
   type: "Literal";
-  value: number | BigInt;
+  value: number | bigint;
 }
 
 // ============================================================================
@@ -332,6 +321,7 @@ export type Declaration =
 export interface DeclarationBase extends BaseNode {
   name: string;
   order?: number;
+  resolved?: boolean;
 }
 
 /**
@@ -341,6 +331,7 @@ export interface ConstDeclaration extends DeclarationBase {
   type: "ConstDeclaration";
   underlyingType: Intrinsics;
   expr: Expression;
+  value?: number | bigint;
 }
 
 /**
@@ -366,6 +357,7 @@ export interface TypeDeclaration extends DeclarationBase {
 export interface TableDeclaration extends DeclarationBase {
   type: "TableDeclaration";
   ids: string[];
+  entryIndex?: number;
 }
 
 /**
@@ -383,7 +375,8 @@ export interface DataDeclaration extends DeclarationBase {
 export interface VariableDeclaration extends DeclarationBase {
   type: "VariableDeclaration";
   spec: TypeSpec;
-  expr: Expression;
+  addressExpr?: Expression;
+  address?: number;
 }
 
 /**
@@ -415,4 +408,20 @@ export interface FunctionParameter extends BaseNode {
   type: "FunctionParameter";
   name: string;
   spec: TypeSpec;
+}
+
+/**
+ * Hash object for the size of intrinsic types
+ */
+export const instrisicSizes: Record<Intrinsics, number> = {
+  i8: 1,
+  u8: 1,
+  i16: 2,
+  u16: 2,
+  i32: 4,
+  u32: 4,
+  i64: 8,
+  u64: 8,
+  f32: 4,
+  f64: 8,
 }

@@ -756,7 +756,7 @@ describe("WatSharpParser - expressions", () => {
 
   const sizeofCases = [
     { src: "sizeof(u32)", spec: "Intrinsic" },
-    { src: "sizeof(myStruct)", spec: "UnresolvedType" },
+    { src: "sizeof(myStruct)", spec: "NamedType" },
     { src: "sizeof(*i64)", spec: "Pointer" },
     { src: "sizeof(*i64[2])", spec: "Array" },
     { src: "sizeof(struct{u8 l})", spec: "Struct" },
@@ -888,7 +888,6 @@ describe("WatSharpParser - expressions", () => {
     { src: "clz(12)", name: "clz" },
     { src: "ctz(12)", name: "ctz" },
     { src: "popcnt(12)", name: "popcnt" },
-    { src: "neg(12)", name: "neg" },
     { src: "ceil(12)", name: "ceil" },
     { src: "floor(12)", name: "floor" },
     { src: "trunc(12)", name: "trunc" },
@@ -896,7 +895,6 @@ describe("WatSharpParser - expressions", () => {
     { src: "sqrt(12)", name: "sqrt" },
     { src: "min(12)", name: "min" },
     { src: "max(12)", name: "max" },
-    { src: "copysign(12)", name: "copysign" },
   ];
   builtInFunc1Cases.forEach((c) => {
     it(`built-in function: ${c.src}`, () => {

@@ -126,7 +126,7 @@ export class FunctionBuilder implements Func {
  */
 export function constVal(
   valueType: WaType,
-  value: number | BigInt,
+  value: number | bigint,
   ...children: WaInstruction[]
 ): ConstVal {
   return <ConstVal>{

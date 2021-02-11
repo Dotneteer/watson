@@ -27,7 +27,6 @@ import {
   GlobalDeclaration,
   Identifier,
   ImportedFunctionDeclaration,
-  Intrinsics,
   IntrinsicType,
   ItemAccessExpression,
   Literal,
@@ -41,7 +40,7 @@ import {
   TypeDeclaration,
   TypeSpec,
   UnaryExpression,
-  UnresolvedType,
+  NamedType,
   VariableDeclaration,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
@@ -136,7 +135,11 @@ export class WatSharpParser {
       } catch {
         const lastErr = this._parseErrors[this._parseErrors.length - 1];
         // --- Skip the remaining part of the declaration
-        if (lastErr?.code !== "W006") {
+        if (
+          lastErr &&
+          lastErr.code !== "W006" &&
+          !lastErr.code.startsWith("W1")
+        ) {
           let token: Token;
           do {
             token = this._lexer.get();
@@ -177,7 +180,7 @@ export class WatSharpParser {
       }
       this._lexer.get();
       const next = this._lexer.peek();
-      if (next.type === TokenType.Asgn || next.type === TokenType.Semicolon) {
+      if (next.type === TokenType.LBrace || next.type === TokenType.Semicolon) {
         this.parseVariableDeclarationTail(start, idToken.text, spec);
         return;
       } else if (next.type === TokenType.LParent) {
@@ -404,7 +407,7 @@ export class WatSharpParser {
 
   /**
    * variableDeclaration
-   *   : typeSpecification identifier ("=" expr)? ";"
+   *   : typeSpecification identifier ( "{" expr "}" )? ";"
    *   ;
    */
   private parseVariableDeclarationTail(
@@ -412,10 +415,13 @@ export class WatSharpParser {
     name: string,
     spec: TypeSpec
   ): void {
-    let expr: Expression | undefined;
-    if (this._lexer.peek().type === TokenType.Asgn) {
+    let addressExpr: Expression | undefined;
+    let next = this._lexer.peek();
+    if (next.type === TokenType.LBrace) {
       this._lexer.get();
-      expr = this.getExpression();
+      addressExpr = this.getExpression();
+      this.expectToken(TokenType.RBrace);
+      next = this._lexer.peek();
     }
     const semicolon = this.expectToken(TokenType.Semicolon, "W006");
     this.addDeclaration<VariableDeclaration>(
@@ -423,7 +429,7 @@ export class WatSharpParser {
       {
         name,
         spec,
-        expr,
+        addressExpr,
       },
       start,
       semicolon
@@ -587,8 +593,8 @@ export class WatSharpParser {
         type: "FunctionParameter",
         name: id.text,
         spec: paramType,
-        startPosition: start.location.startPos,
-        endPosition: id.location.endPos,
+        startPosition: start.location.startPosition,
+        endPosition: id.location.endPosition,
         startLine: start.location.startLine,
         endLine: id.location.endLine,
         startColumn: start.location.startColumn,
@@ -637,10 +643,16 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
+    if (!stump.name) {
+      throw new Error("A declaration must have a name.");
+    }
+    if (this._declarations.has(stump.name)) {
+      this.reportError("W100", undefined, stump.name);
+    }
     const updatedDecl = Object.assign({}, stump, <Declaration>{
       type,
-      startPosition: startToken.location.startPos,
-      endPosition: endToken.location.endPos,
+      startPosition: startToken.location.startPosition,
+      endPosition: endToken.location.endPosition,
       startLine: startToken.location.startLine,
       startColumn: startToken.location.startColumn,
       endLine: endToken.location.endLine,
@@ -1175,6 +1187,28 @@ export class WatSharpParser {
         this._lexer.get();
         return this.parseRealLiteral(start);
 
+      case TokenType.Infinity:
+        this._lexer.get();
+        return this.createExpressionNode<Literal>(
+          "Literal",
+          {
+            value: Infinity,
+          },
+          start,
+          start
+        );
+
+      case TokenType.NaN:
+        this._lexer.get();
+        return this.createExpressionNode<Literal>(
+          "Literal",
+          {
+            value: NaN,
+          },
+          start,
+          start
+        );
+
       case TokenType.Plus:
       case TokenType.Minus:
       case TokenType.BinaryNot:
@@ -1242,7 +1276,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseBinaryLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
@@ -1267,7 +1301,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseDecimalLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
@@ -1292,7 +1326,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseHexadecimalLiteral(token: Token): Literal {
-    let value: number | BigInt;
+    let value: number | bigint;
     const bigValue = BigInt(token.text.replace(/_/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
@@ -1417,8 +1451,8 @@ export class WatSharpParser {
     switch (start.type) {
       case TokenType.Identifier:
         this._lexer.get();
-        return this.createTypeSpecNode<UnresolvedType>(
-          "UnresolvedType",
+        return this.createTypeSpecNode<NamedType>(
+          "NamedType",
           {
             name: start.text,
           },
@@ -1582,8 +1616,8 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
-    const startPosition = startToken.location.startPos;
-    const endPosition = endToken.location.startPos;
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
     return Object.assign({}, stump, <Expression>{
       type,
       startPosition,
@@ -1608,8 +1642,8 @@ export class WatSharpParser {
     startToken: Token,
     endToken: Token
   ): T {
-    const startPosition = startToken.location.startPos;
-    const endPosition = endToken.location.startPos;
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
     return Object.assign({}, stump, <TypeSpec>{
       type,
       startPosition,
@@ -1647,7 +1681,7 @@ export class WatSharpParser {
       text: errorText,
       line: token.location.startLine,
       column: token.location.startColumn,
-      position: token.location.startPos,
+      position: token.location.startPosition,
     });
     throw new ParserError(errorText, errorCode);
 

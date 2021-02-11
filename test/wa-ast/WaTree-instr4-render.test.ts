@@ -4,10 +4,8 @@ import { WaTree } from "../../src/wa-ast/WaTree";
 import {
   abs,
   ceil,
-  clz,
   convert32,
   convert64,
-  copysign,
   demote64,
   eq,
   eqz,
@@ -1232,49 +1230,4 @@ describe("WaTree - render instructions #4", () => {
     }
     fail("Error expected");
   });
-
-  it("f32.copysign", () => {
-    // --- Arrange
-    const tree = new WaTree();
-    const instr = copysign(WaType.f32);
-
-    // --- Act
-    const text = tree.renderInstructionNode(instr);
-
-    // --- Assert
-    expect(text).toBe("f32.copysign");
-  });
-
-  it("f64.copysign", () => {
-    // --- Arrange
-    const tree = new WaTree();
-    const instr = copysign(WaType.f64);
-
-    // --- Act
-    const text = tree.renderInstructionNode(instr);
-
-    // --- Assert
-    expect(text).toBe("f64.copysign");
-  });
-
-  it("i32.copysign", () => {
-    try {
-      // --- Act
-      copysign(WaType.i32);
-    } catch (err) {
-      return;
-    }
-    fail("Error expected");
-  });
-
-  it("i64.copysign", () => {
-    try {
-      // --- Act
-      copysign(WaType.i64);
-    } catch (err) {
-      return;
-    }
-    fail("Error expected");
-  });
-
 });

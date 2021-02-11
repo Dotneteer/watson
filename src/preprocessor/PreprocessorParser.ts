@@ -108,7 +108,7 @@ export class PreprocessorParser implements PPEvaluationContext {
           sourceChunks.push({
             sourceCode: trimmedText,
             fileIndex: loc.fileIndex,
-            pos: loc.startPos,
+            pos: loc.startPosition,
             line: loc.startLine,
             col: loc.startColumn,
           });
@@ -246,7 +246,7 @@ export class PreprocessorParser implements PPEvaluationContext {
           sourceChunks.push({
             sourceCode: trimmedText,
             fileIndex: loc.fileIndex,
-            pos: loc.startPos,
+            pos: loc.startPosition,
             line: loc.startLine,
             col: loc.startColumn,
           });
@@ -475,7 +475,7 @@ export class PreprocessorParser implements PPEvaluationContext {
         sourceChunks.push({
           sourceCode: trimmedText,
           fileIndex: loc.fileIndex,
-          pos: loc.startPos,
+          pos: loc.startPosition,
           line: loc.startLine,
           col: loc.startColumn,
         });
@@ -721,7 +721,7 @@ export class PreprocessorParser implements PPEvaluationContext {
       text: errorText,
       line: token.location.startLine,
       column: token.location.startColumn,
-      position: token.location.startPos,
+      position: token.location.startPosition,
     });
     throw new ParserError(errorText, errorCode);
 

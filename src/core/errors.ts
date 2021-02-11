@@ -45,8 +45,7 @@ export type ErrorCodes =
   | "P015"
   | "P016"
 
-  // --- WAT# errors
-
+  // --- WAT# syntax errors
   | "W001"
   | "W002"
   | "W003"
@@ -67,7 +66,19 @@ export type ErrorCodes =
   | "W018"
   | "W019"
   | "W020"
-  | "W021";
+  | "W021"
+
+  // --- WAT# semantic errors
+  | "W100"
+  | "W101"
+  | "W102"
+  | "W103"
+  | "W104"
+  | "W105"
+  | "W106"
+  | "W107"
+  | "W108"
+  | "W109"
 
 /**
  * Error message type description
@@ -78,6 +89,7 @@ type ErrorText = Record<string, string>;
  * The error messages of error codes
  */
 export const errorMessages: ErrorText = {
+  // --- Preprocessor errors
   P001: "Unknown source code token found during preprocessing: {0}",
   P002: "Cannot find preprocessor directive",
   P003: "Unknown preprocessor directive: {0}",
@@ -95,6 +107,7 @@ export const errorMessages: ErrorText = {
   P015: "String literal expected",
   P016: "#include error: {0}",
 
+  // --- WAT# syntax issues
   W001: "A comma expected",
   W002: "An expression expected",
   W003: "Unexpected token: {0}",
@@ -116,4 +129,16 @@ export const errorMessages: ErrorText = {
   W019: "Function parameters can be intrinsic types of pointers only",
   W020: "Function result types can be intrinsic types, pointers, or 'void'",
   W021: "Missing function parameter name",
+
+  // --- WAT# semantic issues
+  W100: "Duplicated declaration identifier: '{0}'",
+  W101: "Unknonw declaration: '{0}'",
+  W102: "'{0}' is not a type declaration",
+  W103: "Cannot resolve '{0}' because of circular declaration reference",
+  W104: "Invalid construct in constant expressions",
+  W105: "The '&' and '*' operators cannot be used in constant expressions",
+  W106: "The '~' operators cannot be used with a float value",
+  W107: "Error when evaluating an expression: {0}",
+  W108: "'{0}' is not a const declaration",
+  W109: "A table can hold only function identifiers"
 };

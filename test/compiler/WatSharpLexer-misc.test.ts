@@ -18,8 +18,8 @@ describe("WatSharpLexer - miscellaneous", () => {
     expect(next.type).toBe(TokenType.Eof);
     expect(next.text).toBe(source);
     expect(next.location.fileIndex).toBe(0);
-    expect(next.location.startPos).toBe(0);
-    expect(next.location.endPos).toBe(source.length);
+    expect(next.location.startPosition).toBe(0);
+    expect(next.location.endPosition).toBe(source.length);
     expect(next.location.startLine).toBe(1);
     expect(next.location.endLine).toBe(1);
     expect(next.location.startColumn).toBe(0);
@@ -61,8 +61,8 @@ describe("WatSharpLexer - miscellaneous", () => {
     { src: "<<", exp: TokenType.ShiftLeft },
     { src: ">", exp: TokenType.GreaterThan },
     { src: ">=", exp: TokenType.GreaterThanOrEqual },
-    { src: ">>", exp: TokenType.ShiftRight },
-    { src: ">>>", exp: TokenType.SignedShiftRight },
+    { src: ">>", exp: TokenType.SignedShiftRight },
+    { src: ">>>", exp: TokenType.ShiftRight },
     { src: ".", exp: TokenType.Dot },
     { src: "thisId", exp: TokenType.Identifier },
   ];
@@ -78,8 +78,8 @@ describe("WatSharpLexer - miscellaneous", () => {
       expect(next.type).toBe(c.exp);
       expect(next.text).toBe(source);
       expect(next.location.fileIndex).toBe(0);
-      expect(next.location.startPos).toBe(0);
-      expect(next.location.endPos).toBe(source.length);
+      expect(next.location.startPosition).toBe(0);
+      expect(next.location.endPosition).toBe(source.length);
       expect(next.location.startLine).toBe(1);
       expect(next.location.endLine).toBe(1);
       expect(next.location.startColumn).toBe(0);
@@ -97,8 +97,8 @@ describe("WatSharpLexer - miscellaneous", () => {
       expect(next.type).toBe(c.exp);
       expect(next.text).toBe(c.src);
       expect(next.location.fileIndex).toBe(0);
-      expect(next.location.startPos).toBe(5);
-      expect(next.location.endPos).toBe(source.length);
+      expect(next.location.startPosition).toBe(5);
+      expect(next.location.endPosition).toBe(source.length);
       expect(next.location.startLine).toBe(1);
       expect(next.location.endLine).toBe(1);
       expect(next.location.startColumn).toBe(5);
@@ -116,8 +116,8 @@ describe("WatSharpLexer - miscellaneous", () => {
       expect(next.type).toBe(c.exp);
       expect(next.text).toBe(c.src);
       expect(next.location.fileIndex).toBe(0);
-      expect(next.location.startPos).toBe(9);
-      expect(next.location.endPos).toBe(source.length);
+      expect(next.location.startPosition).toBe(9);
+      expect(next.location.endPosition).toBe(source.length);
       expect(next.location.startLine).toBe(1);
       expect(next.location.endLine).toBe(1);
       expect(next.location.startColumn).toBe(9);
@@ -135,8 +135,8 @@ describe("WatSharpLexer - miscellaneous", () => {
       expect(next.type).toBe(c.exp);
       expect(next.text).toBe(c.src);
       expect(next.location.fileIndex).toBe(0);
-      expect(next.location.startPos).toBe(0);
-      expect(next.location.endPos).toBe(c.src.length);
+      expect(next.location.startPosition).toBe(0);
+      expect(next.location.endPosition).toBe(c.src.length);
       expect(next.location.startLine).toBe(1);
       expect(next.location.endLine).toBe(1);
       expect(next.location.startColumn).toBe(0);
@@ -157,8 +157,8 @@ describe("WatSharpLexer - miscellaneous", () => {
       expect(next.type).toBe(c.exp);
       expect(next.text).toBe(c.src);
       expect(next.location.fileIndex).toBe(0);
-      expect(next.location.startPos).toBe(0);
-      expect(next.location.endPos).toBe(c.src.length);
+      expect(next.location.startPosition).toBe(0);
+      expect(next.location.endPosition).toBe(c.src.length);
       expect(next.location.startLine).toBe(1);
       expect(next.location.endLine).toBe(1);
       expect(next.location.startColumn).toBe(0);

@@ -82,6 +82,8 @@ export enum TokenType {
   BinaryLiteral,
   RealLiteral,
   StringLiteral,
+  Infinity,
+  NaN,
 
   Inline,
   Export, 
@@ -95,7 +97,6 @@ export enum TokenType {
   Ctz,
   PopCnt,
   Abs,
-  Neg,
   Ceil,
   Floor,
   Trunc,
@@ -103,6 +104,7 @@ export enum TokenType {
   Sqrt,
   Min,
   Max,
+  Neg,
   CopySign,
 
   Const,
@@ -142,12 +144,12 @@ export interface TokenLocation {
   /**
    * Start position in the source stream
    */
-  readonly startPos: number;
+  readonly startPosition: number;
 
   /**
    * End position (exclusive) in the source stream
    */
-  readonly endPos: number;
+  readonly endPosition: number;
 
   /**
    * Start line number
