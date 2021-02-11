@@ -77,6 +77,8 @@ export type ErrorCodes =
   | "W105"
   | "W106"
   | "W107"
+  | "W108"
+  | "W109"
 
 /**
  * Error message type description
@@ -137,4 +139,6 @@ export const errorMessages: ErrorText = {
   W105: "The '&' and '*' operators cannot be used in constant expressions",
   W106: "The '~' operators cannot be used with a float value",
   W107: "Error when evaluating an expression: {0}",
+  W108: "'{0}' is not a const declaration",
+  W109: "A table can hold only function identifiers"
 };

@@ -625,24 +625,6 @@ describe("WatSharpParser - declarations", () => {
     it(`var decl ${c.src} #1`, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c.src} myVar = 123 * 456;
-      `);
-
-      // --- Act
-      wParser.parseProgram();
-
-      // --- Assert
-      expect(wParser.hasErrors).toBe(false);
-      const decl = wParser.declarations.get("myVar");
-      expect(decl).toBeDefined();
-      const varDecl = decl as VariableDeclaration;
-      expect(varDecl.spec.type).toBe("Intrinsic");
-      expect(varDecl.expr.type).toBe("BinaryExpression");
-    });
-
-    it(`var decl ${c.src} #2`, () => {
-      // --- Arrange
-      const wParser = new WatSharpParser(`
       ${c.src} myVar;
       `);
 
@@ -655,10 +637,9 @@ describe("WatSharpParser - declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("Intrinsic");
-      expect(varDecl.expr).toBeUndefined();
     });
 
-    it(`var decl ${c.src} #3`, () => {
+    it(`var decl ${c.src} #2`, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
       ${c.src} ;
@@ -673,22 +654,7 @@ describe("WatSharpParser - declarations", () => {
       expect(wParser.errors[0].code).toBe("W004");
     });
 
-    it(`var decl ${c.src} #4`, () => {
-      // --- Arrange
-      const wParser = new WatSharpParser(`
-      ${c.src} myVar = ;
-      `);
-
-      // --- Act
-      wParser.parseProgram();
-
-      // --- Assert
-      expect(wParser.hasErrors).toBe(true);
-      expect(wParser.errors.length).toBe(1);
-      expect(wParser.errors[0].code).toBe("W002");
-    });
-
-    it(`var decl ${c.src} #5`, () => {
+    it(`var decl ${c.src} #3`, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
       ${c.src} myVar 123
@@ -709,7 +675,7 @@ describe("WatSharpParser - declarations", () => {
     it(`var decl/named ${c} `, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c} myVar = 123 * 456;
+      ${c} myVar;
       `);
 
       // --- Act
@@ -721,7 +687,6 @@ describe("WatSharpParser - declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("NamedType");
-      expect(varDecl.expr.type).toBe("BinaryExpression");
     });
   });
 
@@ -747,7 +712,7 @@ describe("WatSharpParser - declarations", () => {
     it(`var decl/pointer ${c.src} `, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c.src} myVar = 123 * 456;
+      ${c.src} myVar;
       `);
 
       // --- Act
@@ -759,7 +724,6 @@ describe("WatSharpParser - declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("Pointer");
-      expect(varDecl.expr.type).toBe("BinaryExpression");
     });
   });
 
@@ -779,7 +743,7 @@ describe("WatSharpParser - declarations", () => {
     it(`var decl/array cases ${c.src} `, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c.src} myVar = 123 * 456;
+      ${c.src} myVar;
       `);
 
       // --- Act
@@ -791,7 +755,6 @@ describe("WatSharpParser - declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("Array");
-      expect(varDecl.expr.type).toBe("BinaryExpression");
     });
   });
 
@@ -804,7 +767,7 @@ describe("WatSharpParser - declarations", () => {
     it(`var decl/struct cases ${c} `, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c} myVar = 123 * 456;
+      ${c} myVar;
       `);
 
       // --- Act
@@ -816,7 +779,6 @@ describe("WatSharpParser - declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("Struct");
-      expect(varDecl.expr.type).toBe("BinaryExpression");
     });
   });
 });

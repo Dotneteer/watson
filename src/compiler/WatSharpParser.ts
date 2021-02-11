@@ -180,7 +180,7 @@ export class WatSharpParser {
       }
       this._lexer.get();
       const next = this._lexer.peek();
-      if (next.type === TokenType.Asgn || next.type === TokenType.Semicolon) {
+      if (next.type === TokenType.LBrace || next.type === TokenType.Semicolon) {
         this.parseVariableDeclarationTail(start, idToken.text, spec);
         return;
       } else if (next.type === TokenType.LParent) {
@@ -407,7 +407,7 @@ export class WatSharpParser {
 
   /**
    * variableDeclaration
-   *   : typeSpecification identifier ("=" expr)? ";"
+   *   : typeSpecification identifier ( "{" expr "}" )? ";"
    *   ;
    */
   private parseVariableDeclarationTail(
@@ -415,10 +415,13 @@ export class WatSharpParser {
     name: string,
     spec: TypeSpec
   ): void {
-    let expr: Expression | undefined;
-    if (this._lexer.peek().type === TokenType.Asgn) {
+    let addressExpr: Expression | undefined;
+    let next = this._lexer.peek();
+    if (next.type === TokenType.LBrace) {
       this._lexer.get();
-      expr = this.getExpression();
+      addressExpr = this.getExpression();
+      this.expectToken(TokenType.RBrace);
+      next = this._lexer.peek();
     }
     const semicolon = this.expectToken(TokenType.Semicolon, "W006");
     this.addDeclaration<VariableDeclaration>(
@@ -426,7 +429,7 @@ export class WatSharpParser {
       {
         name,
         spec,
-        expr,
+        addressExpr,
       },
       start,
       semicolon

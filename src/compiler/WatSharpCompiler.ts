@@ -4,6 +4,7 @@ import {
   Declaration,
   Expression,
   instrisicSizes as intrisicSizes,
+  TableDeclaration,
   TypeSpec,
 } from "./source-tree";
 import { WatSharpParser } from "./WatSharpParser";
@@ -82,17 +83,31 @@ export class WatSharpCompiler {
    * Resolve unresolved declaration dependencies
    */
   private resolveDependencies(): void {
-    // --- Declarations to resolve
     const compiler = this;
+
+    // --- Declarations to resolve
     const declarations = this._parser.declarations;
+
+    // --- Queue to hold dependent declarations to resolve
     const resolutionQueue: ResolutionQueueItem[] = [
       ...declarations.values(),
     ].map((item) => <ResolutionQueueItem>{ decl: item });
+
+    // --- Stack of name to check circular references
     const namedStack: string[] = [];
 
+    // --- Total #of table entries
+    let tableEntries = 0;
+
+    // --- Next address in memory
+    let nextMemoryAddress = 0;
+
+    // --- Iterate through the queue of items to resolve
     while (resolutionQueue.length > 0) {
       const item = resolutionQueue.shift();
       let itemToReport: Declaration | TypeSpec | Expression | undefined;
+
+      // --- Resolve a declaration, type, or expression
       try {
         if (item.decl) {
           itemToReport = item.decl;
@@ -119,7 +134,10 @@ export class WatSharpCompiler {
         return;
       }
 
+      // --- Push the name to the stack
       namedStack.push(decl.name);
+
+      // --- Resolve a particular type of declaration
       switch (decl.type) {
         case "ConstDeclaration":
           resolveExpression(decl.expr);
@@ -127,32 +145,44 @@ export class WatSharpCompiler {
             decl.value = applyTypeCast(decl.underlyingType, decl.expr.value);
           }
           break;
+
         case "DataDeclaration":
           decl.exprs.forEach((expr) => resolveExpression(expr));
           break;
-        case "FunctionDeclaration":
-          // TODO: Implement this case
-          break;
+
         case "GlobalDeclaration":
           if (decl.initExpr) {
             resolveExpression(decl.initExpr);
           }
+          if (decl.initExpr.value === undefined) {
+            decl.initExpr.value = 0;
+          }
           break;
-        case "ImportedFunctionDeclaration":
-          // TODO: Implement this case
-          break;
+
         case "TableDeclaration":
-          // TODO: Implement this case
+          resolveTableDeclaration(decl);
           break;
+
         case "TypeDeclaration":
           resolveTypeSpecification(decl.spec);
           break;
+
         case "VariableDeclaration":
-          if (decl.expr) {
-            resolveExpression(decl.expr);
+          resolveTypeSpecification(decl.spec);
+          if (decl.addressExpr) {
+            resolveExpression(decl.addressExpr);
+            if (decl.addressExpr.value) {
+              decl.address = Number(decl.addressExpr.value);
+            }
           }
+          if (decl.address === undefined) {
+            decl.address = nextMemoryAddress
+          }
+          nextMemoryAddress = decl.address + compiler.getSizeof(decl.spec);
           break;
       }
+
+      // --- Done. Remove the name fromt he stack and complete the resolution
       namedStack.pop();
       decl.resolved = true;
       return;
@@ -168,7 +198,7 @@ export class WatSharpCompiler {
         return;
       }
 
-      // --- Let's make the type is resolved
+      // --- Let's make the type resolved
       spec.resolved = true;
 
       switch (spec.type) {
@@ -199,7 +229,7 @@ export class WatSharpCompiler {
           break;
 
         case "NamedType":
-          // --- After circular reference check
+          // --- Check circular references
           if (namedStack.includes(spec.name)) {
             compiler.reportError("W103", spec, spec.name);
             break;
@@ -213,9 +243,11 @@ export class WatSharpCompiler {
               namedStack.pop();
               break;
             } else {
+              // --- Name is not a type declaration
               compiler.reportError("W102", spec, spec.name);
             }
           } else {
+            // --- Unknown declaration
             compiler.reportError("W101", spec, spec.name);
           }
           break;
@@ -231,13 +263,19 @@ export class WatSharpCompiler {
      * @param expr Expression to resolve
      */
     function resolveExpression(expr: Expression): void {
+      // --- "Outsource" to resolveConstantExpression
       resolveConstantExpression(
         expr,
+
+        // --- This function resolves identifiers in constant expressions
         (id) => {
+          // --- Check for circular reference
           if (namedStack.includes(id.name)) {
             compiler.reportError("W103", id, id.name);
             return;
           }
+
+          // --- Resolve the const declaration
           const decl = declarations.get(id.name);
           if (decl) {
             if (decl.type === "ConstDeclaration") {
@@ -247,18 +285,47 @@ export class WatSharpCompiler {
               id.value = decl.value;
               namedStack.pop();
             } else {
-              compiler.reportError("W102", id, id.name);
+              // --- This is not a const declaration
+              compiler.reportError("W108", id, id.name);
             }
           } else {
+            // --- Unknown declaration
             compiler.reportError("W101", id, id.name);
           }
         },
+        
+        // --- This function resolves the "sizeof" operator
         (typeSpec) => {
           resolveTypeSpecification(typeSpec);
           return typeSpec.resolved ? compiler.getSizeof(typeSpec) : 0;
         },
+
+        // --- Use this function to report errors
         compiler.reportError.bind(compiler)
       );
+    }
+
+    /**
+     * Resolves the specified table declaration
+     * @param table Table declaration
+     */
+    function resolveTableDeclaration(table: TableDeclaration): void {
+      // --- Iterate through all table idetifiers
+      table.entryIndex = tableEntries;
+      table.ids.forEach((id) => {
+        const decl = declarations.get(id);
+        if (!decl) {
+          // --- Unknown identifier
+          compiler.reportError("W101", table, id);
+          return;
+        }
+        if (decl.type !== "FunctionDeclaration") {
+          // --- This ID is not a function
+          compiler.reportError("W109", table, id);
+        }
+        tableEntries++;
+      });
+      table.resolved = true;
     }
   }
 

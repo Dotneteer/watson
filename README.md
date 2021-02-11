@@ -316,7 +316,7 @@ Syntax:
 
 ```
 jumpTableDeclaration
-    : "table" identifier "{" identifier? ("," identifier)* "}"
+    : "table" identifier "{" identifier? ("," identifier)* "}" ";"
     ;
 ```
 
@@ -338,7 +338,7 @@ Syntax:
 
 ```
 variableDeclaration
-    : typeSpecification identifier ("=" expr)? ";"
+    : typeSpecification identifier ( "{" expr "}" ) ";"
     ;
 ```
 

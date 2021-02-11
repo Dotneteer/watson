@@ -357,6 +357,7 @@ export interface TypeDeclaration extends DeclarationBase {
 export interface TableDeclaration extends DeclarationBase {
   type: "TableDeclaration";
   ids: string[];
+  entryIndex?: number;
 }
 
 /**
@@ -374,7 +375,8 @@ export interface DataDeclaration extends DeclarationBase {
 export interface VariableDeclaration extends DeclarationBase {
   type: "VariableDeclaration";
   spec: TypeSpec;
-  expr?: Expression;
+  addressExpr?: Expression;
+  address?: number;
 }
 
 /**
