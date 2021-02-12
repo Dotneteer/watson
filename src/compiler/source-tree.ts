@@ -2,7 +2,12 @@
  * This type represents the discriminated union of all WAT# source tree
  * node types
  */
-export type Node = TypeSpec | Expression | Declaration | FunctionParameter;
+export type Node =
+  | TypeSpec
+  | Expression
+  | Declaration
+  | FunctionParameter
+  | Statement;
 
 /**
  * This class represents the root class of all source tree nodes
@@ -399,15 +404,135 @@ export interface FunctionDeclaration extends DeclarationBase {
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;
+  body: Statement[];
 }
 
 /**
- * Describes a structure field
+ * Describes a function parameter field
  */
 export interface FunctionParameter extends BaseNode {
   type: "FunctionParameter";
   name: string;
   spec: TypeSpec;
+}
+
+// ============================================================================
+// Statements
+
+/**
+ * Discriminated unions of WAT# statements
+ */
+export type Statement =
+  | Assignment
+  | LocalVariable
+  | LocalFunctionInvocation
+  | IfStatement
+  | WhileStatement
+  | DoStatement
+  | BreakStatement
+  | ContinueStatement
+  | ReturnStatement;
+
+/**
+ * Symbols that can be unary operators
+ */
+export type AssignmentSymbols =
+  | "="
+  | "*="
+  | "/="
+  | "%="
+  | "+="
+  | "-="
+  | "<<="
+  | ">>="
+  | ">>>="
+  | "&="
+  | "|="
+  | "^=";
+
+/**
+ * Base class of statement nodes
+ */
+export interface StatementBase extends BaseNode {}
+
+/**
+ * Local variable statement
+ */
+export interface LocalVariable extends StatementBase {
+  type: "LocalVariable";
+  spec: TypeSpec;
+  name: string;
+  initExpr?: Expression;
+}
+
+/**
+ * Assignment statement
+ */
+export interface Assignment extends StatementBase {
+  type: "Assignment";
+  leftVal: Expression;
+  asgn: AssignmentSymbols;
+  expr: Expression;
+}
+
+/**
+ * Local function invocation
+ */
+export interface LocalFunctionInvocation extends StatementBase {
+  type: "LocalFunctionInvocation";
+  name: string;
+  args: Expression[];
+}
+
+/**
+ * If statement
+ */
+export interface IfStatement extends StatementBase {
+  type: "If";
+  test: Expression;
+  consequent: Statement[];
+  alternate?: Statement[];
+}
+
+
+/**
+ * Do-while statement
+ */
+export interface WhileStatement extends StatementBase {
+  type: "While";
+  loopBody: Statement[];
+  test: Expression;
+}
+
+/**
+ * Do statement
+ */
+export interface DoStatement extends StatementBase {
+  type: "Do";
+  loopBody: Statement[];
+  test: Expression;
+}
+
+/**
+ * Break statement
+ */
+export interface BreakStatement extends StatementBase {
+  type: "Break";
+}
+
+/**
+ * Continue statement
+ */
+export interface ContinueStatement extends StatementBase {
+  type: "Continue";
+}
+
+/**
+ * Break statement
+ */
+export interface ReturnStatement extends StatementBase {
+  type: "Return";
+  expr?: Expression;
 }
 
 /**
@@ -424,4 +549,4 @@ export const instrisicSizes: Record<Intrinsics, number> = {
   u64: 8,
   f32: 4,
   f64: 8,
-}
+};
