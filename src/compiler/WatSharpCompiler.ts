@@ -3,6 +3,7 @@ import { IncludeHandlerResult } from "../preprocessor/PreprocessorParser";
 import {
   Declaration,
   Expression,
+  FunctionDeclaration,
   instrisicSizes as intrisicSizes,
   TableDeclaration,
   TypeSpec,
@@ -14,6 +15,8 @@ import {
   applyTypeCast,
   resolveConstantExpression,
 } from "./expression-resolver";
+import { FunctionCompiler } from "./FunctionCompiler";
+import { WaTree } from "../wa-ast/WaTree";
 
 /**
  * This class implements the WAT# compiler
@@ -24,6 +27,9 @@ export class WatSharpCompiler {
 
   // --- Keep track of error messages
   private _errors: ParserErrorMessage[] = [];
+
+  // --- Stores the WebAssemble tree
+  private _waTree: WaTree | null = null;
 
   constructor(
     public readonly source: string,
@@ -53,6 +59,13 @@ export class WatSharpCompiler {
     if (this._errors.length > 0) {
       return;
     }
+
+    // --- Step #3: process function bodies
+    this._waTree = new WaTree();
+    this.processFunctionBodies();
+    if (this._errors.length > 0) {
+      return;
+    }
   }
 
   /**
@@ -74,6 +87,13 @@ export class WatSharpCompiler {
    */
   get declarations(): Map<string, Declaration> {
     return this._parser.declarations;
+  }
+
+  /**
+   * Gets the WebAssembly tree with the emitted code
+   */
+  get waTree(): WaTree | null {
+    return this._waTree;
   }
 
   // ==========================================================================
@@ -345,6 +365,29 @@ export class WatSharpCompiler {
   }
 
   // ==========================================================================
+  // Process function bodies
+
+  /**
+   * Processes the bodies of functions
+   */
+  private processFunctionBodies(): void {
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "FunctionDeclaration") {
+        this.processFunctionBody(decl);
+      }
+    }
+  }
+
+  /**
+   * Processes the specified function
+   * @param func Function to process
+   */
+  private processFunctionBody(func: FunctionDeclaration): void {
+    const fCompiler = new FunctionCompiler(this, func);
+    fCompiler.process();
+  }
+
+  // ==========================================================================
   // Error reporting
 
   /**
@@ -353,7 +396,7 @@ export class WatSharpCompiler {
    * @param token Token that represents the error's position
    * @param options Error message options
    */
-  private reportError(
+  reportError(
     errorCode: ErrorCodes,
     node: Node | TokenLocation,
     ...options: any[]

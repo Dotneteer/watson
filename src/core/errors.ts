@@ -87,6 +87,9 @@ export type ErrorCodes =
   | "W111"
   | "W112"
 
+  // --- WAT# Compiler issues
+  | "W140";
+
 /**
  * Error message type description
  */
@@ -155,4 +158,7 @@ export const errorMessages: ErrorText = {
   W110: "The break statement can only be used in a loop",
   W111: "The continue statement can only be used in a loop",
   W112: "Invalid left value",
+
+  // --- WAT# Compiler issues
+  W140: "Local parameter/variable '{0}' has already been declared",
 };
