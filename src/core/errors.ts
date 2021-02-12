@@ -67,6 +67,10 @@ export type ErrorCodes =
   | "W019"
   | "W020"
   | "W021"
+  | "W022"
+  | "W023"
+  | "W024"
+  | "W025"
 
   // --- WAT# semantic errors
   | "W100"
@@ -79,6 +83,9 @@ export type ErrorCodes =
   | "W107"
   | "W108"
   | "W109"
+  | "W110"
+  | "W111"
+  | "W112"
 
 /**
  * Error message type description
@@ -129,10 +136,14 @@ export const errorMessages: ErrorText = {
   W019: "Function parameters can be intrinsic types of pointers only",
   W020: "Function result types can be intrinsic types, pointers, or 'void'",
   W021: "Missing function parameter name",
+  W022: "'while' expected",
+  W023: "A statement expected",
+  W024: "An assignment operator expected",
+  W025: "'*' or an identifier expected",
 
   // --- WAT# semantic issues
   W100: "Duplicated declaration identifier: '{0}'",
-  W101: "Unknonw declaration: '{0}'",
+  W101: "Unknown declaration: '{0}'",
   W102: "'{0}' is not a type declaration",
   W103: "Cannot resolve '{0}' because of circular declaration reference",
   W104: "Invalid construct in constant expressions",
@@ -140,5 +151,8 @@ export const errorMessages: ErrorText = {
   W106: "The '~' operators cannot be used with a float value",
   W107: "Error when evaluating an expression: {0}",
   W108: "'{0}' is not a const declaration",
-  W109: "A table can hold only function identifiers"
+  W109: "A table can hold only function identifiers",
+  W110: "The break statement can only be used in a loop",
+  W111: "The continue statement can only be used in a loop",
+  W112: "Invalid left value",
 };

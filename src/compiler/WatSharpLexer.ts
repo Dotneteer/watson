@@ -166,6 +166,11 @@ export class WatSharpLexer {
               tokenType = TokenType.Asterisk;
               break;
 
+            case "%":
+              phase = LexerPhase.Remainder;
+              tokenType = TokenType.Remainder;
+              break;
+
             // --- Plus, AddAsgn
             case "+":
               phase = LexerPhase.Plus;
@@ -219,9 +224,6 @@ export class WatSharpLexer {
 
             case "?":
               return completeToken(TokenType.QuestionMark);
-
-            case "%":
-              return completeToken(TokenType.Remainder);
 
             case "~":
               return completeToken(TokenType.BinaryNot);
@@ -346,12 +348,17 @@ export class WatSharpLexer {
             ? completeToken(TokenType.MultiplyAsgn)
             : makeToken();
 
+        case LexerPhase.Remainder:
+          return ch === "="
+            ? completeToken(TokenType.RemainderAsgn)
+            : makeToken();
+
         case LexerPhase.Plus:
           return ch === "=" ? completeToken(TokenType.AddAsgn) : makeToken();
 
         case LexerPhase.Minus:
           return ch === "="
-            ? completeToken(TokenType.SubtrackAsgn)
+            ? completeToken(TokenType.SubtractAsgn)
             : makeToken();
 
         case LexerPhase.Xor:
@@ -374,7 +381,9 @@ export class WatSharpLexer {
             return completeToken(TokenType.LessThanOrEqual);
           }
           if (ch === "<") {
-            return completeToken(TokenType.ShiftLeft);
+            phase = LexerPhase.ShiftLeft;
+            tokenType = TokenType.ShiftLeft;
+            break;
           }
           return makeToken();
 
@@ -385,13 +394,28 @@ export class WatSharpLexer {
           if (ch !== ">") {
             return makeToken();
           }
-          phase = LexerPhase.ShiftRight;
+          phase = LexerPhase.SignedShiftRight;
           tokenType = TokenType.SignedShiftRight;
           break;
 
+        case LexerPhase.ShiftLeft:
+          return ch === "="
+            ? completeToken(TokenType.ShiftLeftAsgn)
+            : makeToken();
+
+        case LexerPhase.SignedShiftRight:
+          if (ch === ">") {
+            phase = LexerPhase.ShiftRight;
+            tokenType = TokenType.ShiftRight;
+            break;
+          }
+          return ch === "="
+            ? completeToken(TokenType.SignedShiftRightAsgn)
+            : makeToken();
+
         case LexerPhase.ShiftRight:
-          return ch === ">"
-            ? completeToken(TokenType.ShiftRight)
+          return ch === "="
+            ? completeToken(TokenType.ShiftRightAsgn)
             : makeToken();
 
         // ====================================================================
@@ -662,6 +686,7 @@ enum LexerPhase {
 
   Slash,
   Asterisk,
+  Remainder,
   Plus,
   Minus,
   Xor,
@@ -671,7 +696,9 @@ enum LexerPhase {
   Exclamation,
   AngleLeft,
   AngleRight,
+  ShiftLeft,
   ShiftRight,
+  SignedShiftRight,
   IdTail,
   Dot,
   Zero,
@@ -742,4 +769,13 @@ const resolverHash: Record<string, TokenType> = {
   table: TokenType.Table,
   data: TokenType.Data,
   import: TokenType.Import,
+
+  local: TokenType.Local,
+  if: TokenType.If,
+  else: TokenType.Else,
+  do: TokenType.Do,
+  while: TokenType.While,
+  break: TokenType.Break,
+  continue: TokenType.Continue,
+  return: TokenType.Return,
 };

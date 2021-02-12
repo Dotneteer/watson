@@ -9,6 +9,8 @@ import {
   FunctionInvocationExpression,
   Identifier,
   ItemAccessExpression,
+  Literal,
+  LiteralSource,
   MemberAccessExpression,
   SizeOfExpression,
   TypeCastExpression,
@@ -39,6 +41,12 @@ describe("WatSharpParser - expressions", () => {
       // --- Assert
       expect(expr.type).toBe("Literal");
       expect(expr.value).toBe(c.exp);
+      const literal = expr as Literal;
+      if (typeof c.exp === "number") {
+        expect(literal.source).toBe(LiteralSource.Int);
+      } else {
+        expect(literal.source).toBe(LiteralSource.BigInt);
+      }
     });
   });
 
@@ -69,6 +77,12 @@ describe("WatSharpParser - expressions", () => {
       // --- Assert
       expect(expr.type).toBe("Literal");
       expect(expr.value).toBe(c.exp);
+      const literal = expr as Literal;
+      if (typeof c.exp === "number") {
+        expect(literal.source).toBe(LiteralSource.Int);
+      } else {
+        expect(literal.source).toBe(LiteralSource.BigInt);
+      }
     });
   });
 
@@ -94,6 +108,12 @@ describe("WatSharpParser - expressions", () => {
       // --- Assert
       expect(expr.type).toBe("Literal");
       expect(expr.value).toBe(c.exp);
+      const literal = expr as Literal;
+      if (typeof c.exp === "number") {
+        expect(literal.source).toBe(LiteralSource.Int);
+      } else {
+        expect(literal.source).toBe(LiteralSource.BigInt);
+      }
     });
   });
 
@@ -148,6 +168,8 @@ describe("WatSharpParser - expressions", () => {
       // --- Assert
       expect(expr.type).toBe("Literal");
       expect(expr.value).toBe(c.exp);
+      const literal = expr as Literal;
+      expect(literal.source).toBe(LiteralSource.Real);
     });
   });
 

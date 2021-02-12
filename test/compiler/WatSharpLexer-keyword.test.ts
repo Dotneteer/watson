@@ -53,6 +53,15 @@ describe("WatSharpLexer - keywords", () => {
     { src: "table", exp: TokenType.Table },
     { src: "data", exp: TokenType.Data },
     { src: "import", exp: TokenType.Import },
+
+    { src: "local", exp: TokenType.Local },
+    { src: "if", exp: TokenType.If },
+    { src: "else", exp: TokenType.Else },
+    { src: "do", exp: TokenType.Do },
+    { src: "while", exp: TokenType.While },
+    { src: "break", exp: TokenType.Break },
+    { src: "continue", exp: TokenType.Continue },
+    { src: "return", exp: TokenType.Return },
   ];
   keywordCases.forEach((c) => {
     it(`Token ${c.src} #1`, () => {

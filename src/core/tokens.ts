@@ -30,10 +30,12 @@ export enum TokenType {
   DivideAsgn,
   Asterisk,
   MultiplyAsgn,
+  Remainder,
+  RemainderAsgn,
   Plus,
   AddAsgn,
   Minus,
-  SubtrackAsgn,
+  SubtractAsgn,
   Xor,
   XorAsgn,
   Or,
@@ -47,7 +49,6 @@ export enum TokenType {
   LSquare,
   RSquare,
   QuestionMark,
-  Remainder,
   BinaryNot,
   LBrace,
   RBrace,
@@ -58,10 +59,13 @@ export enum TokenType {
   LessThan,
   LessThanOrEqual,
   ShiftLeft,
+  ShiftLeftAsgn,
   GreaterThan,
   GreaterThanOrEqual,
   ShiftRight,
+  ShiftRightAsgn,
   SignedShiftRight,
+  SignedShiftRightAsgn,
   Dot,
   Sizeof,
 
@@ -110,6 +114,15 @@ export enum TokenType {
   Const,
   Global,
   
+  Local,
+  If,
+  Else,
+  Do,
+  While,
+  Break,
+  Continue,
+  Return,
+
 }
 
 /**

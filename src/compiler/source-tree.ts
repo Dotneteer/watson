@@ -2,7 +2,13 @@
  * This type represents the discriminated union of all WAT# source tree
  * node types
  */
-export type Node = TypeSpec | Expression | Declaration | FunctionParameter;
+export type Node =
+  | TypeSpec
+  | Expression
+  | LeftValue
+  | Declaration
+  | FunctionParameter
+  | Statement;
 
 /**
  * This class represents the root class of all source tree nodes
@@ -300,6 +306,16 @@ export interface Identifier extends ExpressionBase {
 export interface Literal extends ExpressionBase {
   type: "Literal";
   value: number | bigint;
+  source: LiteralSource;
+}
+
+/**
+ * Type of source literal
+ */
+export enum LiteralSource {
+  Int,
+  BigInt,
+  Real
 }
 
 // ============================================================================
@@ -399,15 +415,182 @@ export interface FunctionDeclaration extends DeclarationBase {
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;
+  body: Statement[];
 }
 
 /**
- * Describes a structure field
+ * Describes a function parameter field
  */
 export interface FunctionParameter extends BaseNode {
   type: "FunctionParameter";
   name: string;
   spec: TypeSpec;
+}
+
+// ============================================================================
+// Statements
+
+/**
+ * Discriminated unions of WAT# statements
+ */
+export type Statement =
+  | Assignment
+  | LocalVariable
+  | LocalFunctionInvocation
+  | IfStatement
+  | WhileStatement
+  | DoStatement
+  | BreakStatement
+  | ContinueStatement
+  | ReturnStatement;
+
+/**
+ * Symbols that can be unary operators
+ */
+export type AssignmentSymbols =
+  | "="
+  | "*="
+  | "/="
+  | "%="
+  | "+="
+  | "-="
+  | "<<="
+  | ">>="
+  | ">>>="
+  | "&="
+  | "|="
+  | "^=";
+
+/**
+ * Base class of statement nodes
+ */
+export interface StatementBase extends BaseNode {}
+
+/**
+ * Local variable statement
+ */
+export interface LocalVariable extends StatementBase {
+  type: "LocalVariable";
+  spec: TypeSpec;
+  name: string;
+  initExpr?: Expression;
+}
+
+/**
+ * Assignment statement
+ */
+export interface Assignment extends StatementBase {
+  type: "Assignment";
+  lval: LeftValue;
+  asgn: AssignmentSymbols;
+  expr: Expression;
+}
+
+/**
+ * Local function invocation
+ */
+export interface LocalFunctionInvocation extends StatementBase {
+  type: "LocalFunctionInvocation";
+  name: string;
+  args: Expression[];
+}
+
+/**
+ * If statement
+ */
+export interface IfStatement extends StatementBase {
+  type: "If";
+  test: Expression;
+  consequent: Statement[];
+  alternate?: Statement[];
+}
+
+/**
+ * Do-while statement
+ */
+export interface WhileStatement extends StatementBase {
+  type: "While";
+  loopBody: Statement[];
+  test: Expression;
+}
+
+/**
+ * Do statement
+ */
+export interface DoStatement extends StatementBase {
+  type: "Do";
+  loopBody: Statement[];
+  test: Expression;
+}
+
+/**
+ * Break statement
+ */
+export interface BreakStatement extends StatementBase {
+  type: "Break";
+}
+
+/**
+ * Continue statement
+ */
+export interface ContinueStatement extends StatementBase {
+  type: "Continue";
+}
+
+/**
+ * Break statement
+ */
+export interface ReturnStatement extends StatementBase {
+  type: "Return";
+  expr?: Expression;
+}
+
+// ============================================================================
+// Left values
+
+export type LeftValue =
+  | DereferenceLValue
+  | IdentifierLValue
+  | IndexedLValue
+  | MemberLValue;
+
+/**
+ * Base class of left value nodes
+ */
+export interface LeftValueBase extends BaseNode {}
+
+/**
+ * Dereference left value
+ */
+export interface DereferenceLValue extends LeftValueBase {
+  type: "DereferenceLValue";
+  lval: LeftValue;
+}
+
+/**
+ * Identifier left value
+ */
+export interface IdentifierLValue extends LeftValueBase {
+  type: "IdentifierLValue";
+  name: string;
+}
+
+/**
+ * Indexed left value
+ */
+export interface IndexedLValue extends LeftValueBase {
+  type: "IndexedLValue";
+  lval: LeftValue;
+  indexExpr: Expression;
+}
+
+/**
+ * Member left value
+ */
+export interface MemberLValue extends LeftValueBase {
+  type: "MemberLValue";
+  lval: LeftValue;
+  member: string;
 }
 
 /**
@@ -424,4 +607,4 @@ export const instrisicSizes: Record<Intrinsics, number> = {
   u64: 8,
   f32: 4,
   f64: 8,
-}
+};

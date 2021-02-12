@@ -42,6 +42,22 @@ import {
   UnaryExpression,
   NamedType,
   VariableDeclaration,
+  Statement,
+  ReturnStatement,
+  BreakStatement,
+  ContinueStatement,
+  IfStatement,
+  DoStatement,
+  WhileStatement,
+  LocalFunctionInvocation,
+  Assignment,
+  LocalVariable,
+  LeftValue,
+  DereferenceLValue,
+  IdentifierLValue,
+  MemberLValue,
+  IndexedLValue,
+  LiteralSource,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 
@@ -606,8 +622,12 @@ export class WatSharpParser {
       this._lexer.get();
     } while (true);
     this.expectToken(TokenType.RParent, "W017");
-    this.parseFunctionBody();
-    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    if (this._lexer.peek().type !== TokenType.LBrace) {
+      this.reportError("W009");
+      return;
+    }
+    const body: Statement[] = [];
+    this.parseBlockStatement(body, 0);
     this.addDeclaration<FunctionDeclaration>(
       "FunctionDeclaration",
       {
@@ -616,6 +636,364 @@ export class WatSharpParser {
         params,
         isExport,
         isInline,
+        body,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * Parses a block statement
+   */
+  private parseBlockStatement(body: Statement[], loopDepth: number): void {
+    this._lexer.get();
+    let next: Token;
+    while (
+      (next = this._lexer.peek()).type !== TokenType.RBrace &&
+      next.type !== TokenType.Eof
+    ) {
+      try {
+        this.parseStatement(body, loopDepth);
+      } catch (err) {
+        const lastError = this._parseErrors[this._parseErrors.length - 1];
+        if (
+          lastError &&
+          lastError.code !== "W006" &&
+          !lastError.code.startsWith("W1")
+        ) {
+          break;
+        }
+      }
+    }
+    this.expectToken(TokenType.RBrace, "W010");
+  }
+
+  /**
+   * bodyStatement :=
+   *   | blockStatement
+   *   | localVariableDeclaration
+   *   | assignment
+   *   | localFunctionInvocation
+   *   | controlFlowStatement
+   *   ;
+   */
+  private parseStatement(body: Statement[], loopDepth: number): void {
+    const next = this._lexer.peek();
+
+    // --- Check for local function invocation
+    if (
+      next.type === TokenType.Identifier &&
+      this._lexer.ahead(1).type === TokenType.LParent
+    ) {
+      this.parseLocalFunctionInvocation(body);
+      return;
+    }
+
+    // --- Check for assignement
+    if (
+      next.type === TokenType.Identifier ||
+      next.type === TokenType.Asterisk
+    ) {
+      this.parseAssignment(body, loopDepth);
+      return;
+    }
+
+    // --- Check other statements
+    switch (next.type) {
+      case TokenType.LBrace:
+        this.parseBlockStatement(body, loopDepth);
+        break;
+
+      case TokenType.Semicolon:
+        this._lexer.get();
+        return;
+
+      case TokenType.Local:
+        this.parseLocalVariable(body);
+        return;
+
+      case TokenType.If:
+        this.parseIfStatement(body, loopDepth);
+        return;
+
+      case TokenType.Do:
+        this.parseDoStatement(body, loopDepth + 1);
+        return;
+
+      case TokenType.While:
+        this.parseWhileStatement(body, loopDepth + 1);
+        return;
+
+      case TokenType.Break:
+        this.parseBreakStatement(body, loopDepth);
+        return;
+
+      case TokenType.Continue:
+        this.parseContinueStatement(body, loopDepth);
+        return;
+
+      case TokenType.Return:
+        this.parseReturnStatement(body);
+        return;
+
+      default:
+        this.reportError("W023");
+        return;
+    }
+  }
+
+  /**
+   * localFunctionInvocation
+   *   : identifier "(" expr? ("," expr)* ")" ";"
+   *   ;
+   */
+  private parseLocalFunctionInvocation(body: Statement[]): void {
+    const id = this._lexer.get();
+    const args = this.parseFunctionArgs();
+    if (args === null) {
+      return;
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<LocalFunctionInvocation>(
+      body,
+      "LocalFunctionInvocation",
+      {
+        name: id.text,
+        args,
+      },
+      id,
+      semicolon
+    );
+  }
+
+  /**
+   * localVariableStatement
+   *   : "local" (intrinsicType | pointerType) identifier ("=" expr) ";"
+   *   ;
+   */
+  private parseLocalVariable(body: Statement[]): void {
+    const start = this._lexer.get();
+    const spec = this.parseTypeSpecification();
+    if (!spec) {
+      this.reportError("W008");
+      return;
+    }
+    const id = this._lexer.peek();
+    if (id.type !== TokenType.Identifier) {
+      this.reportError("W004");
+      return;
+    }
+    this._lexer.get();
+    let initExpr: Expression | undefined;
+    if (this._lexer.peek().type === TokenType.Asgn) {
+      this._lexer.get();
+      initExpr = this.parseExpr();
+      if (!initExpr) {
+        this.reportError("W002");
+      }
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<LocalVariable>(
+      body,
+      "LocalVariable",
+      {
+        name: id.text,
+        spec,
+        initExpr,
+      },
+      id,
+      semicolon
+    );
+  }
+
+  /**
+   * assignment
+   *   : leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|="
+   *     | "<<=" | ">>=" | ">>>=" )
+   *     expr ";"
+   *   ;
+   */
+  private parseAssignment(body: Statement[], loopDepth: number): void {
+    const lval = this.parseLeftValue();
+    if (!lval) {
+      return;
+    }
+    const { start, traits } = this.getParsePoint();
+    if (!traits.assignmentOp) {
+      this.reportError("W024");
+      return;
+    }
+    this._lexer.get();
+    const expr = this.parseExpr();
+    if (!expr) {
+      return;
+    }
+    this.createStatementNode<Assignment>(
+      body,
+      "Assignment",
+      {
+        lval,
+        asgn: start.text,
+        expr,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   *
+   * leftValue
+   *   : "*" leftValue
+   *   | addressable
+   *   ;
+   */
+  private parseLeftValue(): LeftValue | null {
+    const start = this._lexer.peek();
+    if (start.type === TokenType.Asterisk) {
+      this._lexer.get();
+      const lval = this.parseLeftValue();
+      if (!lval) {
+        return;
+      }
+      return this.createLValueNode<DereferenceLValue>(
+        "DereferenceLValue",
+        {
+          lval,
+        },
+        start,
+        start
+      );
+    } else if (start.type === TokenType.Identifier) {
+      return this.parseAddressable();
+    }
+    this.reportError("W025");
+    return null;
+  }
+
+  /**
+   * addressable
+   *   : identifier (("[" expr "]") | ("." addressable))*
+   *   ;
+   */
+  private parseAddressable(): LeftValue | null {
+    const start = this._lexer.peek();
+    if (start.type !== TokenType.Identifier) {
+      this.reportError("W004");
+      return null;
+    }
+    this._lexer.get();
+    let lval: LeftValue = this.createLValueNode<IdentifierLValue>(
+      "IdentifierLValue",
+      {
+        name: start.text,
+      },
+      start,
+      start
+    );
+
+    do {
+      const next = this._lexer.peek();
+      if (next.type === TokenType.Dot) {
+        // --- Process member Lval
+        this._lexer.get();
+        const idToken = this._lexer.peek();
+        if (idToken.type !== TokenType.Identifier) {
+          this.reportError("W004");
+          return null;
+        }
+        this._lexer.get();
+        lval = this.createLValueNode<MemberLValue>(
+          "MemberLValue",
+          {
+            member: idToken.text,
+            lval,
+          },
+          next,
+          idToken
+        );
+      } else if (next.type === TokenType.LSquare) {
+        // --- Process index access
+        this._lexer.get();
+        const indexExpr = this.parseExpr();
+        this.expectToken(TokenType.RSquare);
+        lval = this.createLValueNode<IndexedLValue>(
+          "IndexedLValue",
+          {
+            indexExpr,
+            lval,
+          },
+          next,
+          this._lexer.peek()
+        );
+      } else {
+        break;
+      }
+    } while (true);
+    return lval;
+  }
+
+  /**
+   * ifStatement
+   *   : "if" "(" condition ")" statement ("else" statement)?
+   *   ;
+   */
+  private parseIfStatement(body: Statement[], loopDepth: number): void {
+    const start = this._lexer.get();
+    this.expectToken(TokenType.LParent, "W016");
+    const test = this.parseEquExpr();
+    if (test === null) {
+      this.reportError("W002");
+      return;
+    }
+    this.expectToken(TokenType.RParent, "W017");
+    const consequent: Statement[] = [];
+    this.parseStatement(consequent, loopDepth);
+    let alternate: Statement[] | undefined;
+    const next = this._lexer.peek();
+    if (next.type === TokenType.Else) {
+      this._lexer.get();
+      alternate = [];
+      this.parseStatement(alternate, loopDepth);
+    }
+    this.createStatementNode<IfStatement>(
+      body,
+      "If",
+      {
+        test,
+        consequent,
+        alternate,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * doWhileStatement
+   *   : "do" statement "while" "(" expr ")" ";"
+   *   ;
+   */
+  private parseDoStatement(body: Statement[], loopDepth: number): void {
+    const start = this._lexer.get();
+    const loopBody: Statement[] = [];
+    this.parseStatement(loopBody, loopDepth);
+    this.expectToken(TokenType.While, "W022");
+    this.expectToken(TokenType.LParent, "W016");
+    const test = this.parseEquExpr();
+    if (test === null) {
+      this.reportError("W002");
+      return;
+    }
+    this.expectToken(TokenType.RParent, "W017");
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<DoStatement>(
+      body,
+      "Do",
+      {
+        loopBody,
+        test,
       },
       start,
       semicolon
@@ -623,11 +1001,99 @@ export class WatSharpParser {
   }
 
   /**
-   * Parses the body of a function
+   * whileStatement
+   *   : "while" "(" expr ")" statement
+   *   ;
    */
-  private parseFunctionBody(): void {
-    this.expectToken(TokenType.LBrace, "W009");
-    this.expectToken(TokenType.RBrace, "W010");
+  private parseWhileStatement(body: Statement[], loopDepth: number): void {
+    const start = this._lexer.get();
+    this.expectToken(TokenType.LParent, "W016");
+    const test = this.parseEquExpr();
+    if (test === null) {
+      this.reportError("W002");
+      return;
+    }
+    this.expectToken(TokenType.RParent, "W017");
+    const loopBody: Statement[] = [];
+    this.parseStatement(loopBody, loopDepth);
+    this.createStatementNode<WhileStatement>(
+      body,
+      "While",
+      {
+        loopBody,
+        test,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * breakStatement
+   *   : "break" ";"
+   *   ;
+   */
+  private parseBreakStatement(body: Statement[], loopDepth: number): void {
+    const start = this._lexer.get();
+    if (loopDepth < 1) {
+      this.reportError("W110");
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<BreakStatement>(
+      body,
+      "Break",
+      {},
+      start,
+      semicolon
+    );
+  }
+
+  /**
+   * continueStatement
+   *   : "continue" ";"
+   *   ;
+   */
+  private parseContinueStatement(body: Statement[], loopDepth: number): void {
+    const start = this._lexer.get();
+    if (loopDepth < 1) {
+      this.reportError("W111");
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<ContinueStatement>(
+      body,
+      "Continue",
+      {},
+      start,
+      semicolon
+    );
+  }
+
+  /**
+   * returnStatement
+   *   : "return" expr? ";"
+   *   ;
+   */
+  private parseReturnStatement(body: Statement[]): void {
+    const start = this._lexer.get();
+    const next = this._lexer.peek();
+    let expr: Expression | undefined;
+    if (next.type !== TokenType.Semicolon) {
+      // --- Try to obtain the return expression
+      expr = this.parseExpr();
+      if (!expr) {
+        return;
+      }
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<ReturnStatement>(
+      body,
+      "Return",
+      {
+        expr,
+      },
+      start,
+      semicolon
+    );
   }
 
   /**
@@ -1290,6 +1756,8 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "number" ? LiteralSource.Int : LiteralSource.BigInt,
       },
       token,
       token
@@ -1315,6 +1783,12 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "bigint"
+            ? LiteralSource.BigInt
+            : Number.isInteger(value)
+            ? LiteralSource.Int
+            : LiteralSource.Real,
       },
       token,
       token
@@ -1340,6 +1814,8 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "number" ? LiteralSource.Int : LiteralSource.BigInt,
       },
       token,
       token
@@ -1356,6 +1832,7 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source: LiteralSource.Real,
       },
       token,
       token
@@ -1653,6 +2130,62 @@ export class WatSharpParser {
       endLine: endToken.location.endLine,
       endColumn: endToken.location.startColumn,
     });
+  }
+
+  /**
+   * Creates a left value node
+   * @param type Expression type
+   * @param stump Stump properties
+   * @param startToken The token that starts the expression
+   * @param endToken The token that ends the expression
+   */
+  private createLValueNode<T extends LeftValue>(
+    type: LeftValue["type"],
+    stump: any,
+    startToken: Token,
+    endToken: Token
+  ): T {
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
+    return Object.assign({}, stump, <LeftValue>{
+      type,
+      startPosition,
+      endPosition,
+      startLine: startToken.location.startLine,
+      startColumn: startToken.location.startColumn,
+      endLine: endToken.location.endLine,
+      endColumn: endToken.location.startColumn,
+    });
+  }
+
+  /**
+   * Creates an expression node
+   * @param body List of statements to add the new statement
+   * @param type Expression type
+   * @param stump Stump properties
+   * @param startToken The token that starts the expression
+   * @param endToken The token that ends the expression
+   */
+  private createStatementNode<T extends Statement>(
+    body: Statement[],
+    type: Statement["type"],
+    stump: any,
+    startToken: Token,
+    endToken: Token
+  ): T {
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
+    const newStatement = Object.assign({}, stump, <Statement>{
+      type,
+      startPosition,
+      endPosition,
+      startLine: startToken.location.startLine,
+      startColumn: startToken.location.startColumn,
+      endLine: endToken.location.endLine,
+      endColumn: endToken.location.startColumn,
+    });
+    body.push(newStatement);
+    return newStatement;
   }
 
   /**

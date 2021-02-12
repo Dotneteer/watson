@@ -379,17 +379,100 @@ functionParam
 Syntax:
 
 ```
-statement :=
+bodyStatement
+    : emptyStatement
     | blockStatement
-    | variableDeclaration
-    | functionDeclaration
-    | jumpTableDeclaration
+    | localVariableDeclaration
     | assignment
+    | localFunctionInvocation
     | controlFlowStatement
+    ;
+
+emptyStatement
+    : ";"
     ;
 
 blockStatement :=
     "{" statement? (";" statement)* }
+    ;
+```
+
+## Local Variable Statement
+
+Syntax:
+
+```
+localVariableStatement
+    : "local" (intrinsicType | pointerType) identifier ("=" expr) ";"
+    ;
+```
+
+## Assignments
+
+Syntax:
+
+```
+assignment
+    : leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^|" | "&=" | "|=" | "~=" | "!=" ) 
+      expr ";"
+    ;
+
+leftValue
+    : "*" leftValue
+    | addressable
+    ;
+
+addressable
+    : identifier (("[" expr "]") | ("." addressable))*
+    ;
+```
+
+## Local Function Invocation
+
+Syntax:
+
+```
+localFunctionInvocation 
+    : identifier "(" expr? ("," expr)* ")" ";"
+    ;
+```
+
+## Control flow statements
+
+Syntax:
+
+```
+controlFlowStatement
+    : ifStatement
+    | whileStatement
+    | doWhileStatement
+    | breakStatement
+    | continueStatement
+    | returnStatement
+    ;
+
+ifStatement
+    : "if" "(" condition ")" statement ("else" statement)?
+    ;
+
+whileStatement
+    : "while" "(" expr ")" statement
+    ;
+
+doWhileStatement
+    : "do" statement "while" "(" expr ")" ";"
+    ;
+
+breakStatement
+    : "break" ";"
+    ;
+
+continueStatement
+    : "continue" ";"
+    ;
+
+returnStatement
+    : "return" expr? ";"
     ;
 ```
 
@@ -460,8 +543,8 @@ primaryExpr
     | "(" expr ")"
     ;
 
-functionInvocation :=
-    identifier "(" expr? ("," expr)* ")"
+functionInvocation 
+    : identifier "(" expr? ("," expr)* ")"
     ;
 
 literal
@@ -504,89 +587,6 @@ hexaDigit
     : "0" .. "9"
     | "a" .. "f"
     | "A" .. "F"
-    ;
-```
-
-## Assignments
-
-Syntax:
-
-```
-assignment :=
-    leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^|" | "&=" | "|=" | "~=" | "!=" ) expr
-    ;
-
-leftValue :=
-    addressable ("." addressable )*
-    ;
-
-addressable := 
-    identifier ("[" expr "]")?
-    ;
-```
-
-## Function declarations
-
-Syntax:
-
-```
-functionDeclaration
-    : exportModifier? inlineModifier? "function" identifier parameterList blockStatement
-    ;
-
-exportModifier :=
-    "export" ( stringLiteral )?
-    ;
-
-inlineModifier :=
-    "inline"
-    ;
-
-parameterList :=
-    "(" parameterDecl? ("," parameterDecl)* ")"
-    ;
-
-parameterDecl :=
-    type identifier
-    ;
-```
-
-## Control flow statements
-
-Syntax:
-
-```
-controlFlowStatement :=
-    | ifStatement
-    | whileStatement
-    | doWhileStatement
-    | breakStatement
-    | continueStatement
-    | returnStatement
-    ;
-
-ifStatement :=
-    "if" "(" condition ")" statements ("else" statements)?
-    ;
-
-whileStatement :=
-    "while" "(" expr ")" statements
-    ;
-
-doWhileStatement :=
-    "do" statements "while" "(" expr ")"
-    ;
-
-breakStatement := 
-    "break"
-    ;
-
-continueStatement :=
-    "continue"
-    ;
-
-returnStatement :=
-    "return" expr?
     ;
 ```
 
