@@ -69,6 +69,8 @@ export type ErrorCodes =
   | "W021"
   | "W022"
   | "W023"
+  | "W024"
+  | "W025"
 
   // --- WAT# semantic errors
   | "W100"
@@ -82,7 +84,8 @@ export type ErrorCodes =
   | "W108"
   | "W109"
   | "W110"
-  | "W111";
+  | "W111"
+  | "W112"
 
 /**
  * Error message type description
@@ -135,10 +138,12 @@ export const errorMessages: ErrorText = {
   W021: "Missing function parameter name",
   W022: "'while' expected",
   W023: "A statement expected",
+  W024: "An assignment operator expected",
+  W025: "'*' or an identifier expected",
 
   // --- WAT# semantic issues
   W100: "Duplicated declaration identifier: '{0}'",
-  W101: "Unknonw declaration: '{0}'",
+  W101: "Unknown declaration: '{0}'",
   W102: "'{0}' is not a type declaration",
   W103: "Cannot resolve '{0}' because of circular declaration reference",
   W104: "Invalid construct in constant expressions",
@@ -149,4 +154,5 @@ export const errorMessages: ErrorText = {
   W109: "A table can hold only function identifiers",
   W110: "The break statement can only be used in a loop",
   W111: "The continue statement can only be used in a loop",
+  W112: "Invalid left value",
 };

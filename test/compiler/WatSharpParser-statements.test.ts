@@ -7,6 +7,7 @@ import {
   FunctionDeclaration,
   IfStatement,
   LocalFunctionInvocation,
+  LocalVariable,
   ReturnStatement,
   WhileStatement,
 } from "../../src/compiler/source-tree";
@@ -1202,4 +1203,138 @@ describe("WatSharpParser - statements", () => {
     expect(retStmt.expr.type).toBe("Literal");
   });
 
+
+  it("local variable #1", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local u8 myVar;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+    const decl = wParser.declarations.get("a");
+    expect(decl).toBeDefined();
+    const funcDecl = decl as FunctionDeclaration;
+    const body = funcDecl.body;
+    expect(body.length).toBe(1);
+    expect(body[0].type).toBe("LocalVariable");
+    const local = body[0] as LocalVariable;
+    expect(local.name).toBe("myVar");
+    expect(local.spec.type).toBe("Intrinsic");
+    expect(local.initExpr).toBeUndefined();
+  });
+
+  it("local variable #2", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local *u8 myVar;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+    const decl = wParser.declarations.get("a");
+    expect(decl).toBeDefined();
+    const funcDecl = decl as FunctionDeclaration;
+    const body = funcDecl.body;
+    expect(body.length).toBe(1);
+    expect(body[0].type).toBe("LocalVariable");
+    const local = body[0] as LocalVariable;
+    expect(local.name).toBe("myVar");
+    expect(local.spec.type).toBe("Pointer");
+    expect(local.initExpr).toBeUndefined();
+  });
+
+  it("local variable #3", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local u8 myVar = 123;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+    const decl = wParser.declarations.get("a");
+    expect(decl).toBeDefined();
+    const funcDecl = decl as FunctionDeclaration;
+    const body = funcDecl.body;
+    expect(body.length).toBe(1);
+    expect(body[0].type).toBe("LocalVariable");
+    const local = body[0] as LocalVariable;
+    expect(local.name).toBe("myVar");
+    expect(local.spec.type).toBe("Intrinsic");
+    expect(local.initExpr.type).toBe("Literal");
+  });
+
+  it("local variable #4", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local *u8 myVar = 123;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+    const decl = wParser.declarations.get("a");
+    expect(decl).toBeDefined();
+    const funcDecl = decl as FunctionDeclaration;
+    const body = funcDecl.body;
+    expect(body.length).toBe(1);
+    expect(body[0].type).toBe("LocalVariable");
+    const local = body[0] as LocalVariable;
+    expect(local.name).toBe("myVar");
+    expect(local.spec.type).toBe("Pointer");
+    expect(local.initExpr.type).toBe("Literal");
+  });
+
+  it("local variable #5", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local do = 123;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(3);
+    expect(wParser.errors[0].code).toBe("W008");
+  });
+
+  it("local variable #6", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    ushort a() {
+      local u8 = 123;
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(true);
+    expect(wParser.errors.length).toBe(3);
+    expect(wParser.errors[0].code).toBe("W004");
+  });
 });

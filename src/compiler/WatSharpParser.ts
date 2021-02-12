@@ -50,6 +50,14 @@ import {
   DoStatement,
   WhileStatement,
   LocalFunctionInvocation,
+  Assignment,
+  LocalVariable,
+  LeftValue,
+  DereferenceLValue,
+  IdentifierLValue,
+  MemberLValue,
+  IndexedLValue,
+  LiteralSource,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 
@@ -701,6 +709,10 @@ export class WatSharpParser {
         this._lexer.get();
         return;
 
+      case TokenType.Local:
+        this.parseLocalVariable(body);
+        return;
+
       case TokenType.If:
         this.parseIfStatement(body, loopDepth);
         return;
@@ -756,22 +768,170 @@ export class WatSharpParser {
   }
 
   /**
+   * localVariableStatement
+   *   : "local" (intrinsicType | pointerType) identifier ("=" expr) ";"
+   *   ;
+   */
+  private parseLocalVariable(body: Statement[]): void {
+    const start = this._lexer.get();
+    const spec = this.parseTypeSpecification();
+    if (!spec) {
+      this.reportError("W008");
+      return;
+    }
+    const id = this._lexer.peek();
+    if (id.type !== TokenType.Identifier) {
+      this.reportError("W004");
+      return;
+    }
+    this._lexer.get();
+    let initExpr: Expression | undefined;
+    if (this._lexer.peek().type === TokenType.Asgn) {
+      this._lexer.get();
+      initExpr = this.parseExpr();
+      if (!initExpr) {
+        this.reportError("W002");
+      }
+    }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    this.createStatementNode<LocalVariable>(
+      body,
+      "LocalVariable",
+      {
+        name: id.text,
+        spec,
+        initExpr,
+      },
+      id,
+      semicolon
+    );
+  }
+
+  /**
    * assignment
-   *   : leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^|" | "&=" | "|=" | "~=" | "!=" )
+   *   : leftValue ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|="
+   *     | "<<=" | ">>=" | ">>>=" )
    *     expr ";"
    *   ;
+   */
+  private parseAssignment(body: Statement[], loopDepth: number): void {
+    const lval = this.parseLeftValue();
+    if (!lval) {
+      return;
+    }
+    const { start, traits } = this.getParsePoint();
+    if (!traits.assignmentOp) {
+      this.reportError("W024");
+      return;
+    }
+    this._lexer.get();
+    const expr = this.parseExpr();
+    if (!expr) {
+      return;
+    }
+    this.createStatementNode<Assignment>(
+      body,
+      "Assignment",
+      {
+        lval,
+        asgn: start.text,
+        expr,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
    *
    * leftValue
    *   : "*" leftValue
    *   | addressable
    *   ;
-   *
+   */
+  private parseLeftValue(): LeftValue | null {
+    const start = this._lexer.peek();
+    if (start.type === TokenType.Asterisk) {
+      this._lexer.get();
+      const lval = this.parseLeftValue();
+      if (!lval) {
+        return;
+      }
+      return this.createLValueNode<DereferenceLValue>(
+        "DereferenceLValue",
+        {
+          lval,
+        },
+        start,
+        start
+      );
+    } else if (start.type === TokenType.Identifier) {
+      return this.parseAddressable();
+    }
+    this.reportError("W025");
+    return null;
+  }
+
+  /**
    * addressable
    *   : identifier (("[" expr "]") | ("." addressable))*
    *   ;
    */
-  private parseAssignment(body: Statement[], loopDepth: number): void {
-    // TODO: implement this method
+  private parseAddressable(): LeftValue | null {
+    const start = this._lexer.peek();
+    if (start.type !== TokenType.Identifier) {
+      this.reportError("W004");
+      return null;
+    }
+    this._lexer.get();
+    let lval: LeftValue = this.createLValueNode<IdentifierLValue>(
+      "IdentifierLValue",
+      {
+        name: start.text,
+      },
+      start,
+      start
+    );
+
+    do {
+      const next = this._lexer.peek();
+      if (next.type === TokenType.Dot) {
+        // --- Process member Lval
+        this._lexer.get();
+        const idToken = this._lexer.peek();
+        if (idToken.type !== TokenType.Identifier) {
+          this.reportError("W004");
+          return null;
+        }
+        this._lexer.get();
+        lval = this.createLValueNode<MemberLValue>(
+          "MemberLValue",
+          {
+            member: idToken.text,
+            lval,
+          },
+          next,
+          idToken
+        );
+      } else if (next.type === TokenType.LSquare) {
+        // --- Process index access
+        this._lexer.get();
+        const indexExpr = this.parseExpr();
+        this.expectToken(TokenType.RSquare);
+        lval = this.createLValueNode<IndexedLValue>(
+          "IndexedLValue",
+          {
+            indexExpr,
+            lval,
+          },
+          next,
+          this._lexer.peek()
+        );
+      } else {
+        break;
+      }
+    } while (true);
+    return lval;
   }
 
   /**
@@ -1596,6 +1756,8 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "number" ? LiteralSource.Int : LiteralSource.BigInt,
       },
       token,
       token
@@ -1621,6 +1783,12 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "bigint"
+            ? LiteralSource.BigInt
+            : Number.isInteger(value)
+            ? LiteralSource.Int
+            : LiteralSource.Real,
       },
       token,
       token
@@ -1646,6 +1814,8 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source:
+          typeof value === "number" ? LiteralSource.Int : LiteralSource.BigInt,
       },
       token,
       token
@@ -1662,6 +1832,7 @@ export class WatSharpParser {
       "Literal",
       {
         value,
+        source: LiteralSource.Real,
       },
       token,
       token
@@ -1951,6 +2122,32 @@ export class WatSharpParser {
     const startPosition = startToken.location.startPosition;
     const endPosition = endToken.location.startPosition;
     return Object.assign({}, stump, <TypeSpec>{
+      type,
+      startPosition,
+      endPosition,
+      startLine: startToken.location.startLine,
+      startColumn: startToken.location.startColumn,
+      endLine: endToken.location.endLine,
+      endColumn: endToken.location.startColumn,
+    });
+  }
+
+  /**
+   * Creates a left value node
+   * @param type Expression type
+   * @param stump Stump properties
+   * @param startToken The token that starts the expression
+   * @param endToken The token that ends the expression
+   */
+  private createLValueNode<T extends LeftValue>(
+    type: LeftValue["type"],
+    stump: any,
+    startToken: Token,
+    endToken: Token
+  ): T {
+    const startPosition = startToken.location.startPosition;
+    const endPosition = endToken.location.startPosition;
+    return Object.assign({}, stump, <LeftValue>{
       type,
       startPosition,
       endPosition,

@@ -5,6 +5,7 @@
 export type Node =
   | TypeSpec
   | Expression
+  | LeftValue
   | Declaration
   | FunctionParameter
   | Statement;
@@ -305,6 +306,16 @@ export interface Identifier extends ExpressionBase {
 export interface Literal extends ExpressionBase {
   type: "Literal";
   value: number | bigint;
+  source: LiteralSource;
+}
+
+/**
+ * Type of source literal
+ */
+export enum LiteralSource {
+  Int,
+  BigInt,
+  Real
 }
 
 // ============================================================================
@@ -470,7 +481,7 @@ export interface LocalVariable extends StatementBase {
  */
 export interface Assignment extends StatementBase {
   type: "Assignment";
-  leftVal: Expression;
+  lval: LeftValue;
   asgn: AssignmentSymbols;
   expr: Expression;
 }
@@ -493,7 +504,6 @@ export interface IfStatement extends StatementBase {
   consequent: Statement[];
   alternate?: Statement[];
 }
-
 
 /**
  * Do-while statement
@@ -533,6 +543,54 @@ export interface ContinueStatement extends StatementBase {
 export interface ReturnStatement extends StatementBase {
   type: "Return";
   expr?: Expression;
+}
+
+// ============================================================================
+// Left values
+
+export type LeftValue =
+  | DereferenceLValue
+  | IdentifierLValue
+  | IndexedLValue
+  | MemberLValue;
+
+/**
+ * Base class of left value nodes
+ */
+export interface LeftValueBase extends BaseNode {}
+
+/**
+ * Dereference left value
+ */
+export interface DereferenceLValue extends LeftValueBase {
+  type: "DereferenceLValue";
+  lval: LeftValue;
+}
+
+/**
+ * Identifier left value
+ */
+export interface IdentifierLValue extends LeftValueBase {
+  type: "IdentifierLValue";
+  name: string;
+}
+
+/**
+ * Indexed left value
+ */
+export interface IndexedLValue extends LeftValueBase {
+  type: "IndexedLValue";
+  lval: LeftValue;
+  indexExpr: Expression;
+}
+
+/**
+ * Member left value
+ */
+export interface MemberLValue extends LeftValueBase {
+  type: "MemberLValue";
+  lval: LeftValue;
+  member: string;
 }
 
 /**

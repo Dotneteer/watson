@@ -358,7 +358,7 @@ export class WatSharpLexer {
 
         case LexerPhase.Minus:
           return ch === "="
-            ? completeToken(TokenType.SubtrackAsgn)
+            ? completeToken(TokenType.SubtractAsgn)
             : makeToken();
 
         case LexerPhase.Xor:

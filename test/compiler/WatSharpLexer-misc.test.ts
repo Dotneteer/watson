@@ -37,7 +37,7 @@ describe("WatSharpLexer - miscellaneous", () => {
     { src: "+", exp: TokenType.Plus },
     { src: "+=", exp: TokenType.AddAsgn },
     { src: "-", exp: TokenType.Minus },
-    { src: "-=", exp: TokenType.SubtrackAsgn },
+    { src: "-=", exp: TokenType.SubtractAsgn },
     { src: "^", exp: TokenType.Xor },
     { src: "^=", exp: TokenType.XorAsgn },
     { src: "|", exp: TokenType.Or },

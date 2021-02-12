@@ -35,7 +35,7 @@ export enum TokenType {
   Plus,
   AddAsgn,
   Minus,
-  SubtrackAsgn,
+  SubtractAsgn,
   Xor,
   XorAsgn,
   Or,
