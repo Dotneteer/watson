@@ -2,6 +2,7 @@ import { TokenLocation } from "../core/tokens";
 import { ErrorCodes } from "../core/errors";
 import {
   Assignment,
+  BinaryExpression,
   BreakStatement,
   ContinueStatement,
   DoStatement,
@@ -11,9 +12,10 @@ import {
   LocalVariable,
   Node,
   ReturnStatement,
+  UnaryExpression,
   WhileStatement,
 } from "../compiler/source-tree";
-import { WaType } from "../wa-ast/wa-nodes";
+import { WaParameter, WaType } from "../wa-ast/wa-nodes";
 import {
   FunctionDeclaration,
   Intrinsics,
@@ -21,7 +23,15 @@ import {
   Statement,
   TypeSpec,
 } from "./source-tree";
-import { WatSharpCompiler } from "./WatSharpCompiler";
+import {
+  createGlobalName,
+  createLocalName,
+  createParameterName,
+  WatSharpCompiler,
+  waTypeMappings,
+} from "./WatSharpCompiler";
+import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
+import { renderExpression } from "./expression-resolver";
 
 /**
  * This class is responsible for compiling a function body
@@ -33,6 +43,7 @@ export class FunctionCompiler {
   // --- The result value of the function
   private _resultType: WaType | null = null;
 
+  private _builder: FunctionBuilder;
   /**
    * Initializes a function compiler instance
    * @param wsCompiler WAT# compiler instance
@@ -51,11 +62,19 @@ export class FunctionCompiler {
   }
 
   /**
+   * Adds a trace message
+   * @param traceFactory Factory function to generate trace message
+   */
+  addTrace(traceFactory: () => [string, number | undefined, string]): void {
+    this.wsCompiler.addTrace(traceFactory);
+  }
+
+  /**
    * Processes the body of the function
    */
   process(): void {
     this.processHead();
-    this.func.body.forEach(this.processStatement);
+    this.func.body.forEach((stmt) => this.processStatement(stmt));
   }
 
   /**
@@ -68,6 +87,7 @@ export class FunctionCompiler {
       : null;
 
     // --- Map parameters to locals
+    const waPars: WaParameter[] = [];
     this.func.params.forEach((param) => {
       if (this._locals.has(param.name)) {
         this.reportError("W140", this.func);
@@ -80,8 +100,20 @@ export class FunctionCompiler {
           type: param.spec,
           waType: paramType,
         });
+        waPars.push({
+          id: createParameterName(param.name),
+          type: paramType,
+        });
       }
     });
+
+    // --- Create the function builder
+    this.wsCompiler.waTree.separatorLine();
+    this._builder = this.wsCompiler.waTree.func(
+      createGlobalName(this.func.name),
+      waPars,
+      this._resultType
+    );
   }
 
   /**
@@ -131,7 +163,7 @@ export class FunctionCompiler {
     } else {
       let initExpr: ProcessedExpression | null = null;
       if (localVar.initExpr) {
-         initExpr = this.processExpression(localVar.initExpr);
+        initExpr = this.processExpression(localVar.initExpr);
       }
       const paramType =
         localVar.spec.type === "Pointer"
@@ -141,7 +173,7 @@ export class FunctionCompiler {
         type: localVar.spec,
         waType: paramType,
       });
-      
+      this._builder.addLocal(createLocalName(localVar.name), paramType);
     }
   }
 
@@ -210,7 +242,165 @@ export class FunctionCompiler {
    * Processes the specified expression
    */
   private processExpression(expr: Expression): ProcessedExpression | null {
-    return null;
+    this.addTrace(() => ["pExpr", 0, renderExpression(expr)]);
+    const simplified = this.simplifyExpression(expr);
+    this.addTrace(() => ["pExpr", 1, renderExpression(simplified)]);
+    return {
+      expr: simplified,
+      exprType: {
+        type: "Intrinsic",
+        underlying: "u32",
+      } as TypeSpec,
+    };
+  }
+
+  /**
+   * Simplifies the expression
+   * @param expr Expression to simplify
+   */
+  simplifyExpression(expr: Expression): Expression {
+    expr = this.removeTrivialLiteralsFromBinaryOps(expr);
+    expr = this.orderLiteralsToRight(expr);
+    return expr;
+  }
+
+  /**
+   *
+   * @param expr
+   * @param action
+   */
+  visitExpression(
+    expr: Expression,
+    action: (vexp: Expression) => Expression
+  ): Expression {
+    switch (expr.type) {
+      case "BinaryExpression":
+        const left = this.visitExpression(expr.left, action);
+        if (left !== expr.left) {
+          expr.left = left;
+        }
+        const right = this.visitExpression(expr.right, action);
+        if (right !== expr.right) {
+          expr.right = right;
+        }
+        break;
+
+      case "BuiltInFunctionInvocation":
+      case "FunctionInvocation":
+        for (let i = 0; i < expr.arguments.length; i++) {
+          const arg = this.visitExpression(expr.arguments[i], action);
+          if (arg !== expr.arguments[i]) {
+            expr.arguments[i] = arg;
+          }
+        }
+        break;
+
+      case "ConditionalExpression":
+        const condition = this.visitExpression(expr.condition, action);
+        if (condition !== expr.condition) {
+          expr.condition = condition;
+        }
+        const consequent = this.visitExpression(expr.consequent, action);
+        if (consequent !== expr.consequent) {
+          expr.consequent = consequent;
+        }
+        const alternate = this.visitExpression(expr.alternate, action);
+        if (alternate !== expr.alternate) {
+          expr.condition = condition;
+        }
+        break;
+
+      case "ItemAccess":
+        const array = this.visitExpression(expr.array, action);
+        if (array !== expr.array) {
+          expr.array = array;
+        }
+        const index = this.visitExpression(expr.index, action);
+        if (index !== expr.index) {
+          expr.index = index;
+        }
+        break;
+
+      case "MemberAccess":
+        const obj = this.visitExpression(expr.object, action);
+        if (obj !== expr.object) {
+          expr.object = obj;
+        }
+        break;
+
+      case "TypeCast":
+      case "UnaryExpression":
+        const operand = this.visitExpression(expr.operand, action);
+        if (operand !== expr.operand) {
+          expr.operand = operand;
+        }
+        break;
+    }
+    return action(expr);
+  }
+
+  /**
+   * Flips constant values to the right for
+   * commutative binary ops
+   * @param expr
+   */
+  private orderLiteralsToRight(expr: Expression): Expression {
+    return this.visitExpression(expr, (e) => {
+      const commExpr = isCommutativeOp(e);
+      if (!commExpr) {
+        return e;
+      }
+
+      if (
+        commExpr.left.type === "Literal" &&
+        commExpr.right.type !== "Literal"
+      ) {
+        const tmp = commExpr.left;
+        commExpr.left = commExpr.right;
+        commExpr.right = tmp;
+      }
+      return commExpr;
+    });
+  }
+
+  /**
+   * Removes literals from expressions, which do not change the result of an operation
+   * @param expr Expression to manage
+   */
+  private removeTrivialLiteralsFromBinaryOps(expr: Expression): Expression {
+    return this.visitExpression(expr, (e) => {
+      if (e.type !== "BinaryExpression") {
+        return e;
+      }
+
+      switch (e.operator) {
+        case "+":
+        case "|":
+          if (e.left.type === "Literal" && e.left.value === 0) {
+            return e.right;
+          }
+          if (e.right.type === "Literal" && e.right.value === 0) {
+            return e.left;
+          }
+          return e;
+
+        case "-":
+          if (e.left.type === "Literal" && e.left.value === 0) {
+            return <UnaryExpression>{
+              type: "UnaryExpression",
+              operator: "-",
+              operand: e.right,
+            };
+          }
+          if (e.right.type === "Literal" && e.right.value === 0) {
+            return e.left;
+          }
+          return e;
+
+        default:
+          return e;
+      }
+    });
   }
 
   // ==========================================================================
@@ -244,20 +434,28 @@ interface LocalDeclaration {
  */
 interface ProcessedExpression {
   exprType: TypeSpec;
+  expr: Expression;
 }
 
 /**
- * Mappings from intrinsic types to WA types
+ * Tests if the expression in a commutative binary operation
+ * @param expr Expression to test
+ * @returns Binary operation
  */
-const waTypeMappings: Record<Intrinsics, WaType> = {
-  i8: WaType.i32,
-  u8: WaType.i32,
-  i16: WaType.i32,
-  u16: WaType.i32,
-  i32: WaType.i32,
-  u32: WaType.i32,
-  i64: WaType.i64,
-  u64: WaType.i64,
-  f32: WaType.f32,
-  f64: WaType.f64,
-};
+function isCommutativeOp(expr: Expression): BinaryExpression | null {
+  if (expr.type !== "BinaryExpression") {
+    return null;
+  }
+  switch (expr.operator) {
+    case "!=":
+    case "==":
+    case "&":
+    case "*":
+    case "+":
+    case "^":
+    case "|":
+      return expr;
+    default:
+      return null;
+  }
+}

@@ -385,7 +385,9 @@ function applyBuiltInFunction(
       arg = singleArg();
       return typeof arg === "number" ? Math.trunc(arg) : arg;
   }
-  throw new Error(`The '${name}' function cannot be used in constant expressions`);
+  throw new Error(
+    `The '${name}' function cannot be used in constant expressions`
+  );
 
   function singleArg(): number | bigint {
     if (args.length != 1) {
@@ -443,16 +445,54 @@ function sqrtBigInt(arg: bigint): bigint {
 
 /**
  * Math.max alternative that works with number and BigInt
- * @param args 
+ * @param args
  */
-function bigIntMax (...args: (number | bigint)[]) {
-  return args.reduce((m, e) => e > m ? e : m);
-} 
+function bigIntMax(...args: (number | bigint)[]) {
+  return args.reduce((m, e) => (e > m ? e : m));
+}
 
 /**
  * Math.min alternative that works with number and BigInt
- * @param args 
+ * @param args
  */
-function bigIntMin (...args: (number | bigint)[]) {
-  return args.reduce((m, e) => e < m ? e : m);
-} 
+function bigIntMin(...args: (number | bigint)[]) {
+  return args.reduce((m, e) => (e < m ? e : m));
+}
+
+/**
+ * Renders the specified expression
+ * @param expr Expression to render
+ */
+export function renderExpression(expr: Expression): string {
+  switch (expr.type) {
+    case "Literal":
+      return expr.value.toString();
+    case "Identifier":
+      return expr.name;
+    case "BinaryExpression":
+      return `(${renderExpression(expr.left)}${expr.operator}${renderExpression(
+        expr.right
+      )})`;
+    case "FunctionInvocation":
+    case "BuiltInFunctionInvocation":
+      return `${expr.name}(${expr.arguments
+        .map((arg) => renderExpression(arg))
+        .join(",")})`;
+    case "ConditionalExpression":
+      return `(${renderExpression(expr.condition)}?${renderExpression(
+        expr.consequent
+      )}:${renderExpression(expr.alternate)}`;
+    case "ItemAccess":
+      return `(${renderExpression(expr.array)}[${renderExpression(
+        expr.index
+      )}])`;
+    case "MemberAccess":
+      return `(${renderExpression(expr.object)}.${expr.member})`;
+    case "SizeOfExpression":
+      return "sizeof()";
+    case "TypeCast":
+      return `${expr.name}(${renderExpression(expr.operand)})`;
+    case "UnaryExpression":
+      return `${expr.operator}(${renderExpression(expr.operand)})`;
+  }
+}

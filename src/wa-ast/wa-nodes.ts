@@ -4,12 +4,14 @@
 export type WaNode = Module | WaModuleField | WaFunctionBody;
 
 export type WaModuleField =
+  | WaExportNode
   | WaImportNode
   | Table
   | Global
   | TypeDef
   | Func
-  | Comment;
+  | Comment
+  | SeparatorLine;
 
 export type WaFunctionBody = Local | WaInstruction;
 
@@ -81,9 +83,11 @@ export type WaInstruction =
   | Block
   | Loop
   | If
-  | Comment;
+  | Comment
+  | SeparatorLine;
 
 export type WaImportNode = FuncImport;
+export type WaExportNode = FuncExport;
 
 // ============================================================================
 // Fundamental WebAssembly AST types
@@ -226,6 +230,19 @@ export interface FuncImport extends WaImportSpecification {
   type: "FuncImport";
   params: WaParameter[];
   resultType?: WaType;
+}
+
+/**
+ * Base node for export specifications
+ */
+interface WaExportSpecification extends WaNodeBase {
+  id: string;
+  export: WaExport;
+}
+
+
+export interface FuncExport extends WaExportSpecification {
+  type: "FuncExport";
 }
 
 // ============================================================================
@@ -800,4 +817,11 @@ export interface Comment extends WaInstructionBase {
   type: "Comment";
   isBlock?: boolean;
   text: string;
+}
+
+/**
+ * Block/end-of-line comment
+ */
+export interface SeparatorLine extends WaInstructionBase {
+  type: "SeparatorLine";
 }

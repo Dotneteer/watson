@@ -15,7 +15,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
 )`
     );
   });
@@ -29,10 +29,11 @@ describe("WaTree - render", () => {
     const text = tree.render();
 
     // --- Assert
+    console.log(text);
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
   (func $myFunc (import "imports" "myFunc"))
+  (memory (export "memory") 10)
 )`
     );
   });
@@ -50,8 +51,8 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
   (func $myFunc (import "imports" "myFunc") (param $addr i32))
+  (memory (export "memory") 10)
 )`
     );
   });
@@ -70,8 +71,8 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
   (func $myFunc (import "imports" "myFunc") (param $addr i32) (param $other f64))
+  (memory (export "memory") 10)
 )`
     );
   });
@@ -96,8 +97,8 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
   (func $myFunc (import "imports" "myFunc") (param $addr i32) (param $other f64) (result f32))
+  (memory (export "memory") 10)
 )`
     );
   });
@@ -113,11 +114,29 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
   (func $myFunc (import "imports" "myFunc") (result i64))
+  (memory (export "memory") 10)
 )`
     );
   });
+
+  it("FunctionExport #1", () => {
+    // --- Arrange
+    const tree = new WaTree();
+    tree.functionExport("$myFunc", "myFunc");
+
+    // --- Act
+    const text = tree.render();
+
+    // --- Assert
+    expect(text).toBe(
+      `(module
+  (memory (export "memory") 10)
+  (export "myFunc" (func $myFunc))
+)`
+    );
+  });
+
 
   it("Table #1", () => {
     // --- Arrange
@@ -130,7 +149,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (table $myTable 100 anyfunc)
 )`
     );
@@ -147,7 +166,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (global $myVar (mut i32) (i32.const 123456))
 )`
     );
@@ -164,7 +183,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (global $myVar (export myVar) (mut f64) (f64.const 123456))
 )`
     );
@@ -181,7 +200,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (global $myVar (export myVar) (mut i32) (i32.const 0))
 )`
     );
@@ -198,7 +217,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (global $myVar (mut f32) (f32.const 0))
 )`
     );
@@ -215,7 +234,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (type $myType (func))
 )`
     );
@@ -232,7 +251,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (type $myType (func (param $addr i32)))
 )`
     );
@@ -252,7 +271,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (type $myType (func (param $addr i32) (param $val i64)))
 )`
     );
@@ -276,7 +295,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (type $myType (func (param $addr i32) (param $val i64) (result f32)))
 )`
     );
@@ -293,7 +312,7 @@ describe("WaTree - render", () => {
     // --- Assert
     expect(text).toBe(
       `(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (type $myType (func (result f32)))
 )`
     );

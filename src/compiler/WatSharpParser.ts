@@ -476,8 +476,10 @@ export class WatSharpParser {
       resultType = spec;
     }
     const id = this.expectToken(TokenType.Identifier, "W004");
-    const name1 = this.expectToken(TokenType.StringLiteral).text;
-    const name2 = this.expectToken(TokenType.StringLiteral).text;
+    const name1Literal = this.expectToken(TokenType.StringLiteral).text;
+    const name1 = name1Literal.substr(1, name1Literal.length - 2);
+    const name2Literal = this.expectToken(TokenType.StringLiteral).text;
+    const name2 = name2Literal.substr(1, name2Literal.length - 2);
     this.expectToken(TokenType.LParent, "W016");
     let parSpecs: IntrinsicType[] = [];
     do {

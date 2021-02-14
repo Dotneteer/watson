@@ -13,6 +13,9 @@ import {
   WaNode,
   WaParameter,
   WaType,
+  FuncExport,
+  SeparatorLine,
+  WaImportNode,
 } from "./wa-nodes";
 
 /**
@@ -103,6 +106,25 @@ export class WaTree {
   }
 
   /**
+   * Injects a function import node into the tree
+   * @param id Function identifier
+   * @param name1 First import nametag
+   * @param name2 Second import nametag
+   * @param params Function parameters
+   * @param resultType Function result type
+   */
+  functionExport(id: string, name: string): FuncExport {
+    this.ensureFields();
+    const newNode = <FuncExport>{
+      type: "FuncExport",
+      id,
+      export: { name },
+    };
+    this._module.fields.push(newNode);
+    return newNode;
+  }
+
+  /**
    * Injects a mutable global declaration into the tree
    * @param id Global identifier
    * @param valueType Declaration value type
@@ -112,7 +134,7 @@ export class WaTree {
   global(
     id: string,
     valueType?: WaType,
-    initialValue?: BigInt,
+    initialValue?: number | bigint,
     exportId?: string
   ): Global {
     this.ensureFields();
@@ -183,6 +205,17 @@ export class WaTree {
   }
 
   /**
+   * Injects a separator line into the tree
+   */
+  separatorLine(): void {
+    this.ensureFields();
+    const newNode = <SeparatorLine>{
+      type: "SeparatorLine",
+    };
+    this._module.fields.push(newNode);
+  }
+
+  /**
    * Ensures
    */
   private ensureFields(): void {
@@ -217,12 +250,13 @@ export class WaTree {
    * @param indent Rendering indentation depth
    */
   renderFunctionNode(node: Func, indent: number = 0): string {
-    return `${"".padStart(indent * this._indentSpaces, " ")}(func ${node.id}${
+    const indentation = "".padStart(indent * this._indentSpaces, " ");
+    const body = this.renderFunctionBody(node, indent + 1);
+    return `${indentation}(func ${node.id}${
       node.params.length > 0 || node.resultType ? " " : ""
-    }${this.renderFuncSignature(
-      node.params,
-      node.resultType
-    )}\n${this.renderFunctionBody(node, indent + 1)}\n)`;
+    }${this.renderFuncSignature(node.params, node.resultType)}\n${body}${
+      body.length > 0 ? "\n" : ""
+    }${indentation})`;
   }
 
   /**
@@ -261,7 +295,8 @@ export class WaTree {
   private renderInternal(node: WaNode, indent: number): string {
     switch (node.type) {
       case "Module": {
-        return `(module\n${this.renderModule(node, indent + 1)})`;
+        const moduleFields = this.renderModule(node, indent + 1);
+        return `(module\n${moduleFields}\n)`;
       }
     }
     return "";
@@ -273,20 +308,28 @@ export class WaTree {
    */
   private renderModule(module: Module, indent: number): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
+    const imports = (module.fields
+      ? module.fields.filter((fi) => fi.type === "FuncImport")
+      : []) as FuncImport[];
+    const otherFields = module.fields
+      ? module.fields.filter((fi) => fi.type !== "FuncImport")
+      : [];
     return `${
+      // --- Module imports
+      imports
+        .map((field) => this.renderModuleImport(field, indent))
+        .join("\n") + (imports.length > 0 ? "\n" : "")
+    }${
       indentation
       // --- Memory specification
-    }(memory (export \"${module.memory.export.name ?? "memory"}\" ${
+    }(memory (export \"${module.memory.export.name ?? "memory"}\") ${
       module.memory.limit ?? 10
-    }))\n${
-      // --- Module imports
-      module.fields
-        ? module.fields
-            .map((field) => this.renderModuleField(field, indent))
-            .join("") + "\n"
-        : ""
-      // --- Module exports
-    }${
+    })${otherFields.length > 0 ? "\n" : ""}${
+      // --- Other module fields
+      otherFields
+        .map((field) => this.renderModuleField(field, indent))
+        .join("\n")
+    }${module.table ? "\n" : ""}${
       // --- Table specification
       module.table
         ? indentation +
@@ -294,9 +337,20 @@ export class WaTree {
           module.table.id +
           " " +
           module.table.limit +
-          " anyfunc)\n"
+          " anyfunc)"
         : ""
     }`;
+  }
+
+  private renderModuleImport(field: WaImportNode, indent: number): string {
+    const indentation = "".padStart(indent * this._indentSpaces, " ");
+    return `${indentation}(func ${field.id} (import \"${
+      field.import.name1
+    }\" \"${field.import.name2}\")${
+      field.params.length > 0 || field.resultType
+        ? " " + this.renderFuncSignature(field.params, field.resultType)
+        : ""
+    })`;
   }
 
   /**
@@ -307,14 +361,8 @@ export class WaTree {
   private renderModuleField(field: WaModuleField, indent: number): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
     switch (field.type) {
-      case "FuncImport":
-        return `${indentation}(func ${field.id} (import \"${
-          field.import.name1
-        }\" \"${field.import.name2}\")${
-          field.params.length > 0 || field.resultType
-            ? " " + this.renderFuncSignature(field.params, field.resultType)
-            : ""
-        })`;
+      case "FuncExport":
+        return `${indentation}(export "${field.export.name}" (func ${field.id}))`;
 
       case "Global":
         return `${indentation}(global ${field.id} ${
@@ -336,6 +384,9 @@ export class WaTree {
           indentation +
           (field.isBlock ? `(; ${field.text} ;)` : `;; ${field.text}`)
         );
+
+      case "SeparatorLine":
+        return indentation;
     }
   }
 
@@ -349,7 +400,7 @@ export class WaTree {
     resultType?: WaType
   ): string {
     return `${params
-      .map((p) => "(param " + (p.id + " " ?? " ") + WaType[p.type] + ")")
+      .map((p) => "(param " + (p.id ? p.id + " " : "") + WaType[p.type] + ")")
       .join(" ")}${params.length > 0 && resultType ? " " : ""}${
       resultType ? "(result " + WaType[resultType] + ")" : ""
     }`;
@@ -380,6 +431,7 @@ export class WaTree {
     node: WaInstruction | Comment,
     indent: number
   ): string {
+    const indentation = "".padStart(indent * this._indentSpaces, " ");
     switch (node.type) {
       case "ConstVal":
         return `${WaType[node.valueType]}.const ${node.value}`;
@@ -554,10 +606,7 @@ export class WaTree {
           node.resultType === undefined
             ? ""
             : " (result " + WaType[node.resultType] + ")"
-        }\n${body}${body.length > 0 ? "\n" : ""}${"".padStart(
-          indent * this._indentSpaces,
-          " "
-        )}end`;
+        }\n${body}${body.length > 0 ? "\n" : ""}${indentation}end`;
       case "Loop":
         const loop = node.body
           .map((inst) => this.renderInstructionNode(inst, indent + 1))
@@ -566,10 +615,7 @@ export class WaTree {
           node.resultType === undefined
             ? ""
             : " (result " + WaType[node.resultType] + ")"
-        }\n${loop}${loop.length > 0 ? "\n" : ""}${"".padStart(
-          indent * this._indentSpaces,
-          " "
-        )}end`;
+        }\n${loop}${loop.length > 0 ? "\n" : ""}${indentation}end`;
       case "If":
         const consequtive = node.consequtive
           ? node.consequtive
@@ -587,12 +633,12 @@ export class WaTree {
             : " (result " + WaType[node.resultType] + ")"
         }\n${consequtive}${consequtive.length > 0 ? "\n" : ""}${
           node.alternate ? "else\n" : ""
-        }${alternate}${alternate.length > 0 ? "\n" : ""}${"".padStart(
-          indent * this._indentSpaces,
-          " "
-        )}end`;
+        }${alternate}${alternate.length > 0 ? "\n" : ""}${indentation}end`;
       case "Comment":
         return node.isBlock ? `(; ${node.text} ;)` : `;; ${node.text}`;
+
+      case "SeparatorLine":
+        return indentation;
     }
 
     // --- Convert bit specification to string

@@ -349,7 +349,7 @@ Syntax:
 ```
 importedFunctionDeclaration
     : "import" ("void" | intrinsicType) identifier stringLiteral stringLiteral  
-      "(" intrinsicType? ("," intrinsicType)* ")"
+      "(" intrinsicType? ("," intrinsicType)* ")" ";"
     ;
 ```
 
