@@ -426,7 +426,7 @@ end`);
 
     // --- Assert
     expect(text).toBe(`(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   ;; This is a comment
 )`);
   });
@@ -441,7 +441,7 @@ end`);
 
     // --- Assert
     expect(text).toBe(`(module
-  (memory (export "memory" 10))
+  (memory (export "memory") 10)
   (; This is a comment ;)
 )`);
   });

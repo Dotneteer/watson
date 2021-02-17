@@ -1,0 +1,33 @@
+import void trace "imports" "trace" (u32);
+
+// Global memory for all virtual machines
+u8[0x100_0000] globalMem;
+
+// --- CPU globals
+global u32 tacts;
+global u32 clock = 3_500_000;
+
+// Represents a 16-bit register pair
+type r16 = struct {
+  u8 l, // LSB register
+  u8 h  // MSB register
+};
+
+// --- Z80 Registers
+r16 af;
+r16 bc;
+r16 de;
+r16 hl;
+u16 af_;
+u16 bc_;
+u16 de_;
+u16 hl_;
+
+export void reset() {
+  // TODO: Implement it
+}
+
+inline void setA(u8 a) {
+  local u8 dummy;
+  af.l = a;
+}

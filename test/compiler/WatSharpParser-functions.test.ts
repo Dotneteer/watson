@@ -46,8 +46,8 @@ describe("WatSharpParser - function declarations", () => {
       expect(decl).toBeDefined();
       const importedFuncDecl = decl as ImportedFunctionDeclaration;
       expect(importedFuncDecl.resultType.type).toBe("Intrinsic");
-      expect(importedFuncDecl.name1).toBe('"imports"');
-      expect(importedFuncDecl.name2).toBe('"myFunc"');
+      expect(importedFuncDecl.name1).toBe("imports");
+      expect(importedFuncDecl.name2).toBe("myFunc");
       expect(importedFuncDecl.parSpecs.length).toBe(0);
     });
 
@@ -66,8 +66,8 @@ describe("WatSharpParser - function declarations", () => {
       expect(decl).toBeDefined();
       const importedFuncDecl = decl as ImportedFunctionDeclaration;
       expect(importedFuncDecl.resultType.type).toBe("Intrinsic");
-      expect(importedFuncDecl.name1).toBe('"imports"');
-      expect(importedFuncDecl.name2).toBe('"myFunc"');
+      expect(importedFuncDecl.name1).toBe("imports");
+      expect(importedFuncDecl.name2).toBe("myFunc");
       expect(importedFuncDecl.parSpecs.length).toBe(1);
     });
 
@@ -86,8 +86,8 @@ describe("WatSharpParser - function declarations", () => {
       expect(decl).toBeDefined();
       const importedFuncDecl = decl as ImportedFunctionDeclaration;
       expect(importedFuncDecl.resultType.type).toBe("Intrinsic");
-      expect(importedFuncDecl.name1).toBe('"imports"');
-      expect(importedFuncDecl.name2).toBe('"myFunc"');
+      expect(importedFuncDecl.name1).toBe("imports");
+      expect(importedFuncDecl.name2).toBe("myFunc");
       expect(importedFuncDecl.parSpecs.length).toBe(2);
     });
   });
@@ -107,8 +107,8 @@ describe("WatSharpParser - function declarations", () => {
     expect(decl).toBeDefined();
     const importedFuncDecl = decl as ImportedFunctionDeclaration;
     expect(importedFuncDecl.resultType).toBeUndefined();
-    expect(importedFuncDecl.name1).toBe('"imports"');
-    expect(importedFuncDecl.name2).toBe('"myFunc"');
+    expect(importedFuncDecl.name1).toBe("imports");
+    expect(importedFuncDecl.name2).toBe("myFunc");
     expect(importedFuncDecl.parSpecs.length).toBe(0);
   });
 
@@ -127,8 +127,8 @@ describe("WatSharpParser - function declarations", () => {
     expect(decl).toBeDefined();
     const importedFuncDecl = decl as ImportedFunctionDeclaration;
     expect(importedFuncDecl.resultType).toBeUndefined();
-    expect(importedFuncDecl.name1).toBe('"imports"');
-    expect(importedFuncDecl.name2).toBe('"myFunc"');
+    expect(importedFuncDecl.name1).toBe("imports");
+    expect(importedFuncDecl.name2).toBe("myFunc");
     expect(importedFuncDecl.parSpecs.length).toBe(1);
   });
 
@@ -147,8 +147,8 @@ describe("WatSharpParser - function declarations", () => {
     expect(decl).toBeDefined();
     const importedFuncDecl = decl as ImportedFunctionDeclaration;
     expect(importedFuncDecl.resultType).toBeUndefined();
-    expect(importedFuncDecl.name1).toBe('"imports"');
-    expect(importedFuncDecl.name2).toBe('"myFunc"');
+    expect(importedFuncDecl.name1).toBe("imports");
+    expect(importedFuncDecl.name2).toBe("myFunc");
     expect(importedFuncDecl.parSpecs.length).toBe(2);
   });
 

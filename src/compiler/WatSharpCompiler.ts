@@ -3,7 +3,9 @@ import { IncludeHandlerResult } from "../preprocessor/PreprocessorParser";
 import {
   Declaration,
   Expression,
+  FunctionDeclaration,
   instrisicSizes as intrisicSizes,
+  Intrinsics,
   TableDeclaration,
   TypeSpec,
 } from "./source-tree";
@@ -14,6 +16,9 @@ import {
   applyTypeCast,
   resolveConstantExpression,
 } from "./expression-resolver";
+import { FunctionCompiler } from "./FunctionCompiler";
+import { WaTree } from "../wa-ast/WaTree";
+import { WaParameter, WaType } from "../wa-ast/wa-nodes";
 
 /**
  * This class implements the WAT# compiler
@@ -25,10 +30,20 @@ export class WatSharpCompiler {
   // --- Keep track of error messages
   private _errors: ParserErrorMessage[] = [];
 
+  // --- Stores the WebAssemble tree
+  private _waTree: WaTree | null = null;
+
+  // --- Trace helper members
+  private _shouldTrace: boolean = false;
+  private readonly _traceMessages: CompilerTraceMessage[] = [];
+
+  // --- The number of table entries to emit
+  private _tableEntries = 0;
+
   constructor(
     public readonly source: string,
     public readonly includeHandler?: (filename: string) => IncludeHandlerResult,
-    preprocessorSymbols?: string[]
+    public readonly preprocessorSymbols?: string[]
   ) {
     this._parser = new WatSharpParser(
       source,
@@ -38,21 +53,44 @@ export class WatSharpCompiler {
   }
 
   /**
+   * Turn on comiler tracing
+   */
+  trace(): void {
+    this._shouldTrace = true;
+  }
+
+  /**
    * Execute the compilation of the source
    */
-  compile(): void {
+  compile(): string | null {
     // --- Step #1: parse the program and sign any syntax issues.
     this._parser.parseProgram();
     this._errors = this._parser.errors.slice(0);
     if (this._errors.length > 0) {
-      return;
+      return null;
     }
 
     // --- Step #2: resolve dependencies among declarations
     this.resolveDependencies();
     if (this._errors.length > 0) {
-      return;
+      return null;
     }
+
+    // --- Step #3: emit declaration nodes
+    this._waTree = new WaTree();
+    this.emitDeclarationNodes();
+
+    // --- Step #4: process function bodies
+    this.processFunctionBodies();
+    if (this._errors.length > 0) {
+      return null;
+    }
+
+    // --- Step #5: complete code emission
+    this.completeCodeEmission();
+
+    // --- Step #6: render the tree
+    return this._waTree.render();
   }
 
   /**
@@ -76,28 +114,60 @@ export class WatSharpCompiler {
     return this._parser.declarations;
   }
 
+  /**
+   * Gets the WebAssembly tree with the emitted code
+   */
+  get waTree(): WaTree | null {
+    return this._waTree;
+  }
+
+  /**
+   * Gets compiler trace messages
+   */
+  get traceMessages(): CompilerTraceMessage[] {
+    return this._traceMessages;
+  }
+
+  /**
+   * Adds a trace message
+   * @param traceFactory Factory function to generate trace message
+   */
+  addTrace(traceFactory: () => [string, number | undefined, string]): void {
+    if (this._shouldTrace) {
+      const trace = traceFactory();
+      this._traceMessages.push({
+        source: trace[0],
+        point: trace[1],
+        message: trace[2],
+      });
+    }
+  }
+
   // ==========================================================================
   // Declaration resolution
 
   /**
    * Resolve unresolved declaration dependencies
    */
-  private resolveDependencies(): void {
+  resolveDependencies(spec?: TypeSpec): void {
     const compiler = this;
 
     // --- Declarations to resolve
     const declarations = this._parser.declarations;
 
     // --- Queue to hold dependent declarations to resolve
-    const resolutionQueue: ResolutionQueueItem[] = [
-      ...declarations.values(),
-    ].map((item) => <ResolutionQueueItem>{ decl: item });
+    const resolutionQueue: ResolutionQueueItem[] = [];
+    if (spec) {
+      resolutionQueue.push({ typeSpec: spec });
+    } else {
+      const items = [...declarations.values()].map(
+        (item) => <ResolutionQueueItem>{ decl: item }
+      );
+      resolutionQueue.push(...items);
+    }
 
     // --- Stack of name to check circular references
     const namedStack: string[] = [];
-
-    // --- Total #of table entries
-    let tableEntries = 0;
 
     // --- Next address in memory
     let nextMemoryAddress = 0;
@@ -154,9 +224,6 @@ export class WatSharpCompiler {
           if (decl.initExpr) {
             resolveExpression(decl.initExpr);
           }
-          if (decl.initExpr.value === undefined) {
-            decl.initExpr.value = 0;
-          }
           break;
 
         case "TableDeclaration":
@@ -176,7 +243,7 @@ export class WatSharpCompiler {
             }
           }
           if (decl.address === undefined) {
-            decl.address = nextMemoryAddress
+            decl.address = nextMemoryAddress;
           }
           nextMemoryAddress = decl.address + compiler.getSizeof(decl.spec);
           break;
@@ -293,7 +360,7 @@ export class WatSharpCompiler {
             compiler.reportError("W101", id, id.name);
           }
         },
-        
+
         // --- This function resolves the "sizeof" operator
         (typeSpec) => {
           resolveTypeSpecification(typeSpec);
@@ -311,7 +378,7 @@ export class WatSharpCompiler {
      */
     function resolveTableDeclaration(table: TableDeclaration): void {
       // --- Iterate through all table idetifiers
-      table.entryIndex = tableEntries;
+      table.entryIndex = compiler._tableEntries;
       table.ids.forEach((id) => {
         const decl = declarations.get(id);
         if (!decl) {
@@ -323,7 +390,7 @@ export class WatSharpCompiler {
           // --- This ID is not a function
           compiler.reportError("W109", table, id);
         }
-        tableEntries++;
+        compiler._tableEntries++;
       });
       table.resolved = true;
     }
@@ -345,6 +412,140 @@ export class WatSharpCompiler {
   }
 
   // ==========================================================================
+  // Emit declaration nodes
+
+  /**
+   * Emit the code for module declarations
+   */
+  private emitDeclarationNodes(): void {
+    this.emitImports();
+    this.emitExports();
+    this.emitGlobals();
+    this.emitVariableMap();
+  }
+
+  /**
+   * Emit module exports code
+   */
+  private emitExports(): void {
+    let header = false;
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "FunctionDeclaration" && decl.isExport) {
+        if (!header) {
+          this._waTree.separatorLine();
+          this._waTree.comment("Exported functions");
+          header = true;
+        }
+        this._waTree.functionExport(createGlobalName(decl.name), decl.name);
+      }
+    }
+  }
+
+  /**
+   * Emit module exports code
+   */
+  private emitImports(): void {
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "ImportedFunctionDeclaration") {
+        this._waTree.functionImport(
+          createGlobalName(decl.name),
+          decl.name1,
+          decl.name2,
+          decl.parSpecs.map(
+            (ps) =>
+              <WaParameter>{
+                type: waTypeMappings[ps.underlying],
+              }
+          )
+        );
+      }
+    }
+  }
+
+  /**
+   * Emit globals code
+   */
+  private emitGlobals(): void {
+    let header = false;
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "GlobalDeclaration") {
+        if (!header) {
+          this._waTree.separatorLine();
+          this._waTree.comment("Global declarations");
+          header = true;
+        }
+        this._waTree.global(
+          createGlobalName(decl.name),
+          waTypeMappings[decl.underlyingType],
+          decl?.initExpr?.value
+        );
+      }
+    }
+  }
+
+  /**
+   * Emit globals code
+   */
+  private emitVariableMap(): void {
+    this._waTree.separatorLine();
+    this._waTree.comment("Variable mappings");
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "VariableDeclaration") {
+        this._waTree.comment(
+          `0x${decl.address.toString(16).padStart(6, "0")} (${this.getSizeof(
+            decl.spec
+          )}): ${decl.name}`
+        );
+      }
+    }
+  }
+
+  // ==========================================================================
+  // Process function bodies
+
+  /**
+   * Processes the bodies of functions
+   */
+  private processFunctionBodies(): void {
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "FunctionDeclaration") {
+        this.processFunctionBody(decl);
+      }
+    }
+  }
+
+  /**
+   * Processes the specified function
+   * @param func Function to process
+   */
+  private processFunctionBody(func: FunctionDeclaration): void {
+    const fCompiler = new FunctionCompiler(this, func);
+    fCompiler.process();
+  }
+
+  // ==========================================================================
+  // Complete code emission
+
+  private completeCodeEmission(): void {
+    // --- Calculate memory size
+    let maxAddr = 0;
+    for (const decl of this.declarations.values()) {
+      if (decl.type !== "VariableDeclaration") {
+        continue;
+      }
+      const thisEndAddr = decl.address + this.getSizeof(decl.spec);
+      if (isNaN(thisEndAddr)) {
+        throw new Error(`Unexpected memory size of variable ${decl.name}`);
+      }
+      if (thisEndAddr > maxAddr) {
+        maxAddr = thisEndAddr;
+      }
+    }
+    const memPages = (maxAddr >> 16) + 1;
+    this._waTree.setMemorySpecification(memPages);
+  }
+
+  // ==========================================================================
   // Error reporting
 
   /**
@@ -353,7 +554,7 @@ export class WatSharpCompiler {
    * @param token Token that represents the error's position
    * @param options Error message options
    */
-  private reportError(
+  reportError(
     errorCode: ErrorCodes,
     node: Node | TokenLocation,
     ...options: any[]
@@ -393,4 +594,53 @@ interface ResolutionQueueItem {
   decl?: Declaration;
   typeSpec?: TypeSpec;
   expr?: Expression;
+}
+
+/**
+ * Represents a comiler trace message
+ */
+export interface CompilerTraceMessage {
+  source: string;
+  point?: number;
+  message: string;
+}
+
+/**
+ * Mappings from intrinsic types to WA types
+ */
+export const waTypeMappings: Record<Intrinsics, WaType> = {
+  i8: WaType.i32,
+  u8: WaType.i32,
+  i16: WaType.i32,
+  u16: WaType.i32,
+  i32: WaType.i32,
+  u32: WaType.i32,
+  i64: WaType.i64,
+  u64: WaType.i64,
+  f32: WaType.f32,
+  f64: WaType.f64,
+};
+
+/**
+ * Creates a WebAssembly function name
+ * @param name Name to use as input
+ */
+export function createGlobalName(name: string): string {
+  return `$${name}`;
+}
+
+/**
+ * Creates a WebAssembly local name
+ * @param name Name to use as input
+ */
+export function createLocalName(name: string): string {
+  return `$loc_${name}`;
+}
+
+/**
+ * Creates a WebAssembly parameter name
+ * @param name Name to use as input
+ */
+export function createParameterName(name: string): string {
+  return `$par_${name}`;
 }

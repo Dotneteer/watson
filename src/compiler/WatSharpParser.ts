@@ -60,6 +60,7 @@ import {
   LiteralSource,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
+import { report } from "process";
 
 export class WatSharpParser {
   // --- Use this preprocessor
@@ -476,8 +477,10 @@ export class WatSharpParser {
       resultType = spec;
     }
     const id = this.expectToken(TokenType.Identifier, "W004");
-    const name1 = this.expectToken(TokenType.StringLiteral).text;
-    const name2 = this.expectToken(TokenType.StringLiteral).text;
+    const name1Literal = this.expectToken(TokenType.StringLiteral).text;
+    const name1 = name1Literal.substr(1, name1Literal.length - 2);
+    const name2Literal = this.expectToken(TokenType.StringLiteral).text;
+    const name2 = name2Literal.substr(1, name2Literal.length - 2);
     this.expectToken(TokenType.LParent, "W016");
     let parSpecs: IntrinsicType[] = [];
     do {
@@ -1889,6 +1892,9 @@ export class WatSharpParser {
       }
       this._lexer.get();
       const size = this.parseExpr();
+      if (size === null) {
+        this.reportError("W002");
+      }
       this.expectToken(TokenType.RSquare);
       typeSpec = this.createTypeSpecNode<ArrayType>(
         "Array",
