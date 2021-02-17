@@ -229,7 +229,7 @@ export function applyTypeCast(
  * @param op Unary operation type
  * @param operand Operand value
  */
-function applyUnaryOperation(
+export function applyUnaryOperation(
   op: UnaryOpSymbols,
   operand: number | bigint
 ): number | bigint {
@@ -250,7 +250,7 @@ function applyUnaryOperation(
  * @param left Left operand value
  * @param right Right operand value
  */
-function applyBinaryOperation(
+export function applyBinaryOperation(
   op: BinaryOpSymbols,
   left: number | bigint,
   right: number | bigint
@@ -341,7 +341,7 @@ function applyBinaryOperation(
  * @param name Function name
  * @param args Function arguments
  */
-function applyBuiltInFunction(
+export function applyBuiltInFunction(
   name: BuiltInFunctionNames,
   args: (number | bigint)[]
 ): number | bigint {
@@ -481,7 +481,7 @@ export function renderExpression(expr: Expression): string {
     case "ConditionalExpression":
       return `(${renderExpression(expr.condition)}?${renderExpression(
         expr.consequent
-      )}:${renderExpression(expr.alternate)}`;
+      )}:${renderExpression(expr.alternate)})`;
     case "ItemAccess":
       return `(${renderExpression(expr.array)}[${renderExpression(
         expr.index

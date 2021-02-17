@@ -8,6 +8,8 @@ import {
   DoStatement,
   Expression,
   IfStatement,
+  Literal,
+  LiteralSource,
   LocalFunctionInvocation,
   LocalVariable,
   Node,
@@ -30,8 +32,14 @@ import {
   WatSharpCompiler,
   waTypeMappings,
 } from "./WatSharpCompiler";
-import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
-import { renderExpression } from "./expression-resolver";
+import { FunctionBuilder, le } from "../wa-ast/FunctionBuilder";
+import {
+  applyBinaryOperation,
+  applyBuiltInFunction,
+  applyTypeCast,
+  applyUnaryOperation,
+  renderExpression,
+} from "./expression-resolver";
 
 /**
  * This class is responsible for compiling a function body
@@ -261,6 +269,8 @@ export class FunctionCompiler {
   simplifyExpression(expr: Expression): Expression {
     expr = this.removeTrivialLiteralsFromBinaryOps(expr);
     expr = this.orderLiteralsToRight(expr);
+    expr = this.refoldBinaryOps(expr);
+    expr = this.processLiterals(expr);
     return expr;
   }
 
@@ -376,13 +386,22 @@ export class FunctionCompiler {
       switch (e.operator) {
         case "+":
         case "|":
+        case "^":
           if (e.left.type === "Literal" && e.left.value === 0) {
             return e.right;
           }
           if (e.right.type === "Literal" && e.right.value === 0) {
             return e.left;
           }
-          return e;
+          break;
+
+        case ">>":
+        case ">>>":
+        case "<<":
+          if (e.right.type === "Literal" && e.right.value === 0) {
+            return e.left;
+          }
+          break;
 
         case "-":
           if (e.left.type === "Literal" && e.left.value === 0) {
@@ -395,12 +414,180 @@ export class FunctionCompiler {
           if (e.right.type === "Literal" && e.right.value === 0) {
             return e.left;
           }
-          return e;
+          break;
 
-        default:
-          return e;
+        case "*":
+          if (e.right.type === "Literal" && e.right.value === 1) {
+            return e.left;
+          }
+          if (e.left.type === "Literal" && e.left.value === 1) {
+            return e.right;
+          }
+          break;
+
+        case "/":
+          if (e.right.type === "Literal" && e.right.value === 1) {
+            return e.left;
+          }
+          break;
+
+        case "%":
+          if (e.right.type === "Literal" && e.right.value === 1) {
+            return createLiteral(0);
+          }
+          break;
+
+        case "&":
+          if (
+            (e.left.type === "Literal" && e.left.value === 0) ||
+            (e.right.type === "Literal" && e.right.value === 0)
+          ) {
+            return createLiteral(0);
+          }
+          break;
       }
+      return e;
     });
+  }
+
+  /**
+   * Processes literal values; evaluates constant expressions
+   * @param expr Expression to manage
+   */
+  private processLiterals(expr: Expression): Expression {
+    const compiler = this.wsCompiler;
+    return this.visitExpression(expr, (e) => calculate(e));
+
+    function calculate(e: Expression): Expression {
+      switch (e.type) {
+        case "ConditionalExpression":
+          if (
+            e.condition.type === "Literal" &&
+            e.consequent.type === "Literal" &&
+            e.alternate.type === "Literal"
+          ) {
+            return createLiteral(
+              e.condition.value ? e.consequent.value : e.alternate.value
+            );
+          }
+          break;
+
+        case "BinaryExpression":
+          if (e.left.type === "Literal" && e.right.type === "Literal") {
+            return createLiteral(
+              applyBinaryOperation(e.operator, e.left.value, e.right.value)
+            );
+          }
+          break;
+
+        case "UnaryExpression":
+          if (e.operand.type === "Literal") {
+            return createLiteral(
+              applyUnaryOperation(e.operator, e.operand.value)
+            );
+          }
+          break;
+
+        case "BuiltInFunctionInvocation":
+          const nonLiteralArgs = e.arguments.filter(
+            (a) => a.type !== "Literal"
+          );
+          if (nonLiteralArgs.length === 0) {
+            return createLiteral(
+              applyBuiltInFunction(
+                e.name,
+                e.arguments.map((a) => a.value)
+              )
+            );
+          }
+          break;
+
+        case "TypeCast":
+          if (e.operand.type === "Literal") {
+            try {
+              const cast = applyTypeCast(e.name, e.operand.value);
+              return createLiteral(cast, e.name === "u64");
+            } catch {
+              // --- Intentionally ignored
+            }
+          }
+          break;
+
+        case "SizeOfExpression":
+          compiler.resolveDependencies(e.spec);
+          return createLiteral(compiler.getSizeof(e.spec));
+
+        case "Identifier":
+          const decl = compiler.declarations.get(e.name);
+          if (decl?.type === "ConstDeclaration") {
+            return createLiteral(decl.value);
+          }
+          break;
+      }
+      return e;
+    }
+  }
+
+  /**
+   * Refolds expressions to process literals
+   * @param expr
+   */
+  private refoldBinaryOps(expr: Expression): Expression {
+    return this.visitExpression(expr, (e) => refold(e));
+
+    function refold(expr: Expression): Expression {
+      if (
+        expr.type !== "BinaryExpression" ||
+        expr.right.type !== "Literal" ||
+        expr.left.type !== "BinaryExpression" ||
+        expr.left.right.type !== "Literal"
+      ) {
+        return expr;
+      }
+
+      // --- The expression is like (expr binop2 literal2) binop1 literal1)
+      const binop1 = expr.operator;
+      const literal1 = expr.right.value;
+      const binop2 = expr.left.operator;
+      const literal2 = expr.left.right.value;
+      switch (binop2) {
+        case "+":
+          if (binop1 === "+") {
+            return foldLiterlIntoBinary(expr.left, add(literal2, literal1));
+          } else if (binop1 === "-") {
+            return foldLiterlIntoBinary(expr.left, add(literal2, -literal1));
+          }
+        case "-":
+          if (binop1 === "+") {
+            return foldLiterlIntoBinary(expr.left, add(literal2, -literal1));
+          } else if (binop1 === "-") {
+            return foldLiterlIntoBinary(expr.left, add(literal2, literal1));
+          }
+
+      }
+      return expr;
+    }
+
+    function foldLiterlIntoBinary(
+      binExpr: BinaryExpression,
+      value: number | bigint
+    ): BinaryExpression {
+      return <BinaryExpression><unknown>{
+        type: "BinaryExpression",
+        operator: binExpr.operator,
+        left: binExpr.left,
+        right: createLiteral(value)
+      }
+    }
+
+    function add(
+      left: number | bigint,
+      right: number | bigint
+    ): number | bigint {
+      return typeof left === "number" && typeof right === "number"
+        ? left + right
+        : BigInt(left) + BigInt(right);
+    }
   }
 
   // ==========================================================================
@@ -458,4 +645,22 @@ function isCommutativeOp(expr: Expression): BinaryExpression | null {
     default:
       return null;
   }
+}
+
+function createLiteral(value: number | bigint, asU64 = false): Literal {
+  return <Literal>(<unknown>{
+    type: "Literal",
+    value:
+      typeof value === "bigint"
+        ? asU64
+          ? BigInt.asUintN(64, value)
+          : BigInt.asIntN(64, value)
+        : value,
+    literalSource:
+      typeof value === "number"
+        ? Number.isInteger(value)
+          ? LiteralSource.Int
+          : LiteralSource.Real
+        : LiteralSource.BigInt,
+  });
 }

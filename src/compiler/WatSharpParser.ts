@@ -60,6 +60,7 @@ import {
   LiteralSource,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
+import { report } from "process";
 
 export class WatSharpParser {
   // --- Use this preprocessor
@@ -1891,6 +1892,9 @@ export class WatSharpParser {
       }
       this._lexer.get();
       const size = this.parseExpr();
+      if (size === null) {
+        this.reportError("W002");
+      }
       this.expectToken(TokenType.RSquare);
       typeSpec = this.createTypeSpecNode<ArrayType>(
         "Array",

@@ -149,16 +149,22 @@ export class WatSharpCompiler {
   /**
    * Resolve unresolved declaration dependencies
    */
-  private resolveDependencies(): void {
+  resolveDependencies(spec?: TypeSpec): void {
     const compiler = this;
 
     // --- Declarations to resolve
     const declarations = this._parser.declarations;
 
     // --- Queue to hold dependent declarations to resolve
-    const resolutionQueue: ResolutionQueueItem[] = [
-      ...declarations.values(),
-    ].map((item) => <ResolutionQueueItem>{ decl: item });
+    const resolutionQueue: ResolutionQueueItem[] = [];
+    if (spec) {
+      resolutionQueue.push({ typeSpec: spec });
+    } else {
+      const items = [...declarations.values()].map(
+        (item) => <ResolutionQueueItem>{ decl: item }
+      );
+      resolutionQueue.push(...items);
+    }
 
     // --- Stack of name to check circular references
     const namedStack: string[] = [];
