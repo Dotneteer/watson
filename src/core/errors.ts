@@ -88,7 +88,8 @@ export type ErrorCodes =
   | "W112"
 
   // --- WAT# Compiler issues
-  | "W140";
+  | "W140"
+  | "W141";
 
 /**
  * Error message type description
@@ -161,4 +162,6 @@ export const errorMessages: ErrorText = {
 
   // --- WAT# Compiler issues
   W140: "Local parameter/variable '{0}' has already been declared",
+  W141: "Cannot cast the right side of the assignment to the target type",
+
 };

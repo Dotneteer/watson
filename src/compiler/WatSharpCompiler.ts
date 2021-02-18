@@ -75,6 +75,7 @@ export class WatSharpCompiler {
     if (this._errors.length > 0) {
       return null;
     }
+    this.flattenTypes();
 
     // --- Step #3: emit declaration nodes
     this._waTree = new WaTree();
@@ -393,6 +394,44 @@ export class WatSharpCompiler {
         compiler._tableEntries++;
       });
       table.resolved = true;
+    }
+  }
+
+  /**
+   * Flattens type declarations by replacing named types specifications with direct
+   * ones
+   */
+  private flattenTypes(): void {
+    const compiler = this;
+    for (const decl of this._parser.declarations.values()) {
+      if (decl.type === "TypeDeclaration") {
+        decl.spec = flattenType(decl.spec);
+      }
+    }
+
+    function flattenType(spec: TypeSpec): TypeSpec {
+      if (spec.flattened) {
+        return spec;
+      }
+      spec.flattened = true;
+      switch (spec.type) {
+        case "Array":
+        case "Pointer":
+          spec.spec = flattenType(spec.spec);
+          break;
+        case "Struct":
+          spec.fields.forEach((fi) => {
+            fi.spec = flattenType(fi.spec);
+          });
+          break;
+        case "NamedType":
+          const typeDecl = compiler._parser.declarations.get(spec.name);
+          if (typeDecl.type !== "TypeDeclaration") {
+            break;
+          }
+          return flattenType(typeDecl.spec);
+      }
+      return spec;
     }
   }
 

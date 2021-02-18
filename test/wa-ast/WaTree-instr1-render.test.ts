@@ -271,7 +271,7 @@ describe("WaTree - render instructions #1", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("local_get $myVar");
+    expect(text).toBe("get_local $myVar");
   });
 
   it("local_set", () => {
@@ -283,7 +283,7 @@ describe("WaTree - render instructions #1", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("local_set $myVar");
+    expect(text).toBe("set_local $myVar");
   });
 
   it("local_tee", () => {
@@ -295,7 +295,7 @@ describe("WaTree - render instructions #1", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("local_tee $myVar");
+    expect(text).toBe("tee_local $myVar");
   });
 
   it("global_get", () => {
@@ -307,7 +307,7 @@ describe("WaTree - render instructions #1", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("global_get $myVar");
+    expect(text).toBe("get_global $myVar");
   });
 
   it("global_set", () => {
@@ -319,6 +319,6 @@ describe("WaTree - render instructions #1", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("global_set $myVar");
+    expect(text).toBe("set_global $myVar");
   });
 });

@@ -17,7 +17,7 @@ import {
   UnaryExpression,
   WhileStatement,
 } from "../compiler/source-tree";
-import { WaParameter, WaType } from "../wa-ast/wa-nodes";
+import { WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
 import {
   FunctionDeclaration,
   Intrinsics,
@@ -32,7 +32,20 @@ import {
   WatSharpCompiler,
   waTypeMappings,
 } from "./WatSharpCompiler";
-import { FunctionBuilder, le } from "../wa-ast/FunctionBuilder";
+import {
+  and,
+  constVal,
+  convert32,
+  convert64,
+  demote64,
+  extend32,
+  FunctionBuilder,
+  le,
+  localSet,
+  shl,
+  shr,
+  wrap64,
+} from "../wa-ast/FunctionBuilder";
 import {
   applyBinaryOperation,
   applyBuiltInFunction,
@@ -169,9 +182,12 @@ export class FunctionCompiler {
       this.reportError("W140", this.func);
       return;
     } else {
+      const localName = createLocalName(localVar.name);
       let initExpr: ProcessedExpression | null = null;
       if (localVar.initExpr) {
         initExpr = this.processExpression(localVar.initExpr);
+        this.castForStorage(localVar.spec, initExpr.exprType);
+        this.inject(localSet(localName));
       }
       const paramType =
         localVar.spec.type === "Pointer"
@@ -181,7 +197,12 @@ export class FunctionCompiler {
         type: localVar.spec,
         waType: paramType,
       });
-      this._builder.addLocal(createLocalName(localVar.name), paramType);
+      const local = this._builder.addLocal(localName, paramType);
+      this.addTrace(() => [
+        "local",
+        0,
+        this.wsCompiler.waTree.renderLocal(local),
+      ]);
     }
   }
 
@@ -253,12 +274,10 @@ export class FunctionCompiler {
     this.addTrace(() => ["pExpr", 0, renderExpression(expr)]);
     const simplified = this.simplifyExpression(expr);
     this.addTrace(() => ["pExpr", 1, renderExpression(simplified)]);
+    const exprType = this.compileExpression(simplified);
     return {
       expr: simplified,
-      exprType: {
-        type: "Intrinsic",
-        underlying: "u32",
-      } as TypeSpec,
+      exprType,
     };
   }
 
@@ -563,7 +582,6 @@ export class FunctionCompiler {
           } else if (binop1 === "-") {
             return foldLiterlIntoBinary(expr.left, add(literal2, literal1));
           }
-
       }
       return expr;
     }
@@ -572,12 +590,12 @@ export class FunctionCompiler {
       binExpr: BinaryExpression,
       value: number | bigint
     ): BinaryExpression {
-      return <BinaryExpression><unknown>{
+      return <BinaryExpression>(<unknown>{
         type: "BinaryExpression",
         operator: binExpr.operator,
         left: binExpr.left,
-        right: createLiteral(value)
-      }
+        right: createLiteral(value),
+      });
     }
 
     function add(
@@ -591,7 +609,163 @@ export class FunctionCompiler {
   }
 
   // ==========================================================================
+  // Expression compilation
+
+  private compileExpression(expr: Expression): TypeSpec | null {
+    switch (expr.type) {
+      case "Literal":
+        return this.compileLiteral(expr);
+    }
+    return i32Desc;
+  }
+
+  /**
+   * Compiles a literal
+   * @param lit Literal to compile
+   */
+  private compileLiteral(lit: Literal): TypeSpec {
+    let instr: WaInstruction;
+    let typeSpec: TypeSpec;
+    if (typeof lit.value === "number") {
+      if (Number.isInteger(lit.value)) {
+        instr = constVal(WaType.i32, lit.value);
+        typeSpec = i32Desc;
+      } else {
+        instr = constVal(WaType.f64, lit.value);
+        typeSpec = f64Desc;
+      }
+    } else {
+      instr = constVal(WaType.i64, lit.value);
+      typeSpec = i64Desc;
+    }
+    this.inject(instr);
+    return typeSpec;
+  }
+
+  private castForStorage(left: TypeSpec, right: TypeSpec): void {
+    switch (left.type) {
+      case "Intrinsic":
+        if (right.type !== "Intrinsic") {
+          this.reportError("W141", right);
+          return;
+        }
+        this.castIntrinsicToIntrinsic(left, right);
+      case "Pointer":
+        break;
+    }
+  }
+
+  /**
+   * Casts an intinsice type to another intrinsic type
+   * @param left Left value
+   * @param right Right expression
+   */
+  private castIntrinsicToIntrinsic(
+    left: IntrinsicType,
+    right: IntrinsicType
+  ): void {
+    if (left.underlying === right.underlying) {
+      return;
+    }
+    if (
+      (left.underlying === "i32" && right.underlying === "u32") ||
+      (left.underlying === "u32" && right.underlying === "i32")
+    ) {
+      return;
+    }
+    if (
+      (left.underlying === "i64" && right.underlying === "u64") ||
+      (left.underlying === "u64" && right.underlying === "i64")
+    ) {
+      return;
+    }
+
+    switch (right.underlying) {
+      case "i64":
+      case "u64":
+        switch (left.underlying) {
+          case "f32":
+            this.inject(convert32(WaType.i64));
+            return;
+          case "f64":
+            this.inject(convert64(WaType.i64));
+            return;
+          case "i32":
+          case "u32":
+            this.inject(wrap64());
+            return;
+          case "i16":
+          case "u16":
+            this.inject(wrap64());
+            this.inject(and(WaType.i32, constVal(WaType.i32, 0xffff)));
+            if (left.underlying === "i16") {
+              this.inject(shl(WaType.i32, constVal(WaType.i32, 16)));
+              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 16)));
+            }
+            return;
+          case "i8":
+          case "u8":
+            this.inject(wrap64());
+            this.inject(and(WaType.i32, constVal(WaType.i32, 0xff)));
+            if (left.underlying === "i8") {
+              this.inject(shl(WaType.i32, constVal(WaType.i32, 24)));
+              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 24)));
+            }
+            return;
+        }
+
+      case "i32":
+      case "u32":
+        switch (left.underlying) {
+          case "f32":
+            this.inject(convert32(WaType.i32));
+            return;
+          case "f64":
+            this.inject(convert64(WaType.i32));
+            return;
+          case "i64":
+            this.inject(extend32(true));
+            return;
+          case "u64":
+            this.inject(extend32(false));
+            return;
+          case "i16":
+          case "u16":
+            this.inject(and(WaType.i32, constVal(WaType.i32, 0xffff)));
+            if (left.underlying === "i16") {
+              this.inject(shl(WaType.i32, constVal(WaType.i32, 16)));
+              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 16)));
+            }
+            return;
+          case "i8":
+          case "u8":
+            this.inject(and(WaType.i32, constVal(WaType.i32, 0xff)));
+            if (left.underlying === "i8") {
+              this.inject(shl(WaType.i32, constVal(WaType.i32, 24)));
+              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 24)));
+            }
+            return;
+        }
+    }
+  }
+
+  // ==========================================================================
   // Helpers
+
+  /**
+   * Injects the specifiec WebAssembly instructions into the function
+   * @param instr Instructions to inject
+   */
+  private inject(...instr: WaInstruction[]): void {
+    this._builder.inject(...instr);
+    instr.forEach((ins) => {
+      this.addTrace(() => [
+        "inject",
+        0,
+        this.wsCompiler.waTree.renderInstructionNode(ins),
+      ]);
+    });
+  }
 
   /**
    * Reports the specified error
@@ -647,6 +821,11 @@ function isCommutativeOp(expr: Expression): BinaryExpression | null {
   }
 }
 
+/**
+ * Creates a literal value
+ * @param value Value to wrap into a literal
+ * @param asU64 Wrap a 64-bit value as u64?
+ */
 function createLiteral(value: number | bigint, asU64 = false): Literal {
   return <Literal>(<unknown>{
     type: "Literal",
@@ -664,3 +843,24 @@ function createLiteral(value: number | bigint, asU64 = false): Literal {
         : LiteralSource.BigInt,
   });
 }
+
+// --- Intrinsic type instances
+const i32Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "i32",
+} as IntrinsicType;
+
+const i64Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "i64",
+} as IntrinsicType;
+
+const f32Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "f32",
+} as IntrinsicType;
+
+const f64Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "f64",
+} as IntrinsicType;

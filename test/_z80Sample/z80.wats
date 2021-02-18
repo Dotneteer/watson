@@ -28,6 +28,6 @@ export void reset() {
 }
 
 inline void setA(u8 a) {
-  local u8 dummy;
+  local u8 dummy = 12345;
   af.l = a;
 }
