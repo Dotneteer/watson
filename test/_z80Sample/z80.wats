@@ -23,11 +23,13 @@ u16 bc_;
 u16 de_;
 u16 hl_;
 
+u8 dummy;
+
 export void reset() {
   // TODO: Implement it
 }
 
-inline void setA(u8 a) {
-  local u8 dummy = 12345;
+inline void setA(f64 a) {
+  local i32 other = dummy;
   af.l = a;
 }

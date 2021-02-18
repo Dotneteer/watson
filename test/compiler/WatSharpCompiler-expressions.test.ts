@@ -48,8 +48,10 @@ describe("WatSharpCompiler - expressions", () => {
     it(`Simplify #${index + 1}, ${c.src}`, () => {
       // --- Arrange
       const wComp = new WatSharpCompiler(`
-      void a() {
-        local u32 a = ${c.src};
+      global i32 a;
+      global i32 b;
+      void test() {
+        local u32 dummy = ${c.src};
       }
       `);
 
@@ -151,7 +153,7 @@ describe("WatSharpCompiler - expressions", () => {
     it(`Process binary #${index + 1}, ${c.src}`, () => {
       // --- Arrange
       const wComp = new WatSharpCompiler(`
-      void a() {
+      void test() {
         local u32 a = ${c.src};
       }
       `);

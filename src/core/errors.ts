@@ -89,7 +89,9 @@ export type ErrorCodes =
 
   // --- WAT# Compiler issues
   | "W140"
-  | "W141";
+  | "W141"
+  | "W142"
+  | "W143";
 
 /**
  * Error message type description
@@ -163,5 +165,6 @@ export const errorMessages: ErrorText = {
   // --- WAT# Compiler issues
   W140: "Local parameter/variable '{0}' has already been declared",
   W141: "Cannot cast the right side of the assignment to the target type",
-
+  W142: "Cannot resolve name '{0}' to a local or a global variable declaration",
+  W143: "Only variables with intrinsic types can be used",
 };

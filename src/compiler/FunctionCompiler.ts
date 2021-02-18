@@ -7,6 +7,8 @@ import {
   ContinueStatement,
   DoStatement,
   Expression,
+  GlobalDeclaration,
+  Identifier,
   IfStatement,
   Literal,
   LiteralSource,
@@ -15,9 +17,15 @@ import {
   Node,
   ReturnStatement,
   UnaryExpression,
+  VariableDeclaration,
   WhileStatement,
 } from "../compiler/source-tree";
-import { WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
+import {
+  WaBitSpec,
+  WaInstruction,
+  WaParameter,
+  WaType,
+} from "../wa-ast/wa-nodes";
 import {
   FunctionDeclaration,
   Intrinsics,
@@ -40,10 +48,17 @@ import {
   demote64,
   extend32,
   FunctionBuilder,
+  globalGet,
   le,
+  load,
+  localGet,
   localSet,
+  promote32,
   shl,
   shr,
+  trunc32,
+  trunc64,
+  unreachable,
   wrap64,
 } from "../wa-ast/FunctionBuilder";
 import {
@@ -53,6 +68,7 @@ import {
   applyUnaryOperation,
   renderExpression,
 } from "./expression-resolver";
+import { resolve } from "path";
 
 /**
  * This class is responsible for compiling a function body
@@ -117,12 +133,14 @@ export class FunctionCompiler {
           param.spec.type === "Pointer"
             ? WaType.i32
             : waTypeMappings[(param.spec as IntrinsicType).underlying];
+        const paramName = createParameterName(param.name);
         this.locals.set(param.name, {
+          name: paramName,
           type: param.spec,
           waType: paramType,
         });
         waPars.push({
-          id: createParameterName(param.name),
+          id: paramName,
           type: paramType,
         });
       }
@@ -186,14 +204,17 @@ export class FunctionCompiler {
       let initExpr: ProcessedExpression | null = null;
       if (localVar.initExpr) {
         initExpr = this.processExpression(localVar.initExpr);
-        this.castForStorage(localVar.spec, initExpr.exprType);
-        this.inject(localSet(localName));
+        if (initExpr) {
+          this.castForStorage(localVar.spec, initExpr.exprType);
+          this.inject(localSet(localName));
+        }
       }
       const paramType =
         localVar.spec.type === "Pointer"
           ? WaType.i32
           : waTypeMappings[(localVar.spec as IntrinsicType).underlying];
       this.locals.set(localVar.name, {
+        name: localName,
         type: localVar.spec,
         waType: paramType,
       });
@@ -275,6 +296,9 @@ export class FunctionCompiler {
     const simplified = this.simplifyExpression(expr);
     this.addTrace(() => ["pExpr", 1, renderExpression(simplified)]);
     const exprType = this.compileExpression(simplified);
+    if (!exprType) {
+      return null;
+    }
     return {
       expr: simplified,
       exprType,
@@ -615,6 +639,9 @@ export class FunctionCompiler {
     switch (expr.type) {
       case "Literal":
         return this.compileLiteral(expr);
+      case "Identifier":
+        return this.compileIdentifier(expr);
+      case "UnaryExpression":
     }
     return i32Desc;
   }
@@ -623,7 +650,7 @@ export class FunctionCompiler {
    * Compiles a literal
    * @param lit Literal to compile
    */
-  private compileLiteral(lit: Literal): TypeSpec {
+  private compileLiteral(lit: Literal): TypeSpec | null {
     let instr: WaInstruction;
     let typeSpec: TypeSpec;
     if (typeof lit.value === "number") {
@@ -642,6 +669,109 @@ export class FunctionCompiler {
     return typeSpec;
   }
 
+  /**
+   * Compiles an identifier
+   * @param id Identifier to compile
+   */
+  private compileIdentifier(id: Identifier): TypeSpec | null {
+    const resolvedId = this.resolveIdentifier(id);
+    if (!resolvedId) {
+      return null;
+    }
+    if (resolvedId.local) {
+      this.inject(localGet(resolvedId.local.name));
+      return resolvedId.local.type;
+    }
+    if (resolvedId.global) {
+      this.inject(globalGet(createGlobalName(resolvedId.global.name)));
+      return <IntrinsicType>{
+        type: "Intrinsic",
+        underlying: resolvedId.global.underlyingType,
+      };
+    }
+    if (resolvedId.var) {
+      const typeSpec = resolvedId.var.spec;
+      if (typeSpec.type !== "Intrinsic") {
+        this.reportError("W143", id);
+        return null;
+      }
+      const waType = waTypeMappings[typeSpec.underlying];
+      switch (typeSpec.underlying) {
+        case "f32":
+        case "f64":
+          this.inject(
+            load(
+              waType,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              constVal(WaType.i32, resolvedId.var.address)
+            )
+          );
+          break;
+        case "i8":
+        case "u8":
+          this.inject(
+            load(
+              waType,
+              WaBitSpec.Bit8,
+              undefined,
+              undefined,
+              typeSpec.underlying === "i8",
+              constVal(WaType.i32, resolvedId.var.address)
+            )
+          );
+          break;
+        case "i16":
+        case "u16":
+          this.inject(
+            load(
+              waType,
+              WaBitSpec.Bit16,
+              undefined,
+              undefined,
+              typeSpec.underlying === "i16",
+              constVal(WaType.i32, resolvedId.var.address)
+            )
+          );
+          break;
+        case "i32":
+        case "u32":
+          this.inject(
+            load(
+              waType,
+              WaBitSpec.Bit32,
+              undefined,
+              undefined,
+              typeSpec.underlying === "i32",
+              constVal(WaType.i32, resolvedId.var.address)
+            )
+          );
+          break;
+        case "i64":
+        case "u64":
+          this.inject(
+            load(
+              waType,
+              undefined,
+              undefined,
+              undefined,
+              typeSpec.underlying === "i64",
+              constVal(WaType.i32, resolvedId.var.address)
+            )
+          );
+          break;
+      }
+      return typeSpec;
+    }
+  }
+
+  /**
+   * Casts a storage type to another storage type
+   * @param left
+   * @param right
+   */
   private castForStorage(left: TypeSpec, right: TypeSpec): void {
     switch (left.type) {
       case "Intrinsic":
@@ -650,7 +780,23 @@ export class FunctionCompiler {
           return;
         }
         this.castIntrinsicToIntrinsic(left, right);
+        break;
+
       case "Pointer":
+        if (right.type === "Pointer") {
+          return;
+        }
+        if (
+          right.type !== "Intrinsic" ||
+          right.underlying === "f64" ||
+          right.underlying === "f32"
+        ) {
+          this.reportError("W141", right);
+          return;
+        }
+        if (right.underlying === "i64" || right.underlying === "u64") {
+          this.inject(wrap64());
+        }
         break;
     }
   }
@@ -680,6 +826,7 @@ export class FunctionCompiler {
       return;
     }
 
+    const compiler = this;
     switch (right.underlying) {
       case "i64":
       case "u64":
@@ -697,25 +844,22 @@ export class FunctionCompiler {
           case "i16":
           case "u16":
             this.inject(wrap64());
-            this.inject(and(WaType.i32, constVal(WaType.i32, 0xffff)));
-            if (left.underlying === "i16") {
-              this.inject(shl(WaType.i32, constVal(WaType.i32, 16)));
-              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 16)));
-            }
+            tighten(0xffff, 16, left.underlying);
             return;
           case "i8":
           case "u8":
             this.inject(wrap64());
-            this.inject(and(WaType.i32, constVal(WaType.i32, 0xff)));
-            if (left.underlying === "i8") {
-              this.inject(shl(WaType.i32, constVal(WaType.i32, 24)));
-              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 24)));
-            }
+            tighten(0xff, 24, left.underlying);
             return;
         }
+        break;
 
       case "i32":
       case "u32":
+      case "i16":
+      case "u16":
+      case "i8":
+      case "u8":
         switch (left.underlying) {
           case "f32":
             this.inject(convert32(WaType.i32));
@@ -731,22 +875,119 @@ export class FunctionCompiler {
             return;
           case "i16":
           case "u16":
-            this.inject(and(WaType.i32, constVal(WaType.i32, 0xffff)));
-            if (left.underlying === "i16") {
-              this.inject(shl(WaType.i32, constVal(WaType.i32, 16)));
-              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 16)));
-            }
+            tighten(0xffff, 16, left.underlying);
             return;
           case "i8":
           case "u8":
-            this.inject(and(WaType.i32, constVal(WaType.i32, 0xff)));
-            if (left.underlying === "i8") {
-              this.inject(shl(WaType.i32, constVal(WaType.i32, 24)));
-              this.inject(shr(WaType.i32, true, constVal(WaType.i32, 24)));
-            }
+            tighten(0xff, 24, left.underlying);
             return;
         }
+        break;
+
+      case "f64":
+        switch (left.underlying) {
+          case "f32":
+            this.inject(demote64());
+            return;
+          case "i64":
+            this.inject(trunc64(WaType.f64, true));
+            return;
+          case "u64":
+            this.inject(trunc64(WaType.f64, false));
+            return;
+          case "i32":
+            this.inject(trunc32(WaType.f64, true));
+            return;
+          case "u32":
+            this.inject(trunc32(WaType.f64, false));
+            return;
+          case "i16":
+          case "u16":
+            this.inject(trunc32(WaType.f64, false));
+            tighten(0xffff, 16, left.underlying);
+            return;
+          case "i8":
+          case "u8":
+            this.inject(trunc32(WaType.f64, false));
+            tighten(0xff, 24, left.underlying);
+            return;
+        }
+        break;
+
+      case "f32":
+        switch (left.underlying) {
+          case "f64":
+            this.inject(promote32());
+            return;
+          case "i64":
+            this.inject(trunc64(WaType.f32, true));
+            return;
+          case "u64":
+            this.inject(trunc64(WaType.f32, false));
+            return;
+          case "i32":
+            this.inject(trunc32(WaType.f32, true));
+            return;
+          case "u32":
+            this.inject(trunc32(WaType.f32, false));
+            return;
+          case "i16":
+          case "u16":
+            this.inject(trunc32(WaType.f32, false));
+            tighten(0xffff, 16, left.underlying);
+            return;
+          case "i8":
+          case "u8":
+            this.inject(trunc32(WaType.f32, false));
+            tighten(0xff, 24, left.underlying);
+            return;
+        }
+        break;
     }
+
+    /**
+     * Demotes a 32-bit value to a smaller one
+     * @param mask Bit mask
+     * @param bits Bit count
+     * @param typename Type name
+     */
+    function tighten(mask: number, bits: number, typename: string) {
+      compiler.inject(and(WaType.i32, constVal(WaType.i32, mask)));
+      if (typename.startsWith("i")) {
+        compiler.inject(shl(WaType.i32, constVal(WaType.i32, bits)));
+        compiler.inject(shr(WaType.i32, true, constVal(WaType.i32, bits)));
+      }
+    }
+  }
+
+  /**
+   * Resolves an identifier to a declaration
+   * @param id
+   */
+  private resolveIdentifier(id: Identifier): ResolvedDeclaration | null {
+    const local = this._locals.get(id.name);
+    if (local) {
+      return {
+        local,
+      };
+    }
+    const decl = this.wsCompiler.declarations.get(id.name);
+    if (!decl) {
+      this.reportError("W142", id, id.name);
+      return null;
+    }
+    if (decl.type === "GlobalDeclaration") {
+      return {
+        global: decl,
+      };
+    }
+    if (decl.type === "VariableDeclaration") {
+      return {
+        var: decl,
+      };
+    }
+    this.reportError("W142", id, id.name);
+    return null;
   }
 
   // ==========================================================================
@@ -786,6 +1027,7 @@ export class FunctionCompiler {
  * Information about a local variable type
  */
 interface LocalDeclaration {
+  name: string;
   type: TypeSpec;
   waType: WaType;
 }
@@ -798,6 +1040,14 @@ interface ProcessedExpression {
   expr: Expression;
 }
 
+/**
+ * Represents a resolved declaration
+ */
+interface ResolvedDeclaration {
+  local?: LocalDeclaration;
+  global?: GlobalDeclaration;
+  var?: VariableDeclaration;
+}
 /**
  * Tests if the expression in a commutative binary operation
  * @param expr Expression to test
