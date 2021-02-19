@@ -236,7 +236,6 @@ describe("WatSharpCompiler - emit binary", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc_a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("(i64.load\n  (i32.const 0)\n)");
     expect(instrs[1].message).toBe("f64.convert_u/i64");
     expect(instrs[2].message).toBe("(f32.load\n  (i32.const 8)\n)");
@@ -443,7 +442,6 @@ describe("WatSharpCompiler - emit binary", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc_a f64)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("(i32.load\n  (i32.const 0)\n)");
     expect(instrs[1].message).toBe("f64.convert_u/i32");
     expect(instrs[2].message).toBe("(f64.load\n  (i32.const 4)\n)");

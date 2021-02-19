@@ -27,10 +27,11 @@ export void reset() {
   // TODO: Implement it
 }
 
-u32 b;
-i64 c;
+i32 b;
+f32 c;
+i64 d;
 
 inline void setA(f64 a) {
-  local i64 other = b % c;
+  local i32 other = 3 + i8(b);
   af.l = a;
 }

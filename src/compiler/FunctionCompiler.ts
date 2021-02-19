@@ -4,6 +4,7 @@ import {
   Assignment,
   BinaryExpression,
   BreakStatement,
+  ConditionalExpression,
   ContinueStatement,
   DoStatement,
   Expression,
@@ -16,6 +17,7 @@ import {
   LocalVariable,
   Node,
   ReturnStatement,
+  TypeCastExpression,
   UnaryExpression,
   VariableDeclaration,
   WhileStatement,
@@ -66,6 +68,7 @@ import {
   or,
   promote32,
   rem,
+  select,
   shl,
   shr,
   sub,
@@ -670,6 +673,10 @@ export class FunctionCompiler {
         return this.compileUnaryExpression(expr, emit);
       case "BinaryExpression":
         return this.compileBinaryExpression(expr, emit);
+      case "ConditionalExpression":
+        return this.compileConditionalExpression(expr, emit);
+      case "TypeCast":
+        return this.compileTypeCast(expr, emit);
     }
     return i32Desc;
   }
@@ -962,9 +969,9 @@ export class FunctionCompiler {
     }
 
     // --- Compile the operands and cast them to the appropriate type
-    this.compileExpression(binary.left);
+    this.compileExpression(binary.left, emit);
     this.castIntrinsicToIntrinsic(resultType, left, emit);
-    this.compileExpression(binary.right);
+    this.compileExpression(binary.right, emit);
     this.castIntrinsicToIntrinsic(resultType, right, emit);
     const waType = waTypeMappings[resultType.underlying];
 
@@ -1103,6 +1110,98 @@ export class FunctionCompiler {
   }
 
   /**
+   * Compiles a conditional expression
+   * @param conditional Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileConditionalExpression(
+    conditional: ConditionalExpression,
+    emit = true
+  ): TypeSpec | null {
+    // --- Compile the condition, consequent, and alternate values
+    const condition = this.compileExpression(conditional.condition, false);
+    if (condition === null) {
+      return null;
+    }
+    const consequent = this.compileExpression(conditional.consequent, false);
+    if (consequent === null) {
+      return null;
+    }
+    const alternate = this.compileExpression(conditional.alternate, false);
+    if (alternate === null) {
+      return null;
+    }
+
+    // --- Make sure both operands are intrinsic
+    if (
+      condition.type !== "Intrinsic" ||
+      consequent.type !== "Intrinsic" ||
+      alternate.type !== "Intrinsic"
+    ) {
+      this.reportError("W144", conditional, "conditional");
+      return null;
+    }
+
+    // --- Calculate operation type
+    let resultType = i32Desc;
+    if (
+      consequent.underlying.startsWith("f") ||
+      alternate.underlying.startsWith("f")
+    ) {
+      resultType = f64Desc;
+    } else if (
+      alternate.underlying.endsWith("64") ||
+      alternate.underlying.endsWith("64")
+    ) {
+      resultType = i64Desc;
+    }
+
+    // --- Compile the operands and cast them to the appropriate type
+    this.compileExpression(conditional.consequent, emit);
+    this.castIntrinsicToIntrinsic(resultType, consequent, emit);
+    this.compileExpression(conditional.alternate, emit);
+    this.castIntrinsicToIntrinsic(resultType, alternate, emit);
+    this.compileExpression(conditional.condition, emit);
+    this.castIntrinsicToIntrinsic(i32Desc, condition, emit);
+
+    // --- Inject the "select" operation
+    if (emit) {
+      this.inject(select());
+    }
+
+    // --- Done
+    return resultType;
+  }
+
+  /**
+   * Compiles a type cast
+   * @param cast Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileTypeCast(
+    cast: TypeCastExpression,
+    emit = true
+  ): TypeSpec | null {
+    const operand = this.compileExpression(cast.operand, false);
+    if (operand === null) {
+      return null;
+    }
+    if (operand.type !== "Intrinsic") {
+      this.reportError("W144", cast, `${cast.name}()`);
+      return null;
+    }
+    const resultType = <IntrinsicType>{
+      type: "Intrinsic",
+      underlying: cast.name,
+    };
+    this.compileExpression(cast.operand, emit);
+    this.castIntrinsicToIntrinsic(resultType, operand, emit);
+    return resultType;
+  }
+
+  /**
    * Casts a storage type to another storage type
    * @param left
    * @param right
@@ -1176,24 +1275,34 @@ export class FunctionCompiler {
       case "u64":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i64));
+            if (emit) {
+              this.inject(convert32(WaType.i64));
+            }
             return;
           case "f64":
-            this.inject(convert64(WaType.i64));
+            if (emit) {
+              this.inject(convert64(WaType.i64));
+            }
             return;
           case "i32":
           case "u32":
-            this.inject(wrap64());
+            if (emit) {
+              this.inject(wrap64());
+            }
             return;
           case "i16":
           case "u16":
-            this.inject(wrap64());
-            tighten(0xffff, 16, left.underlying, value);
+            if (emit) {
+              this.inject(wrap64());
+            }
+            tighten(0xffff, 16, left.underlying, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(wrap64());
-            tighten(0xff, 24, left.underlying, value);
+            if (emit) {
+              this.inject(wrap64());
+            }
+            tighten(0xff, 24, left.underlying, emit, value);
             return;
         }
         break;
@@ -1206,24 +1315,32 @@ export class FunctionCompiler {
       case "u8":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i32));
+            if (emit) {
+              this.inject(convert32(WaType.i32));
+            }
             return;
           case "f64":
-            this.inject(convert64(WaType.i32));
+            if (emit) {
+              this.inject(convert64(WaType.i32));
+            }
             return;
           case "i64":
-            this.inject(extend32(true));
+            if (emit) {
+              this.inject(extend32(true));
+            }
             return;
           case "u64":
-            this.inject(extend32(false));
+            if (emit) {
+              this.inject(extend32(false));
+            }
             return;
           case "i16":
           case "u16":
-            tighten(0xffff, 16, left.underlying, value);
+            tighten(0xffff, 16, left.underlying, emit, value);
             return;
           case "i8":
           case "u8":
-            tighten(0xff, 24, left.underlying, value);
+            tighten(0xff, 24, left.underlying, emit, value);
             return;
         }
         break;
@@ -1231,29 +1348,43 @@ export class FunctionCompiler {
       case "f64":
         switch (left.underlying) {
           case "f32":
-            this.inject(demote64());
+            if (emit) {
+              this.inject(demote64());
+            }
             return;
           case "i64":
-            this.inject(trunc64(WaType.f64, true));
+            if (emit) {
+              this.inject(trunc64(WaType.f64, true));
+            }
             return;
           case "u64":
-            this.inject(trunc64(WaType.f64, false));
+            if (emit) {
+              this.inject(trunc64(WaType.f64, false));
+            }
             return;
           case "i32":
-            this.inject(trunc32(WaType.f64, true));
+            if (emit) {
+              this.inject(trunc32(WaType.f64, true));
+            }
             return;
           case "u32":
-            this.inject(trunc32(WaType.f64, false));
+            if (emit) {
+              this.inject(trunc32(WaType.f64, false));
+            }
             return;
           case "i16":
           case "u16":
-            this.inject(trunc32(WaType.f64, false));
-            tighten(0xffff, 16, left.underlying, value);
+            if (emit) {
+              this.inject(trunc32(WaType.f64, false));
+            }
+            tighten(0xffff, 16, left.underlying, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(trunc32(WaType.f64, false));
-            tighten(0xff, 24, left.underlying, value);
+            if (emit) {
+              this.inject(trunc32(WaType.f64, false));
+            }
+            tighten(0xff, 24, left.underlying, emit, value);
             return;
         }
         break;
@@ -1261,29 +1392,43 @@ export class FunctionCompiler {
       case "f32":
         switch (left.underlying) {
           case "f64":
-            this.inject(promote32());
+            if (emit) {
+              this.inject(promote32());
+            }
             return;
           case "i64":
-            this.inject(trunc64(WaType.f32, true));
+            if (emit) {
+              this.inject(trunc64(WaType.f32, true));
+            }
             return;
           case "u64":
-            this.inject(trunc64(WaType.f32, false));
+            if (emit) {
+              this.inject(trunc64(WaType.f32, false));
+            }
             return;
           case "i32":
-            this.inject(trunc32(WaType.f32, true));
+            if (emit) {
+              this.inject(trunc32(WaType.f32, true));
+            }
             return;
           case "u32":
-            this.inject(trunc32(WaType.f32, false));
+            if (emit) {
+              this.inject(trunc32(WaType.f32, false));
+            }
             return;
           case "i16":
           case "u16":
-            this.inject(trunc32(WaType.f32, false));
-            tighten(0xffff, 16, left.underlying, value);
+            if (emit) {
+              this.inject(trunc32(WaType.f32, false));
+            }
+            tighten(0xffff, 16, left.underlying, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(trunc32(WaType.f32, false));
-            tighten(0xff, 24, left.underlying, value);
+            if (emit) {
+              this.inject(trunc32(WaType.f32, false));
+            }
+            tighten(0xff, 24, left.underlying, emit, value);
             return;
         }
         break;
@@ -1294,13 +1439,16 @@ export class FunctionCompiler {
      * @param mask Bit mask
      * @param bits Bit count
      * @param typename Type name
+     * @param emit Should emit code?
+     * @param value: Optional value to check if tightening is needed at all
      */
     function tighten(
       mask: number,
       bits: number,
       typename: string,
+      emit = true,
       value?: number | bigint
-    ) {
+    ): void {
       if (value && typeof value === "number") {
         const rightBits = 32 - bits;
         const lower = typename.startsWith("i") ? -(2 ** (rightBits - 1)) : 0;
@@ -1308,6 +1456,9 @@ export class FunctionCompiler {
         if (value >= lower && value <= upper) {
           return;
         }
+      }
+      if (!emit) {
+        return;
       }
       compiler.inject(and(WaType.i32, constVal(WaType.i32, mask)));
       if (typename.startsWith("i")) {
