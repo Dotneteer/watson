@@ -34,6 +34,7 @@ import {
   TypeSpec,
 } from "./source-tree";
 import {
+  bitwiseNotMasks,
   createGlobalName,
   createLocalName,
   createParameterName,
@@ -41,25 +42,38 @@ import {
   waTypeMappings,
 } from "./WatSharpCompiler";
 import {
+  add,
   and,
   constVal,
   convert32,
   convert64,
   demote64,
+  div,
+  eq,
+  eqz,
   extend32,
   FunctionBuilder,
+  ge,
   globalGet,
+  gt,
   le,
   load,
   localGet,
   localSet,
+  lt,
+  mul,
+  ne,
+  or,
   promote32,
+  rem,
   shl,
   shr,
+  sub,
   trunc32,
   trunc64,
   unreachable,
   wrap64,
+  xor,
 } from "../wa-ast/FunctionBuilder";
 import {
   applyBinaryOperation,
@@ -205,7 +219,12 @@ export class FunctionCompiler {
       if (localVar.initExpr) {
         initExpr = this.processExpression(localVar.initExpr);
         if (initExpr) {
-          this.castForStorage(localVar.spec, initExpr.exprType);
+          this.castForStorage(
+            localVar.spec,
+            initExpr.exprType,
+            true,
+            initExpr?.expr.value
+          );
           this.inject(localSet(localName));
         }
       }
@@ -635,13 +654,22 @@ export class FunctionCompiler {
   // ==========================================================================
   // Expression compilation
 
-  private compileExpression(expr: Expression): TypeSpec | null {
+  /**
+   * Compiles the specified expression
+   * @param expr Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileExpression(expr: Expression, emit = true): TypeSpec | null {
     switch (expr.type) {
       case "Literal":
-        return this.compileLiteral(expr);
+        return this.compileLiteral(expr, emit);
       case "Identifier":
-        return this.compileIdentifier(expr);
+        return this.compileIdentifier(expr, emit);
       case "UnaryExpression":
+        return this.compileUnaryExpression(expr, emit);
+      case "BinaryExpression":
+        return this.compileBinaryExpression(expr, emit);
     }
     return i32Desc;
   }
@@ -649,8 +677,10 @@ export class FunctionCompiler {
   /**
    * Compiles a literal
    * @param lit Literal to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
    */
-  private compileLiteral(lit: Literal): TypeSpec | null {
+  private compileLiteral(lit: Literal, emit = true): TypeSpec | null {
     let instr: WaInstruction;
     let typeSpec: TypeSpec;
     if (typeof lit.value === "number") {
@@ -665,25 +695,33 @@ export class FunctionCompiler {
       instr = constVal(WaType.i64, lit.value);
       typeSpec = i64Desc;
     }
-    this.inject(instr);
+    if (emit) {
+      this.inject(instr);
+    }
     return typeSpec;
   }
 
   /**
    * Compiles an identifier
    * @param id Identifier to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
    */
-  private compileIdentifier(id: Identifier): TypeSpec | null {
+  private compileIdentifier(id: Identifier, emit = true): TypeSpec | null {
     const resolvedId = this.resolveIdentifier(id);
     if (!resolvedId) {
       return null;
     }
     if (resolvedId.local) {
-      this.inject(localGet(resolvedId.local.name));
+      if (emit) {
+        this.inject(localGet(resolvedId.local.name));
+      }
       return resolvedId.local.type;
     }
     if (resolvedId.global) {
-      this.inject(globalGet(createGlobalName(resolvedId.global.name)));
+      if (emit) {
+        this.inject(globalGet(createGlobalName(resolvedId.global.name)));
+      }
       return <IntrinsicType>{
         type: "Intrinsic",
         underlying: resolvedId.global.underlyingType,
@@ -699,68 +737,78 @@ export class FunctionCompiler {
       switch (typeSpec.underlying) {
         case "f32":
         case "f64":
-          this.inject(
-            load(
-              waType,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
+          if (emit) {
+            this.inject(
+              load(
+                waType,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                constVal(WaType.i32, resolvedId.var.address)
+              )
+            );
+          }
           break;
         case "i8":
         case "u8":
-          this.inject(
-            load(
-              waType,
-              WaBitSpec.Bit8,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i8",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
+          if (emit) {
+            this.inject(
+              load(
+                waType,
+                WaBitSpec.Bit8,
+                undefined,
+                undefined,
+                typeSpec.underlying === "i8",
+                constVal(WaType.i32, resolvedId.var.address)
+              )
+            );
+          }
           break;
         case "i16":
         case "u16":
-          this.inject(
-            load(
-              waType,
-              WaBitSpec.Bit16,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i16",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
+          if (emit) {
+            this.inject(
+              load(
+                waType,
+                WaBitSpec.Bit16,
+                undefined,
+                undefined,
+                typeSpec.underlying === "i16",
+                constVal(WaType.i32, resolvedId.var.address)
+              )
+            );
+          }
           break;
         case "i32":
         case "u32":
-          this.inject(
-            load(
-              waType,
-              WaBitSpec.Bit32,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i32",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
+          if (emit) {
+            this.inject(
+              load(
+                waType,
+                WaBitSpec.Bit32,
+                undefined,
+                undefined,
+                typeSpec.underlying === "i32",
+                constVal(WaType.i32, resolvedId.var.address)
+              )
+            );
+          }
           break;
         case "i64":
         case "u64":
-          this.inject(
-            load(
-              waType,
-              undefined,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i64",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
+          if (emit) {
+            this.inject(
+              load(
+                waType,
+                undefined,
+                undefined,
+                undefined,
+                typeSpec.underlying === "i64",
+                constVal(WaType.i32, resolvedId.var.address)
+              )
+            );
+          }
           break;
       }
       return typeSpec;
@@ -768,18 +816,311 @@ export class FunctionCompiler {
   }
 
   /**
+   * Compiles a unary expression
+   * @param unary Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileUnaryExpression(
+    unary: UnaryExpression,
+    emit = true
+  ): TypeSpec | null {
+    switch (unary.operator) {
+      case "+": {
+        // --- Compile the operand
+        const operandType = this.compileExpression(unary.operand);
+        if (operandType === null) {
+          return null;
+        }
+
+        // --- Allow intrinsic types only
+        if (operandType.type !== "Intrinsic") {
+          this.reportError("W144", unary, "unary +");
+          return null;
+        }
+
+        // --- "+" means type cast to i32
+        this.castIntrinsicToIntrinsic(
+          i32Desc,
+          operandType as IntrinsicType,
+          emit,
+          unary.operand?.value
+        );
+        return i32Desc;
+      }
+
+      case "-": {
+        // --- Compile the operand
+        const operandType = this.compileExpression(unary.operand);
+        if (operandType === null) {
+          return null;
+        }
+
+        // --- Allow intrinsic types only
+        if (operandType.type !== "Intrinsic") {
+          this.reportError("W144", unary, "unary -");
+          return null;
+        }
+
+        // --- "-" --> -1 * operand
+        const waType = waTypeMappings[operandType.underlying];
+        this.inject(mul(waType, constVal(waType, -1)));
+        return operandType;
+      }
+
+      case "!":
+      case "~": {
+        // --- Compile the operand
+        const operandType = this.compileExpression(unary.operand);
+        if (operandType === null) {
+          return null;
+        }
+
+        // --- Allow intrinsic types only
+        if (operandType.type !== "Intrinsic") {
+          this.reportError("W145", unary, "logical NOT");
+          return null;
+        }
+        const waType = waTypeMappings[operandType.underlying];
+
+        // --- Allow integer types only
+        if (waType === WaType.f32 || waType === WaType.f64) {
+          this.reportError("W145", unary, "logical NOT");
+          return null;
+        }
+        if (unary.operator === "!") {
+          // --- "!" --> eqz
+          this.inject(eqz(waType));
+          return i32Desc;
+        } else {
+          // --- "~" --> xor with all bits 1
+          this.inject(
+            xor(
+              waType,
+              constVal(
+                waType,
+                bitwiseNotMasks[(operandType as IntrinsicType).underlying]
+              )
+            )
+          );
+          return operandType;
+        }
+      }
+
+      case "&": {
+        const address = this.calculateAddressOf(unary.operand);
+        if (address === null) {
+          return null;
+        }
+        return i32Desc;
+      }
+      case "*":
+        break;
+    }
+    return null;
+  }
+
+  /**
+   * Compiles a binary expression
+   * @param binary Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileBinaryExpression(
+    binary: BinaryExpression,
+    emit = true
+  ): TypeSpec | null {
+    // --- Compile the left and right operands to obtain result types
+    const left = this.compileExpression(binary.left, false);
+    if (left === null) {
+      return null;
+    }
+    const right = this.compileExpression(binary.right, false);
+    if (right === null) {
+      return null;
+    }
+
+    // --- Make sure both operands are intrinsic
+    if (left.type !== "Intrinsic" || right.type !== "Intrinsic") {
+      this.reportError("W144", binary, `binary ${binary.operator}`);
+      return null;
+    }
+
+    // --- Check if the operation should be signed
+    const isSigned =
+      left.underlying.startsWith("i") || right.underlying.startsWith("i");
+
+    // --- Calculate operation type
+    let resultType = i32Desc;
+    if (left.underlying.startsWith("f") || right.underlying.startsWith("f")) {
+      resultType = f64Desc;
+    } else if (
+      left.underlying.endsWith("64") ||
+      right.underlying.endsWith("64")
+    ) {
+      resultType = i64Desc;
+    }
+
+    // --- Compile the operands and cast them to the appropriate type
+    this.compileExpression(binary.left);
+    this.castIntrinsicToIntrinsic(resultType, left, emit);
+    this.compileExpression(binary.right);
+    this.castIntrinsicToIntrinsic(resultType, right, emit);
+    const waType = waTypeMappings[resultType.underlying];
+
+    // --- Process operations
+    switch (binary.operator) {
+      case "+":
+        if (emit) {
+          this.inject(add(waType));
+        }
+        break;
+
+      case "-":
+        if (emit) {
+          this.inject(sub(waType));
+        }
+        break;
+
+      case "*":
+        if (emit) {
+          this.inject(mul(waType));
+        }
+        break;
+
+      case "/":
+        if (emit) {
+          this.inject(div(waType, isSigned));
+        }
+        break;
+
+      case "%":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "remainder (%)");
+          return null;
+        }
+        if (emit) {
+          this.inject(rem(waType, isSigned));
+        }
+        break;
+
+      case "&":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "bitwise AND");
+          return null;
+        }
+        if (emit) {
+          this.inject(and(waType));
+        }
+        break;
+
+      case "|":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "bitwise OR");
+          return null;
+        }
+        if (emit) {
+          this.inject(or(waType));
+        }
+        break;
+
+      case "^":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "bitwise XOR");
+          return null;
+        }
+        if (emit) {
+          this.inject(xor(waType));
+        }
+        break;
+
+      case "<<":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "shift left");
+          return null;
+        }
+        if (emit) {
+          this.inject(shl(waType));
+        }
+        break;
+
+      case ">>":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "signed shift right");
+          return null;
+        }
+        if (emit) {
+          this.inject(shr(waType, true));
+        }
+        break;
+
+      case ">>>":
+        if (resultType.underlying.startsWith("f")) {
+          this.reportError("W145", binary, "shift right");
+          return null;
+        }
+        if (emit) {
+          this.inject(shr(waType, false));
+        }
+        break;
+
+      case "==":
+        if (emit) {
+          this.inject(eq(waType));
+        }
+        break;
+
+      case "!=":
+        if (emit) {
+          this.inject(ne(waType));
+        }
+        break;
+
+      case "<":
+        if (emit) {
+          this.inject(lt(waType, isSigned));
+        }
+        break;
+
+      case "<=":
+        if (emit) {
+          this.inject(le(waType, isSigned));
+        }
+        break;
+      case ">":
+        if (emit) {
+          this.inject(gt(waType, isSigned));
+        }
+        break;
+
+      case ">=":
+        if (emit) {
+          this.inject(ge(waType, isSigned));
+        }
+        break;
+    }
+    return resultType;
+  }
+
+  /**
    * Casts a storage type to another storage type
    * @param left
    * @param right
+   * @param emit Should emit code?
    */
-  private castForStorage(left: TypeSpec, right: TypeSpec): void {
+  private castForStorage(
+    left: TypeSpec,
+    right: TypeSpec,
+    emit = true,
+    value?: number | bigint
+  ): void {
     switch (left.type) {
       case "Intrinsic":
         if (right.type !== "Intrinsic") {
           this.reportError("W141", right);
           return;
         }
-        this.castIntrinsicToIntrinsic(left, right);
+        this.castIntrinsicToIntrinsic(left, right, emit, value);
         break;
 
       case "Pointer":
@@ -805,10 +1146,13 @@ export class FunctionCompiler {
    * Casts an intinsice type to another intrinsic type
    * @param left Left value
    * @param right Right expression
+   * @param emit Should emit code?
    */
   private castIntrinsicToIntrinsic(
     left: IntrinsicType,
-    right: IntrinsicType
+    right: IntrinsicType,
+    emit = true,
+    value?: number | bigint
   ): void {
     if (left.underlying === right.underlying) {
       return;
@@ -844,12 +1188,12 @@ export class FunctionCompiler {
           case "i16":
           case "u16":
             this.inject(wrap64());
-            tighten(0xffff, 16, left.underlying);
+            tighten(0xffff, 16, left.underlying, value);
             return;
           case "i8":
           case "u8":
             this.inject(wrap64());
-            tighten(0xff, 24, left.underlying);
+            tighten(0xff, 24, left.underlying, value);
             return;
         }
         break;
@@ -875,11 +1219,11 @@ export class FunctionCompiler {
             return;
           case "i16":
           case "u16":
-            tighten(0xffff, 16, left.underlying);
+            tighten(0xffff, 16, left.underlying, value);
             return;
           case "i8":
           case "u8":
-            tighten(0xff, 24, left.underlying);
+            tighten(0xff, 24, left.underlying, value);
             return;
         }
         break;
@@ -904,12 +1248,12 @@ export class FunctionCompiler {
           case "i16":
           case "u16":
             this.inject(trunc32(WaType.f64, false));
-            tighten(0xffff, 16, left.underlying);
+            tighten(0xffff, 16, left.underlying, value);
             return;
           case "i8":
           case "u8":
             this.inject(trunc32(WaType.f64, false));
-            tighten(0xff, 24, left.underlying);
+            tighten(0xff, 24, left.underlying, value);
             return;
         }
         break;
@@ -934,12 +1278,12 @@ export class FunctionCompiler {
           case "i16":
           case "u16":
             this.inject(trunc32(WaType.f32, false));
-            tighten(0xffff, 16, left.underlying);
+            tighten(0xffff, 16, left.underlying, value);
             return;
           case "i8":
           case "u8":
             this.inject(trunc32(WaType.f32, false));
-            tighten(0xff, 24, left.underlying);
+            tighten(0xff, 24, left.underlying, value);
             return;
         }
         break;
@@ -951,7 +1295,20 @@ export class FunctionCompiler {
      * @param bits Bit count
      * @param typename Type name
      */
-    function tighten(mask: number, bits: number, typename: string) {
+    function tighten(
+      mask: number,
+      bits: number,
+      typename: string,
+      value?: number | bigint
+    ) {
+      if (value && typeof value === "number") {
+        const rightBits = 32 - bits;
+        const lower = typename.startsWith("i") ? -(2 ** (rightBits - 1)) : 0;
+        const upper = lower + 2 ** rightBits;
+        if (value >= lower && value <= upper) {
+          return;
+        }
+      }
       compiler.inject(and(WaType.i32, constVal(WaType.i32, mask)));
       if (typename.startsWith("i")) {
         compiler.inject(shl(WaType.i32, constVal(WaType.i32, bits)));
@@ -987,6 +1344,122 @@ export class FunctionCompiler {
       };
     }
     this.reportError("W142", id, id.name);
+    return null;
+  }
+
+  /**
+   * Calculates the address of the specified expression
+   * @param expr Address expression
+   * @param emit Should emit code?
+   */
+  private calculateAddressOf(
+    expr: Expression,
+    emit = true
+  ): ResolvedAddress | null {
+    switch (expr.type) {
+      case "Identifier": {
+        // --- Only variables have an address
+        const resolvedId = this.resolveIdentifier(expr);
+        if (resolvedId === null || !resolvedId.var) {
+          this.reportError("W146", expr);
+          return null;
+        }
+
+        // --- Inject variable address if requested
+        if (emit) {
+          this.inject(constVal(WaType.i32, resolvedId.var.address));
+        }
+
+        // --- Retrieve address/type information
+        return {
+          address: resolvedId.var.address,
+          spec: resolvedId.var.spec,
+        };
+      }
+
+      case "MemberAccess": {
+        // --- Start with the calculation of the object address
+        const leftAddress = this.calculateAddressOf(expr.object, false);
+        if (leftAddress === null) {
+          return null;
+        }
+
+        // --- Member access needs a struct object
+        if (leftAddress.spec.type !== "Struct") {
+          this.reportError("W147", expr);
+          return null;
+        }
+
+        // --- Obtain struct field information
+        const field = leftAddress.spec.fields.filter(
+          (fi) => fi.id === expr.member
+        );
+        if (!field) {
+          this.reportError("W147", expr);
+          return null;
+        }
+
+        // --- Field exists, add its offset to the address
+        let address = leftAddress.address;
+        const offset = field[0].offset;
+        if (leftAddress.address < 0) {
+          // --- Calculated address
+          address = -1;
+          if (offset) {
+            this.inject(add(WaType.i32, constVal(WaType.i32, offset)));
+          }
+        } else {
+          // --- Constant address
+          address += offset;
+          if (emit) {
+            this.inject(constVal(WaType.i32, address));
+          }
+        }
+        return {
+          address,
+          spec: field[0].spec,
+        };
+      }
+
+      case "ItemAccess": {
+        // --- Start with the calculation of the object address
+        const arrayAddress = this.calculateAddressOf(expr.array, false);
+        if (arrayAddress === null) {
+          return null;
+        }
+
+        // --- Calculate the item size
+        let address = arrayAddress.address;
+        if (arrayAddress.spec.type !== "Array") {
+          this.reportError("W149", expr);
+          return null;
+        }
+        const itemSize = this.wsCompiler.getSizeof(arrayAddress.spec.spec);
+
+        if (expr.index.type === "Literal") {
+          // --- We can get a constant address
+          address += itemSize * Number(expr.index.value);
+          if (emit) {
+            this.inject(constVal(WaType.i32, address));
+          }
+        } else {
+          // --- We use a calculated address
+          this.inject(constVal(WaType.i32, address));
+          const indexType = this.compileExpression(expr.index);
+          if (indexType === null) {
+            return null;
+          }
+          this.castForStorage(i32Desc, indexType, emit, expr.index.value);
+          this.inject(mul(WaType.i32, constVal(WaType.i32, itemSize)));
+          this.inject(add(WaType.i32));
+          address = -1;
+        }
+        return {
+          address,
+          spec: arrayAddress.spec.spec,
+        };
+      }
+    }
     return null;
   }
 
@@ -1048,6 +1521,15 @@ interface ResolvedDeclaration {
   global?: GlobalDeclaration;
   var?: VariableDeclaration;
 }
+
+/**
+ * Represents a resolved address
+ */
+interface ResolvedAddress {
+  address: number;
+  spec: TypeSpec;
+}
+
 /**
  * Tests if the expression in a commutative binary operation
  * @param expr Expression to test
@@ -1103,6 +1585,16 @@ const i32Desc: IntrinsicType = {
 const i64Desc: IntrinsicType = {
   type: "Intrinsic",
   underlying: "i64",
+} as IntrinsicType;
+
+const u32Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "u32",
+} as IntrinsicType;
+
+const u64Desc: IntrinsicType = {
+  type: "Intrinsic",
+  underlying: "u64",
 } as IntrinsicType;
 
 const f32Desc: IntrinsicType = {

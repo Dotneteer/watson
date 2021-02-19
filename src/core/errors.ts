@@ -91,7 +91,13 @@ export type ErrorCodes =
   | "W140"
   | "W141"
   | "W142"
-  | "W143";
+  | "W143"
+  | "W144"
+  | "W145"
+  | "W146"
+  | "W147"
+  | "W148"
+  | "W149";
 
 /**
  * Error message type description
@@ -167,4 +173,10 @@ export const errorMessages: ErrorText = {
   W141: "Cannot cast the right side of the assignment to the target type",
   W142: "Cannot resolve name '{0}' to a local or a global variable declaration",
   W143: "Only variables with intrinsic types can be used",
+  W144: "The {0} operator works only with instrinsic types",
+  W145: "The {0} operator works only with integer types",
+  W146: "The addressOf (&) operator works only with variable identifier",
+  W147: "The left operand of the member access operator must be a struct",
+  W148: "Unknown struct member: {0}",
+  W149: "The item access operator can be used only with arrays",
 };

@@ -5,8 +5,8 @@ import { WatSharpCompiler } from "../../src/compiler/WatSharpCompiler";
 
 describe("WatSharpCompiler - expressions", () => {
   const simplificationCases = [
-    { src: "13 * (12 + abc)", exp: "((abc+12)*13)" },
-    { src: "12 + abc", exp: "(abc+12)" },
+    { src: "13 * (12 + a)", exp: "((a+12)*13)" },
+    { src: "12 + a", exp: "(a+12)" },
     { src: "0 + a", exp: "a" },
     { src: "a + 0", exp: "a" },
     { src: "0 + (a*b)", exp: "(a*b)" },
@@ -453,8 +453,9 @@ describe("WatSharpCompiler - expressions", () => {
       // --- Arrange
       const wComp = new WatSharpCompiler(`
       const i32 cVal = 2;
-      void a() {
-        local u32 a = ${c.src};
+      void test() {
+        local i32 a;
+        local u32 b = ${c.src};
       }
       `);
 

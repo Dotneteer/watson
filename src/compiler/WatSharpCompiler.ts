@@ -404,8 +404,11 @@ export class WatSharpCompiler {
   private flattenTypes(): void {
     const compiler = this;
     for (const decl of this._parser.declarations.values()) {
-      if (decl.type === "TypeDeclaration") {
-        decl.spec = flattenType(decl.spec);
+      switch (decl.type) {
+        case "TypeDeclaration":
+        case "VariableDeclaration":
+          decl.spec = flattenType(decl.spec);
+          break;
       }
     }
 
@@ -658,6 +661,22 @@ export const waTypeMappings: Record<Intrinsics, WaType> = {
   u64: WaType.i64,
   f32: WaType.f32,
   f64: WaType.f64,
+};
+
+/**
+ * Mask constants for the bitwise NOT operation
+ */
+export const bitwiseNotMasks: Record<Intrinsics, number | bigint> = {
+  i8: 0xff,
+  u8: 0xff,
+  i16: 0xffff,
+  u16: 0xffff,
+  i32: 0xffff_ffff,
+  u32: 0xffff_ffff,
+  i64: BigInt("0xffffffffffffffff"),
+  u64: BigInt("0xffffffffffffffff"),
+  f32: 0,
+  f64: 0,
 };
 
 /**
