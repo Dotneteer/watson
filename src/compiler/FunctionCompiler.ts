@@ -762,15 +762,16 @@ export class FunctionCompiler {
     typeSpec: IntrinsicType,
     emit = true
   ): void {
-    const children: WaInstruction[] =
-      address >= 0 ? [constVal(WaType.i32, address)] : [];
+    if (address >= 0) {
+      this.inject(emit, constVal(WaType.i32, address));
+    }
     const waType = waTypeMappings[typeSpec.underlying];
     switch (typeSpec.underlying) {
       case "f32":
       case "f64":
         this.inject(
           emit,
-          load(waType, undefined, undefined, undefined, undefined, ...children)
+          load(waType, undefined, undefined, undefined, undefined)
         );
         break;
       case "i8":
@@ -782,8 +783,7 @@ export class FunctionCompiler {
             WaBitSpec.Bit8,
             undefined,
             undefined,
-            typeSpec.underlying === "i8",
-            ...children
+            typeSpec.underlying === "i8"
           )
         );
         break;
@@ -796,8 +796,7 @@ export class FunctionCompiler {
             WaBitSpec.Bit16,
             undefined,
             undefined,
-            typeSpec.underlying === "i16",
-            ...children
+            typeSpec.underlying === "i16"
           )
         );
         break;
@@ -810,8 +809,7 @@ export class FunctionCompiler {
             WaBitSpec.Bit32,
             undefined,
             undefined,
-            typeSpec.underlying === "i32",
-            ...children
+            typeSpec.underlying === "i32"
           )
         );
         break;
@@ -824,8 +822,7 @@ export class FunctionCompiler {
             undefined,
             undefined,
             undefined,
-            typeSpec.underlying === "i64",
-            ...children
+            typeSpec.underlying === "i64"
           )
         );
     }
@@ -880,7 +877,8 @@ export class FunctionCompiler {
 
         // --- "-" --> -1 * operand
         const waType = waTypeMappings[operandType.underlying];
-        this.inject(emit, mul(waType, constVal(waType, -1)));
+        this.inject(emit, constVal(waType, -1));
+        this.inject(emit, mul(waType));
         return operandType;
       }
 
@@ -912,14 +910,12 @@ export class FunctionCompiler {
           // --- "~" --> xor with all bits 1
           this.inject(
             emit,
-            xor(
+            constVal(
               waType,
-              constVal(
-                waType,
-                bitwiseNotMasks[(operandType as IntrinsicType).underlying]
-              )
+              bitwiseNotMasks[(operandType as IntrinsicType).underlying]
             )
           );
+          this.inject(emit, xor(waType));
           return operandType;
         }
       }
@@ -1408,13 +1404,13 @@ export class FunctionCompiler {
           return;
         }
       }
-      compiler.inject(emit, and(WaType.i32, constVal(WaType.i32, mask)));
+      compiler.inject(emit, constVal(WaType.i32, mask));
+      compiler.inject(emit, and(WaType.i32));
       if (typename.startsWith("i")) {
-        compiler.inject(emit, shl(WaType.i32, constVal(WaType.i32, bits)));
-        compiler.inject(
-          emit,
-          shr(WaType.i32, true, constVal(WaType.i32, bits))
-        );
+        compiler.inject(emit, constVal(WaType.i32, bits));
+        compiler.inject(emit, shl(WaType.i32));
+        compiler.inject(emit, constVal(WaType.i32, bits));
+        compiler.inject(emit, shr(WaType.i32, true));
       }
     }
   }
@@ -1507,7 +1503,8 @@ export class FunctionCompiler {
           address = -1;
           this.calculateAddressOf(expr.object, true);
           if (offset) {
-            this.inject(true, add(WaType.i32, constVal(WaType.i32, offset)));
+            this.inject(true, constVal(WaType.i32, offset));
+            this.inject(true, add(WaType.i32));
           }
         } else {
           // --- Constant address
@@ -1549,7 +1546,8 @@ export class FunctionCompiler {
             return null;
           }
           this.castForStorage(i32Desc, indexType, emit, expr.index.value);
-          this.inject(emit, mul(WaType.i32, constVal(WaType.i32, itemSize)));
+          this.inject(emit, constVal(WaType.i32, itemSize));
+          this.inject(emit, mul(WaType.i32));
           if (address !== 0) {
             this.inject(emit, add(WaType.i32));
           }

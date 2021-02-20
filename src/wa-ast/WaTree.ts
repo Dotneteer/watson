@@ -270,14 +270,6 @@ export class WaTree {
     parenthesized = false
   ): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
-    if (node.children && node.children.length > 0) {
-      return `${indentation}(${this.renderPureBodyNode(
-        node,
-        indent
-      )}\n${node.children
-        .map((ch) => this.renderInstructionNode(ch, indent + 1, true))
-        .join("\n")}\n${indentation})`;
-    }
     return `${indentation}${parenthesized ? "(" : ""}${this.renderPureBodyNode(
       node,
       indent

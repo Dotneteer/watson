@@ -105,7 +105,7 @@ export class FunctionBuilder implements Func {
   /**
    * Adds a local node to the function locals
    * @param id
-   * @param valueType
+   * @param valueType Value type of operation
    */
   addLocal(id: string, valueType: WaType): Local {
     const newNode = <Local>{
@@ -120,71 +120,59 @@ export class FunctionBuilder implements Func {
 
 /**
  * Factory method for a const WA instrcution
- * @param valueType Type of constant
+ * @param valueType Value type of operation
  * @param value Constant value
- * @param children Optional child nodes
  */
 export function constVal(
   valueType: WaType,
-  value: number | bigint,
-  ...children: WaInstruction[]
+  value: number | bigint
 ): ConstVal {
   return <ConstVal>{
     type: "ConstVal",
     valueType,
     value,
-    children,
   };
 }
 
 /**
  * Factory method for an unreachable WA instruction
- * @param children Optional child nodes
  */
-export function unreachable(...children: WaInstruction[]): Unreachable {
+export function unreachable(): Unreachable {
   return <Unreachable>{
     type: "Unreachable",
-    children,
   };
 }
 
 /**
  * Factory method for an nop WA instruction
- * @param children Optional child nodes
  */
-export function nop(...children: WaInstruction[]): Nop {
+export function nop(): Nop {
   return <Nop>{
     type: "Nop",
-    children,
   };
 }
 
 /**
  * Factory method for a br WA instruction
  * @param label Target label
- * @param children Optional child nodes
  */
-export function branch(label: string, ...children: WaInstruction[]): Branch {
+export function branch(label: string): Branch {
   return <Branch>{
     type: "Branch",
     label,
-    children,
   };
 }
 
 /**
  * Factory method for a br_if WA instruction
  * @param label Target label
- * @param children Optional child nodes
  */
 export function branchIf(
   label: string,
-  ...children: WaInstruction[]
 ): BranchIf {
   return <BranchIf>{
     type: "BranchIf",
     label,
-    children,
   };
 }
 
@@ -192,42 +180,35 @@ export function branchIf(
  * Factory method for a br_table WA instruction
  * @param caseIds Branch IDs
  * @param defaultId Default branch ID
- * @param children Optional child nodes
  */
 export function branchTable(
   caseIds: string[],
   defaultId: string,
-  ...children: WaInstruction[]
 ): BranchTable {
   return <BranchTable>{
     type: "BranchTable",
     caseIds,
     defaultId,
-    children,
   };
 }
 
 /**
  * Factory method for a return WA instruction
- * @param children Optional child nodes
  */
-export function ret(...children: WaInstruction[]): Return {
+export function ret(): Return {
   return <Return>{
     type: "Return",
-    children,
   };
 }
 
 /**
  * Factory method for a call WA instruction
  * @param id Function ID
- * @param children Optional child nodes
  */
-export function call(id: string, ...children: WaInstruction[]): Call {
+export function call(id: string): Call {
   return <Call>{
     type: "Call",
     id,
-    children,
   };
 }
 
@@ -235,112 +216,98 @@ export function call(id: string, ...children: WaInstruction[]): Call {
  * Factory method for a call_indirect WA instruction
  * @param id Function ID
  * @param typeId Function type identifier
- * @param children Optional child nodes
  */
 export function callIndirect(
   id: string,
   typeId: string,
-  ...children: WaInstruction[]
 ): CallIndirect {
   return <CallIndirect>{
     type: "CallIndirect",
     id,
     typeId,
-    children,
   };
 }
 
 /**
  * Factory method for a drop WA instruction
- * @param children Optional child nodes
  */
-export function drop(...children: WaInstruction[]): Drop {
+export function drop(): Drop {
   return <Drop>{
     type: "Drop",
-    children,
   };
 }
 
 /**
  * Factory method for a select WA instruction
- * @param children Optional child nodes
  */
-export function select(...children: WaInstruction[]): Select {
+export function select(): Select {
   return <Select>{
     type: "Select",
-    children,
   };
 }
 
 /**
  * Factory method for a local_get WA instruction
  * @param id Identifier
- * @param children Optional child nodes
  */
-export function localGet(id: string, ...children: WaInstruction[]): LocalGet {
+export function localGet(id: string): LocalGet {
   return <LocalGet>{
     type: "LocalGet",
     id,
-    children,
   };
 }
 
 /**
  * Factory method for a local_set WA instruction
  * @param id Identifier
- * @param children Optional child nodes
  */
-export function localSet(id: string, ...children: WaInstruction[]): LocalSet {
+export function localSet(id: string): LocalSet {
   return <LocalSet>{
     type: "LocalSet",
     id,
-    children,
   };
 }
 
 /**
  * Factory method for a local_tee WA instruction
  * @param id Identifier
- * @param children Optional child nodes
  */
-export function localTee(id: string, ...children: WaInstruction[]): LocalTee {
+export function localTee(id: string): LocalTee {
   return <LocalTee>{
     type: "LocalTee",
     id,
-    children,
   };
 }
 
 /**
  * Factory method for a global_get WA instruction
  * @param id Identifier
- * @param children Optional child nodes
  */
-export function globalGet(id: string, ...children: WaInstruction[]): GlobalGet {
+export function globalGet(id: string): GlobalGet {
   return <GlobalGet>{
     type: "GlobalGet",
     id,
-    children,
   };
 }
 
 /**
  * Factory method for a global_set WA instruction
  * @param id Identifier
- * @param children Optional child nodes
  */
-export function globalSet(id: string, ...children: WaInstruction[]): GlobalSet {
+export function globalSet(id: string): GlobalSet {
   return <GlobalSet>{
     type: "GlobalSet",
     id,
-    children,
   };
 }
 
 /**
  * Factory method for a load WA instruction
- * @param id Identifier
- * @param children Optional child nodes
+ * @param valueType Value type of operation
+ * @param bits Bit specification
+ * @param offset Optional offset
+ * @param align Optional alignment
+ * @param signed Signed operation?
  */
 export function load(
   valueType: WaType,
@@ -348,7 +315,6 @@ export function load(
   offset: number = 0,
   align: number = 0,
   signed = false,
-  ...children: WaInstruction[]
 ): Load {
   // --- Check input consistency
   if (
@@ -368,21 +334,21 @@ export function load(
     offset,
     align,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a load WA instruction
- * @param id Identifier
- * @param children Optional child nodes
+ * @param valueType Value type of operation
+ * @param bits Bit specification
+ * @param offset Optional offset
+ * @param align Optional alignment
  */
 export function store(
   valueType: WaType,
   bits: WaBitSpec = WaBitSpec.None,
   offset: number = 0,
   align: number = 0,
-  ...children: WaInstruction[]
 ): Store {
   // --- Check input consistency
   if (
@@ -401,646 +367,578 @@ export function store(
     bits,
     offset,
     align,
-    children,
   };
 }
 
 /**
  * Factory method for a memory.size WA instruction
- * @param children Optional child nodes
  */
-export function memSize(...children: WaInstruction[]): MemorySize {
+export function memSize(): MemorySize {
   return <MemorySize>{
     type: "MemorySize",
-    children,
   };
 }
 
 /**
  * Factory method for a memory.grow WA instruction
- * @param children Optional child nodes
  */
-export function memGrow(...children: WaInstruction[]): MemoryGrow {
+export function memGrow(): MemoryGrow {
   return <MemoryGrow>{
     type: "MemoryGrow",
-    children,
   };
 }
 
 /**
  * Factory method for a clz WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function clz(valueType: WaType, ...children: WaInstruction[]): Clz {
+export function clz(valueType: WaType): Clz {
   checkInteger(valueType, "clz");
   return <Clz>{
     type: "Clz",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a ctz WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function ctz(valueType: WaType, ...children: WaInstruction[]): Ctz {
+export function ctz(valueType: WaType): Ctz {
   checkInteger(valueType, "ctz");
   return <Ctz>{
     type: "Ctz",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an add WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function add(valueType: WaType, ...children: WaInstruction[]): Add {
+export function add(valueType: WaType): Add {
   return <Add>{
     type: "Add",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a sub WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function sub(valueType: WaType, ...children: WaInstruction[]): Sub {
+export function sub(valueType: WaType): Sub {
   return <Sub>{
     type: "Sub",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a mul WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function mul(valueType: WaType, ...children: WaInstruction[]): Mul {
+export function mul(valueType: WaType): Mul {
   return <Mul>{
     type: "Mul",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a div WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function div(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Div {
   return <Div>{
     type: "Div",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a rem WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function rem(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Rem {
   return <Rem>{
     type: "Rem",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an and WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function and(valueType: WaType, ...children: WaInstruction[]): And {
+export function and(valueType: WaType): And {
   checkInteger(valueType, "and");
   return <And>{
     type: "And",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an xor WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function xor(valueType: WaType, ...children: WaInstruction[]): Xor {
+export function xor(valueType: WaType): Xor {
   checkInteger(valueType, "xor");
   return <Xor>{
     type: "Xor",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an or WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function or(valueType: WaType, ...children: WaInstruction[]): Or {
+export function or(valueType: WaType): Or {
   checkInteger(valueType, "or");
   return <Or>{
     type: "Or",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a shl WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function shl(valueType: WaType, ...children: WaInstruction[]): Shl {
+export function shl(valueType: WaType): Shl {
   checkInteger(valueType, "shl");
   return <Shl>{
     type: "Shl",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a shr WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function shr(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Shr {
   checkInteger(valueType, "shr");
   return <Shr>{
     type: "Shr",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a rotl WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function rotl(valueType: WaType, ...children: WaInstruction[]): Rotl {
+export function rotl(valueType: WaType): Rotl {
   checkInteger(valueType, "rotl");
   return <Rotl>{
     type: "Rotl",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a rotr WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function rotr(valueType: WaType, ...children: WaInstruction[]): Rotr {
+export function rotr(valueType: WaType): Rotr {
   checkInteger(valueType, "rotr");
   return <Rotr>{
     type: "Rotr",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an eqz WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function eqz(valueType: WaType, ...children: WaInstruction[]): Eqz {
+export function eqz(valueType: WaType): Eqz {
   checkInteger(valueType, "eqz");
   return <Eqz>{
     type: "Eqz",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an eq WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function eq(valueType: WaType, ...children: WaInstruction[]): Eq {
+export function eq(valueType: WaType): Eq {
   checkInteger(valueType, "eq");
   return <Eq>{
     type: "Eq",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an ne WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function ne(valueType: WaType, ...children: WaInstruction[]): Ne {
+export function ne(valueType: WaType): Ne {
   checkInteger(valueType, "ne");
   return <Ne>{
     type: "Ne",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a le WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function le(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Le {
   return <Le>{
     type: "Le",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a lt WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function lt(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Lt {
   return <Lt>{
     type: "Lt",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a ge WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function ge(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Ge {
   return <Ge>{
     type: "Ge",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for a ge WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function gt(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Gt {
   return <Gt>{
     type: "Gt",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an i32.wrap_i64 WA instruction
- * @param children Optional child nodes
  */
-export function wrap64(...children: WaInstruction[]): Wrap64 {
+export function wrap64(): Wrap64 {
   return <Wrap64>{
-    type: "Wrap64",
-    children,
+    type: "Wrap64"
   };
 }
 
 /**
  * Factory method for an extend32 WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param signed Signed operation?
  */
 export function extend32(
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Extend32 {
   return <Extend32>{
     type: "Extend32",
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an i32.trunc WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function trunc32(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Trunc32 {
   checkFloat(valueType, "trunc32");
   return <Trunc32>{
     type: "Trunc32",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an i64.trunc WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function trunc64(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Trunc64 {
   checkFloat(valueType, "trunc64");
   return <Trunc64>{
     type: "Trunc64",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an f32.convert WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function convert32(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Convert32 {
   checkInteger(valueType, "convert32");
   return <Convert32>{
     type: "Convert32",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an f64.convert WA instruction
- * @param children Optional child nodes
- * @param signed Use signed operation?
+ * @param valueType Value type of operation
+ * @param signed Signed operation?
  */
 export function convert64(
   valueType: WaType,
   signed?: boolean,
-  ...children: WaInstruction[]
 ): Convert64 {
   checkInteger(valueType, "convert64");
   return <Convert64>{
     type: "Convert64",
     valueType,
     signed,
-    children,
   };
 }
 
 /**
  * Factory method for an f64.demote WA instruction
- * @param children Optional child nodes
  */
-export function demote64(...children: WaInstruction[]): Demote64 {
+export function demote64(): Demote64 {
   return <Demote64>{
     type: "Demote64",
-    children,
   };
 }
 
 /**
  * Factory method for an f32.promote WA instruction
- * @param children Optional child nodes
  */
-export function promote32(...children: WaInstruction[]): Promote32 {
+export function promote32(): Promote32 {
   return <Promote32>{
     type: "Promote32",
-    children,
   };
 }
 
 /**
  * Factory method for an i32.reinterpret WA instruction
- * @param children Optional child nodes
  */
-export function reinterpretF32(...children: WaInstruction[]): ReinterpretF32 {
+export function reinterpretF32(): ReinterpretF32 {
   return <ReinterpretF32>{
     type: "ReinterpretF32",
-    children,
   };
 }
 
 /**
  * Factory method for an i64.reinterpret WA instruction
- * @param children Optional child nodes
  */
-export function reinterpretF64(...children: WaInstruction[]): ReinterpretF64 {
+export function reinterpretF64(): ReinterpretF64 {
   return <ReinterpretF64>{
     type: "ReinterpretF64",
-    children,
   };
 }
 
 /**
  * Factory method for an f32.reinterpret WA instruction
- * @param children Optional child nodes
  */
-export function reinterpretI32(...children: WaInstruction[]): ReinterpretI32 {
+export function reinterpretI32(): ReinterpretI32 {
   return <ReinterpretI32>{
     type: "ReinterpretI32",
-    children,
   };
 }
 
 /**
  * Factory method for an f64.reinterpret WA instruction
- * @param children Optional child nodes
  */
-export function reinterpretI64(...children: WaInstruction[]): ReinterpretI64 {
+export function reinterpretI64(): ReinterpretI64 {
   return <ReinterpretI64>{
     type: "ReinterpretI64",
-    children,
   };
 }
 
 /**
  * Factory method for an abs WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function abs(valueType: WaType, ...children: WaInstruction[]): Abs {
+export function abs(valueType: WaType): Abs {
   checkFloat(valueType, "abs");
   return <Abs>{
     type: "Abs",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a neg WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function neg(valueType: WaType, ...children: WaInstruction[]): Neg {
+export function neg(valueType: WaType): Neg {
   checkFloat(valueType, "neg");
   return <Neg>{
     type: "Neg",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a ceil WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function ceil(valueType: WaType, ...children: WaInstruction[]): Ceil {
+export function ceil(valueType: WaType): Ceil {
   checkFloat(valueType, "ceil");
   return <Ceil>{
     type: "Ceil",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a floor WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function floor(valueType: WaType, ...children: WaInstruction[]): Floor {
+export function floor(valueType: WaType): Floor {
   checkFloat(valueType, "floor");
   return <Floor>{
     type: "Floor",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a trunc WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function trunc(valueType: WaType, ...children: WaInstruction[]): Trunc {
+export function trunc(valueType: WaType): Trunc {
   checkFloat(valueType, "trunc");
   return <Trunc>{
     type: "Trunc",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a nearest WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
 export function nearest(
   valueType: WaType,
-  ...children: WaInstruction[]
 ): Nearest {
   checkFloat(valueType, "nearest");
   return <Nearest>{
     type: "Nearest",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for an sqrt WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function sqrt(valueType: WaType, ...children: WaInstruction[]): Sqrt {
+export function sqrt(valueType: WaType): Sqrt {
   checkFloat(valueType, "sqrt");
   return <Sqrt>{
     type: "Sqrt",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a min WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function min(valueType: WaType, ...children: WaInstruction[]): Min {
+export function min(valueType: WaType): Min {
   checkFloat(valueType, "min");
   return <Min>{
     type: "Min",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a max WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
-export function max(valueType: WaType, ...children: WaInstruction[]): Max {
+export function max(valueType: WaType): Max {
   checkFloat(valueType, "max");
   return <Max>{
     type: "Max",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a copysign WA instruction
- * @param children Optional child nodes
+ * @param valueType Value type of operation
  */
 export function copysign(
   valueType: WaType,
-  ...children: WaInstruction[]
 ): CopySign {
   checkFloat(valueType, "copysign");
   return <CopySign>{
     type: "CopySign",
     valueType,
-    children,
   };
 }
 
 /**
  * Factory method for a block WA instruction
- * @param children Optional child nodes
+ * @param id Block identifier
+ * @param body Block body
+ * @param resultType Type of optional block result
  */
 export function block(
   id: string,
@@ -1057,7 +955,9 @@ export function block(
 
 /**
  * Factory method for a loop WA instruction
- * @param children Optional child nodes
+ * @param id Loop identifier
+ * @param body Loop body
+ * @param resultType Type of optional loop result
  */
 export function loop(
   id: string,
@@ -1074,7 +974,9 @@ export function loop(
 
 /**
  * Factory method for an if WA instruction
- * @param children Optional child nodes
+ * @param consequtive Consequtive branch body
+ * @param alternate Alternate branch body
+ * @param resultType Type of optional result
  */
 export function ifBlock(
   consequtive: WaInstruction[],
@@ -1091,7 +993,8 @@ export function ifBlock(
 
 /**
  * Factory method for a WA comment
- * @param children Optional child nodes
+ * @param text Comment text
+ * @param isBlock Block comment?
  */
 export function comment(text: string, isBlock?: boolean): Comment {
   return <Comment>{
