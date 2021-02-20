@@ -11,10 +11,12 @@ import {
   GlobalDeclaration,
   Identifier,
   IfStatement,
+  ItemAccessExpression,
   Literal,
   LiteralSource,
   LocalFunctionInvocation,
   LocalVariable,
+  MemberAccessExpression,
   Node,
   ReturnStatement,
   TypeCastExpression,
@@ -677,6 +679,13 @@ export class FunctionCompiler {
         return this.compileConditionalExpression(expr, emit);
       case "TypeCast":
         return this.compileTypeCast(expr, emit);
+      case "MemberAccess":
+      case "ItemAccess":
+        return this.compileIndirectAccess(expr, emit);
+      case "BuiltInFunctionInvocation":
+        break;
+      case "FunctionInvocation":
+        break;
     }
     return i32Desc;
   }
@@ -734,80 +743,91 @@ export class FunctionCompiler {
         this.reportError("W143", id);
         return null;
       }
-      const waType = waTypeMappings[typeSpec.underlying];
-      switch (typeSpec.underlying) {
-        case "f32":
-        case "f64":
-          this.inject(
-            emit,
-            load(
-              waType,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
-          break;
-        case "i8":
-        case "u8":
-          this.inject(
-            emit,
-            load(
-              waType,
-              WaBitSpec.Bit8,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i8",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
-          break;
-        case "i16":
-        case "u16":
-          this.inject(
-            emit,
-            load(
-              waType,
-              WaBitSpec.Bit16,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i16",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
-          break;
-        case "i32":
-        case "u32":
-          this.inject(
-            emit,
-            load(
-              waType,
-              WaBitSpec.Bit32,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i32",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
-          break;
-        case "i64":
-        case "u64":
-          this.inject(
-            emit,
-            load(
-              waType,
-              undefined,
-              undefined,
-              undefined,
-              typeSpec.underlying === "i64",
-              constVal(WaType.i32, resolvedId.var.address)
-            )
-          );
-          break;
-      }
+      this.compileIntrinsicVariableAccess(
+        resolvedId.var.address,
+        typeSpec,
+        emit
+      );
       return typeSpec;
+    }
+  }
+
+  /**
+   * Compiles access to a variable with the specified type
+   * @param typeSpec Variabel type
+   * @param emit Should emit code?
+   */
+  private compileIntrinsicVariableAccess(
+    address: number,
+    typeSpec: IntrinsicType,
+    emit = true
+  ): void {
+    const children: WaInstruction[] =
+      address >= 0 ? [constVal(WaType.i32, address)] : [];
+    const waType = waTypeMappings[typeSpec.underlying];
+    switch (typeSpec.underlying) {
+      case "f32":
+      case "f64":
+        this.inject(
+          emit,
+          load(waType, undefined, undefined, undefined, undefined, ...children)
+        );
+        break;
+      case "i8":
+      case "u8":
+        this.inject(
+          emit,
+          load(
+            waType,
+            WaBitSpec.Bit8,
+            undefined,
+            undefined,
+            typeSpec.underlying === "i8",
+            ...children
+          )
+        );
+        break;
+      case "i16":
+      case "u16":
+        this.inject(
+          emit,
+          load(
+            waType,
+            WaBitSpec.Bit16,
+            undefined,
+            undefined,
+            typeSpec.underlying === "i16",
+            ...children
+          )
+        );
+        break;
+      case "i32":
+      case "u32":
+        this.inject(
+          emit,
+          load(
+            waType,
+            WaBitSpec.Bit32,
+            undefined,
+            undefined,
+            typeSpec.underlying === "i32",
+            ...children
+          )
+        );
+        break;
+      case "i64":
+      case "u64":
+        this.inject(
+          emit,
+          load(
+            waType,
+            undefined,
+            undefined,
+            undefined,
+            typeSpec.underlying === "i64",
+            ...children
+          )
+        );
     }
   }
 
@@ -905,7 +925,7 @@ export class FunctionCompiler {
       }
 
       case "&": {
-        const address = this.calculateAddressOf(unary.operand);
+        const address = this.calculateAddressOf(unary.operand, emit);
         if (address === null) {
           return null;
         }
@@ -1153,6 +1173,29 @@ export class FunctionCompiler {
     this.compileExpression(cast.operand, emit);
     this.castIntrinsicToIntrinsic(resultType, operand, emit);
     return resultType;
+  }
+
+  /**
+   * Compiles an indirect value access
+   * @param expr Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileIndirectAccess(
+    expr: MemberAccessExpression | ItemAccessExpression,
+    emit = true
+  ): TypeSpec | null {
+    const varAddr = this.calculateAddressOf(expr, emit);
+    if (varAddr == null) {
+      return null;
+    }
+    const typeSpec = varAddr.spec;
+    if (typeSpec.type !== "Intrinsic") {
+      this.reportError("W143", expr);
+      return null;
+    }
+    this.compileIntrinsicVariableAccess(-1, typeSpec, emit);
+    return typeSpec;
   }
 
   /**
@@ -1462,9 +1505,9 @@ export class FunctionCompiler {
         if (leftAddress.address < 0) {
           // --- Calculated address
           address = -1;
-          this.calculateAddressOf(expr.object, emit);
+          this.calculateAddressOf(expr.object, true);
           if (offset) {
-            this.inject(emit, add(WaType.i32, constVal(WaType.i32, offset)));
+            this.inject(true, add(WaType.i32, constVal(WaType.i32, offset)));
           }
         } else {
           // --- Constant address
@@ -1492,20 +1535,24 @@ export class FunctionCompiler {
         }
         const itemSize = this.wsCompiler.getSizeof(arrayAddress.spec.spec);
 
-        if (expr.index.type === "Literal") {
+        if (expr.index.type === "Literal" && address >= 0) {
           // --- We can get a constant address
           address += itemSize * Number(expr.index.value);
           this.inject(emit, constVal(WaType.i32, address));
         } else {
           // --- We use a calculated address
-          this.inject(emit, constVal(WaType.i32, address));
+          if (address > 0) {
+            this.inject(emit, constVal(WaType.i32, address));
+          }
           const indexType = this.compileExpression(expr.index, emit);
           if (indexType === null) {
             return null;
           }
           this.castForStorage(i32Desc, indexType, emit, expr.index.value);
           this.inject(emit, mul(WaType.i32, constVal(WaType.i32, itemSize)));
-          this.inject(emit, add(WaType.i32));
+          if (address !== 0) {
+            this.inject(emit, add(WaType.i32));
+          }
           address = -1;
         }
         return {

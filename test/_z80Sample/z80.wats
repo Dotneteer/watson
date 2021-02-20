@@ -10,7 +10,7 @@ global u32 clock = 3_500_000;
 // Represents a 16-bit register pair
 type r16 = struct {
   u8 l, // LSB register
-  u8 h  // MSB register
+  u8[3] h  // MSB register
 };
 
 // --- Z80 Registers
@@ -27,11 +27,12 @@ export void reset() {
   // TODO: Implement it
 }
 
-i32 b;
+r16[4] b;
 f32 c;
 i64 d;
 
 inline void setA(f64 a) {
-  local i32 other = 3 + i8(b);
+  local i32 idx;
+  local i32 other = b[idx].h[2];
   af.l = a;
 }
