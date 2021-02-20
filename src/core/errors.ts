@@ -97,7 +97,9 @@ export type ErrorCodes =
   | "W146"
   | "W147"
   | "W148"
-  | "W149";
+  | "W149"
+  | "W150"
+  | "W151"
 
 /**
  * Error message type description
@@ -179,4 +181,6 @@ export const errorMessages: ErrorText = {
   W147: "The left operand of the member access operator must be a struct",
   W148: "Unknown struct member: {0}",
   W149: "The item access operator can be used only with arrays",
+  W150: "The {0} built-in function works only with floating-point types",
+  W151: "The {0} built-in function works only with integer types",
 };

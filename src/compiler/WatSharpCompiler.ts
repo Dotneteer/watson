@@ -43,13 +43,17 @@ export class WatSharpCompiler {
   constructor(
     public readonly source: string,
     public readonly includeHandler?: (filename: string) => IncludeHandlerResult,
-    public readonly preprocessorSymbols?: string[]
+    public readonly preprocessorSymbols?: string[],
+    public readonly options?: CompilerOptions
   ) {
     this._parser = new WatSharpParser(
       source,
       includeHandler,
       preprocessorSymbols
     );
+    if (!options) {
+      this.options = defaultCompilerOptions;
+    }
   }
 
   /**
@@ -534,9 +538,9 @@ export class WatSharpCompiler {
     for (const decl of this.declarations.values()) {
       if (decl.type === "VariableDeclaration") {
         this._waTree.comment(
-          `0x${decl.address.toString(16).padStart(6, "0")} (${this.getSizeof(
+          `0x${decl.address.toString(16).padStart(8, "0")} (${decl.address.toString(10).padStart(10, " ")}) [${this.getSizeof(
             decl.spec
-          )}): ${decl.name}`
+          ).toString(10).padStart(10, " ")}]: ${decl.name}`
         );
       }
     }
@@ -637,6 +641,20 @@ interface ResolutionQueueItem {
   typeSpec?: TypeSpec;
   expr?: Expression;
 }
+
+/**
+ * Options to use with the compiler
+ */
+export interface CompilerOptions {
+  generateComments?: boolean;
+}
+
+/**
+ * Default compiler options
+ */
+export const defaultCompilerOptions: CompilerOptions = {
+  generateComments: true,
+};
 
 /**
  * Represents a comiler trace message

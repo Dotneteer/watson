@@ -485,7 +485,9 @@ export class WaTree {
         return `${WaType[node.valueType]}.clz`;
       case "Ctz":
         return `${WaType[node.valueType]}.ctz`;
-      case "Add":
+      case "PopCnt":
+          return `${WaType[node.valueType]}.popcnt`;
+        case "Add":
         return `${WaType[node.valueType]}.add`;
       case "Sub":
         return `${WaType[node.valueType]}.sub`;
@@ -630,7 +632,7 @@ export class WaTree {
             ? ""
             : " (result " + WaType[node.resultType] + ")"
         }\n${consequtive}${consequtive.length > 0 ? "\n" : ""}${
-          node.alternate ? "else\n" : ""
+          node.alternate ? `${indentation}else\n` : ""
         }${alternate}${alternate.length > 0 ? "\n" : ""}${indentation}end`;
       case "Comment":
         return node.isBlock ? `(; ${node.text} ;)` : `;; ${node.text}`;

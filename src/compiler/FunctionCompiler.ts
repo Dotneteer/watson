@@ -4,6 +4,7 @@ import {
   Assignment,
   BinaryExpression,
   BreakStatement,
+  BuiltInFunctionInvocationExpression,
   ConditionalExpression,
   ContinueStatement,
   DoStatement,
@@ -46,33 +47,48 @@ import {
   waTypeMappings,
 } from "./WatSharpCompiler";
 import {
+  abs,
   add,
   and,
+  ceil,
+  clz,
+  comment,
   constVal,
   convert32,
   convert64,
+  copysign,
+  ctz,
   demote64,
   div,
   eq,
   eqz,
   extend32,
+  floor,
   FunctionBuilder,
   ge,
   globalGet,
   gt,
+  ifBlock,
   le,
   load,
   localGet,
   localSet,
+  localTee,
   lt,
+  max,
+  min,
   mul,
   ne,
+  nearest,
+  neg,
   or,
+  popcnt,
   promote32,
   rem,
   select,
   shl,
   shr,
+  sqrt,
   sub,
   trunc32,
   trunc64,
@@ -99,7 +115,12 @@ export class FunctionCompiler {
   // --- The result value of the function
   private _resultType: WaType | null = null;
 
+  // --- The function builder object
   private _builder: FunctionBuilder;
+
+  // --- Temporary locals assigned to the function
+  private _tempLocals = new Set<WaType>();
+
   /**
    * Initializes a function compiler instance
    * @param wsCompiler WAT# compiler instance
@@ -666,6 +687,7 @@ export class FunctionCompiler {
    * @returns Type specification of the result
    */
   private compileExpression(expr: Expression, emit = true): TypeSpec | null {
+    this.injectComment(emit, () => renderExpression(expr));
     switch (expr.type) {
       case "Literal":
         return this.compileLiteral(expr, emit);
@@ -683,7 +705,7 @@ export class FunctionCompiler {
       case "ItemAccess":
         return this.compileIndirectAccess(expr, emit);
       case "BuiltInFunctionInvocation":
-        break;
+        return this.compileBuiltinFunctionInvocation(expr, emit);
       case "FunctionInvocation":
         break;
     }
@@ -1195,6 +1217,149 @@ export class FunctionCompiler {
   }
 
   /**
+   * Compiles a built-in function invocation
+   * @param func Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileBuiltinFunctionInvocation(
+    func: BuiltInFunctionInvocationExpression,
+    emit = true
+  ): TypeSpec | null {
+    // --- Prepare function argument types
+    const argTypes = func.arguments.map((arg) =>
+      this.compileExpression(arg, false)
+    );
+    const hasF64Arg =
+      argTypes.filter(
+        (arg) => arg.type === "Intrinsic" && arg.underlying === "f64"
+      ).length > 0;
+
+    const argType =
+      argTypes.length == 0 ? undefined : (argTypes[0] as IntrinsicType);
+    const argIns = argType ? argType.underlying : "";
+    let waType = argIns === "" ? WaType.i32 : waTypeMappings[argIns];
+    let resultType = argType;
+
+    // --- Compile function argument types
+    func.arguments.forEach((arg, index) => {
+      this.compileExpression(arg, emit);
+      if (func.name === "min" || func.name === "max") {
+        this.castIntrinsicToIntrinsic(
+          hasF64Arg ? f64Desc : f32Desc,
+          argTypes[index] as IntrinsicType
+        );
+      }
+    });
+
+    // --- Inject the appropriate operation
+    switch (func.name) {
+      case "abs": {
+        if (argIns.startsWith("i")) {
+          // --- Integer absolute value
+          const local = this.createTempLocal(waType);
+          this.inject(
+            emit,
+            localTee(local),
+            constVal(waType, 0),
+            lt(waType, true),
+            ifBlock(
+              [localGet(local), constVal(waType, -1), mul(waType)],
+              [localGet(local)],
+              waType
+            )
+          );
+        } else if (argIns.startsWith("f")) {
+          this.inject(emit, abs(waType));
+        }
+        break;
+      }
+
+      case "ceil":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "ceil");
+          return null;
+        }
+        this.inject(emit, ceil(waType));
+        break;
+
+      case "clz":
+        if (waType === WaType.f32 || waType === WaType.f64) {
+          this.reportError("W151", func, "clz");
+          return null;
+        }
+        this.inject(emit, clz(waType));
+        break;
+
+      case "copysign":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "copysign");
+          return null;
+        }
+        this.inject(emit, copysign(waType));
+        break;
+
+      case "ctz":
+        if (waType === WaType.f32 || waType === WaType.f64) {
+          this.reportError("W151", func, "ctz");
+          return null;
+        }
+        this.inject(emit, ctz(waType));
+        break;
+
+      case "floor":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "floor");
+          return null;
+        }
+        this.inject(emit, floor(waType));
+        break;
+
+      case "nearest":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "nearest");
+          return null;
+        }
+        this.inject(emit, nearest(waType));
+        break;
+
+      case "neg":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "neg");
+          return null;
+        }
+        this.inject(emit, neg(waType));
+        break;
+
+      case "popcnt":
+        if (waType === WaType.f32 || waType === WaType.f64) {
+          this.reportError("W151", func, "popcnt");
+          return null;
+        }
+        this.inject(emit, popcnt(waType));
+        break;
+
+      case "sqrt":
+        if (waType === WaType.i32 || waType === WaType.i64) {
+          this.reportError("W150", func, "sqrt");
+          return null;
+        }
+        this.inject(emit, sqrt(waType));
+        break;
+
+      case "min":
+      case "max":
+        resultType = hasF64Arg ? f64Desc : f32Desc;
+        waType = hasF64Arg ? WaType.f64 : WaType.f32;
+        for (let i = 1; i < func.arguments.length; i++) {
+          this.inject(emit, func.name === "min" ? min(waType) : max(waType));
+        }
+        break;
+    }
+    return resultType;
+  }
+
+  /**
    * Casts a storage type to another storage type
    * @param left
    * @param right
@@ -1454,6 +1619,7 @@ export class FunctionCompiler {
     expr: Expression,
     emit = true
   ): ResolvedAddress | null {
+    this.injectComment(emit, () => `Address of ${renderExpression(expr)}`);
     switch (expr.type) {
       case "Identifier": {
         // --- Only variables have an address
@@ -1503,6 +1669,7 @@ export class FunctionCompiler {
           address = -1;
           this.calculateAddressOf(expr.object, true);
           if (offset) {
+            this.injectComment(true, () => `Field: ${expr.member}`);
             this.inject(true, constVal(WaType.i32, offset));
             this.inject(true, add(WaType.i32));
           }
@@ -1545,6 +1712,10 @@ export class FunctionCompiler {
           if (indexType === null) {
             return null;
           }
+          this.injectComment(
+            true,
+            () => `Item: ${renderExpression(expr.index)}`
+          );
           this.castForStorage(i32Desc, indexType, emit, expr.index.value);
           this.inject(emit, constVal(WaType.i32, itemSize));
           this.inject(emit, mul(WaType.i32));
@@ -1563,11 +1734,33 @@ export class FunctionCompiler {
   }
 
   // ==========================================================================
+  // Temporary locals
+
+  /**
+   * Creates a temporary local with the specified type
+   * @param type
+   */
+  private createTempLocal(type: WaType): string {
+    const tmpName = `$tloc_${WaType[type].toString()}`;
+    if (!this._tempLocals.has(type)) {
+      const local = this._builder.addLocal(tmpName, type);
+      this._tempLocals.add(type);
+      this.addTrace(() => [
+        "local",
+        0,
+        this.wsCompiler.waTree.renderLocal(local),
+      ]);
+    }
+    return tmpName;
+  }
+
+  // ==========================================================================
   // Helpers
 
   /**
    * Injects the specifiec WebAssembly instructions into the function
    * @param instr Instructions to inject
+   * @param emit Should emit code?
    */
   private inject(emit: boolean, ...instr: WaInstruction[]): void {
     if (!emit) {
@@ -1575,12 +1768,25 @@ export class FunctionCompiler {
     }
     this._builder.inject(...instr);
     instr.forEach((ins) => {
-      this.addTrace(() => [
-        "inject",
-        0,
-        this.wsCompiler.waTree.renderInstructionNode(ins),
-      ]);
+      if (ins.type !== "Comment") {
+        this.addTrace(() => [
+          "inject",
+          0,
+          this.wsCompiler.waTree.renderInstructionNode(ins),
+        ]);
+      }
     });
+  }
+
+  /**
+   * Injects comments
+   * @param emit Should emit comment?
+   */
+  private injectComment(emit: boolean, text: string | (() => string)): void {
+    if (!emit || !this.wsCompiler.options.generateComments) {
+      return;
+    }
+    this._builder.inject(comment(typeof text === "string" ? text : text()));
   }
 
   /**
