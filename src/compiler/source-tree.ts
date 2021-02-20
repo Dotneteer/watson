@@ -81,6 +81,7 @@ export type Intrinsics =
 
 export interface TypeSpecBase extends BaseNode {
   resolved?: boolean;
+  flattened?: boolean;
   sizeof?: number;
 }
 

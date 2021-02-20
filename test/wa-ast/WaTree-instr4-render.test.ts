@@ -464,7 +464,7 @@ describe("WaTree - render instructions #4", () => {
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("i32.wrap_i64");
+    expect(text).toBe("i32.wrap/i64");
   });
 
   it("i64.extend_s/i32", () => {

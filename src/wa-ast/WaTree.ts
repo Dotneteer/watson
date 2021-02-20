@@ -410,10 +410,10 @@ export class WaTree {
    * Renders the body of a function
    * @param func Function body instructions
    */
-  private renderFunctionBody(func: Func, indent: number): string {
+  renderFunctionBody(func: Func, indent: number): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
     const locals = func.locals
-      .map((l) => `${indentation}(local ${l.id} ${WaType[l.valueType]})`)
+      .map((l) => `${indentation}${this.renderLocal(l)}`)
       .join("\n");
     const body = func.body
       .map((inst) => this.renderInstructionNode(inst, indent))
@@ -421,6 +421,14 @@ export class WaTree {
     return `${locals}${
       locals.length > 0 && body.length > 0 ? "\n" : ""
     }${body}`;
+  }
+
+  /**
+   * Renders the specified local declaration
+   * @param local Local declaration
+   */
+  renderLocal(local: Local): string {
+    return `(local ${local.id} ${WaType[local.valueType]})`
   }
 
   /**
@@ -458,17 +466,15 @@ export class WaTree {
       case "Select":
         return "select";
       case "LocalGet":
-        return `local_get ${node.id}`;
+        return `get_local ${node.id}`;
       case "LocalSet":
-        return `local_set ${node.id}`;
+        return `set_local ${node.id}`;
       case "LocalTee":
-        return `local_tee ${node.id}`;
+        return `tee_local ${node.id}`;
       case "GlobalGet":
-        return `global_get ${node.id}`;
+        return `get_global ${node.id}`;
       case "GlobalSet":
-        return `global_set ${node.id}`;
-      case "GlobalSet":
-        return `global_set ${node.id}`;
+        return `set_global ${node.id}`;
       case "Load":
         return `${WaType[node.valueType]}.load${bitSpecToString(node.bits)}${
           node.bits !== WaBitSpec.None ? (node.signed ? "_s" : "_u") : ""
@@ -547,7 +553,7 @@ export class WaTree {
           node.signed
         )}`;
       case "Wrap64":
-        return "i32.wrap_i64";
+        return "i32.wrap/i64";
       case "Extend32":
         return `i64.extend${signedTag(WaType.i32, node.signed)}/i32`;
       case "Trunc32":

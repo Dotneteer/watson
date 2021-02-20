@@ -187,8 +187,8 @@ describe("WatSharpCompiler - type resolution", () => {
     expect(ptr.resolved).toBe(true);
     expect(ptr.sizeof).toBe(4);
 
-    expect(ptr.spec.type).toBe("NamedType");
-    let nextType = ptr.spec as NamedType;
+    expect(ptr.spec.type).toBe("Struct");
+    let nextType = ptr.spec as StructType;
     expect(nextType.resolved).toBe(true);
     expect(wComp.getSizeof(nextType)).toBe(5);
   });
@@ -226,10 +226,10 @@ describe("WatSharpCompiler - type resolution", () => {
     let spec = struct.fields[0].spec as IntrinsicType;
     expect(spec.resolved).toBe(true);
     expect(spec.sizeof).toBe(1);
-    expect(struct.fields[1].spec.type).toBe("NamedType");
+    expect(struct.fields[1].spec.type).toBe("Struct");
     expect(struct.fields[1].offset).toBe(1);
-    let named = struct.fields[1].spec as NamedType;
-    expect(wComp.getSizeof(named)).toBe(2);
+    struct = struct.fields[1].spec as StructType;
+    expect(wComp.getSizeof(struct)).toBe(2);
 
     decl = wComp.declarations.get("b");
     expect(decl).toBeDefined();
@@ -245,6 +245,33 @@ describe("WatSharpCompiler - type resolution", () => {
     spec = struct.fields[0].spec as IntrinsicType;
     expect(spec.resolved).toBe(true);
     expect(spec.sizeof).toBe(2);
+  });
+
+  it("Cascade naming #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+    type a = u8;
+    type b = a;
+    `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    let decl = wComp.declarations.get("a");
+    expect(decl).toBeDefined();
+    expect(decl.type).toBe("TypeDeclaration");
+    expect(decl.resolved).toBe(true);
+    let typeDecl = decl as TypeDeclaration;
+    expect(typeDecl.spec.type).toBe("Intrinsic");
+
+    decl = wComp.declarations.get("b");
+    expect(decl).toBeDefined();
+    expect(decl.type).toBe("TypeDeclaration");
+    expect(decl.resolved).toBe(true);
+    typeDecl = decl as TypeDeclaration;
+    expect(typeDecl.spec.type).toBe("Intrinsic");
   });
 
 });

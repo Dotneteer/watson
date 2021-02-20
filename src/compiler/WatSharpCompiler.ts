@@ -75,6 +75,7 @@ export class WatSharpCompiler {
     if (this._errors.length > 0) {
       return null;
     }
+    this.flattenTypes();
 
     // --- Step #3: emit declaration nodes
     this._waTree = new WaTree();
@@ -397,6 +398,47 @@ export class WatSharpCompiler {
   }
 
   /**
+   * Flattens type declarations by replacing named types specifications with direct
+   * ones
+   */
+  private flattenTypes(): void {
+    const compiler = this;
+    for (const decl of this._parser.declarations.values()) {
+      switch (decl.type) {
+        case "TypeDeclaration":
+        case "VariableDeclaration":
+          decl.spec = flattenType(decl.spec);
+          break;
+      }
+    }
+
+    function flattenType(spec: TypeSpec): TypeSpec {
+      if (spec.flattened) {
+        return spec;
+      }
+      spec.flattened = true;
+      switch (spec.type) {
+        case "Array":
+        case "Pointer":
+          spec.spec = flattenType(spec.spec);
+          break;
+        case "Struct":
+          spec.fields.forEach((fi) => {
+            fi.spec = flattenType(fi.spec);
+          });
+          break;
+        case "NamedType":
+          const typeDecl = compiler._parser.declarations.get(spec.name);
+          if (typeDecl.type !== "TypeDeclaration") {
+            break;
+          }
+          return flattenType(typeDecl.spec);
+      }
+      return spec;
+    }
+  }
+
+  /**
    * Get the size of a type specification
    * @param typeSpec
    */
@@ -619,6 +661,22 @@ export const waTypeMappings: Record<Intrinsics, WaType> = {
   u64: WaType.i64,
   f32: WaType.f32,
   f64: WaType.f64,
+};
+
+/**
+ * Mask constants for the bitwise NOT operation
+ */
+export const bitwiseNotMasks: Record<Intrinsics, number | bigint> = {
+  i8: 0xff,
+  u8: 0xff,
+  i16: 0xffff,
+  u16: 0xffff,
+  i32: 0xffff_ffff,
+  u32: 0xffff_ffff,
+  i64: BigInt("0xffffffffffffffff"),
+  u64: BigInt("0xffffffffffffffff"),
+  f32: 0,
+  f64: 0,
 };
 
 /**
