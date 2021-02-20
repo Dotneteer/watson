@@ -154,7 +154,6 @@ export interface WaParameter {
  * The base node for all nodes that can be in a function body
  */
 export interface WaInstructionBase extends WaNodeBase {
-  readonly children: WaInstruction[];
 }
 
 // ============================================================================

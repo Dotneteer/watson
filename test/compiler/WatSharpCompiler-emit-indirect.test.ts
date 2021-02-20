@@ -110,10 +110,12 @@ describe("WatSharpCompiler - emit indirect", () => {
     expect(locals[1].message).toBe("(local $loc_a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("get_local $loc_idx");
-    expect(instrs[1].message).toBe("(i32.mul\n  (i32.const 2)\n)");
-    expect(instrs[2].message).toBe("(i32.add\n  (i32.const 1)\n)");
-    expect(instrs[3].message).toBe("i32.load8_u");
-    expect(instrs[4].message).toBe("set_local $loc_a");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.mul");
+    expect(instrs[3].message).toBe("i32.const 1");
+    expect(instrs[4].message).toBe("i32.add");
+    expect(instrs[5].message).toBe("i32.load8_u");
+    expect(instrs[6].message).toBe("set_local $loc_a");
   });
 
   it("indirect #5", () => {
@@ -141,14 +143,15 @@ describe("WatSharpCompiler - emit indirect", () => {
     expect(locals[0].message).toBe("(local $loc_idx i32)");
     expect(locals[1].message).toBe("(local $loc_a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 4");
     expect(instrs[1].message).toBe("get_local $loc_idx");
-    expect(instrs[2].message).toBe("(i32.mul\n  (i32.const 2)\n)");
-    expect(instrs[3].message).toBe("i32.add");
-    expect(instrs[4].message).toBe("(i32.add\n  (i32.const 1)\n)");
-    expect(instrs[5].message).toBe("i32.load8_u");
-    expect(instrs[6].message).toBe("set_local $loc_a");
+    expect(instrs[2].message).toBe("i32.const 2");
+    expect(instrs[3].message).toBe("i32.mul");
+    expect(instrs[4].message).toBe("i32.add");
+    expect(instrs[5].message).toBe("i32.const 1");
+    expect(instrs[6].message).toBe("i32.add");
+    expect(instrs[7].message).toBe("i32.load8_u");
+    expect(instrs[8].message).toBe("set_local $loc_a");
   });
 
   it("indirect #6", () => {
@@ -176,16 +179,18 @@ describe("WatSharpCompiler - emit indirect", () => {
     expect(locals[0].message).toBe("(local $loc_idx i32)");
     expect(locals[1].message).toBe("(local $loc_a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 8");
     expect(instrs[1].message).toBe("get_local $loc_idx");
-    expect(instrs[2].message).toBe("(i32.mul\n  (i32.const 4)\n)");
-    expect(instrs[3].message).toBe("i32.add");
-    expect(instrs[4].message).toBe("(i32.add\n  (i32.const 1)\n)");
-    expect(instrs[5].message).toBe("i32.const 2");
-    expect(instrs[6].message).toBe("(i32.mul\n  (i32.const 1)\n)");
-    expect(instrs[7].message).toBe("i32.add");
-    expect(instrs[8].message).toBe("i32.load8_u");
-    expect(instrs[9].message).toBe("set_local $loc_a");
+    expect(instrs[2].message).toBe("i32.const 4");
+    expect(instrs[3].message).toBe("i32.mul");
+    expect(instrs[4].message).toBe("i32.add");
+    expect(instrs[5].message).toBe("i32.const 1");
+    expect(instrs[6].message).toBe("i32.add");
+    expect(instrs[7].message).toBe("i32.const 2");
+    expect(instrs[8].message).toBe("i32.const 1");
+    expect(instrs[9].message).toBe("i32.mul");
+    expect(instrs[10].message).toBe("i32.add");
+    expect(instrs[11].message).toBe("i32.load8_u");
+    expect(instrs[12].message).toBe("set_local $loc_a");
   });
 });

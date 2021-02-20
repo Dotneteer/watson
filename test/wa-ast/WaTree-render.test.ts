@@ -137,7 +137,6 @@ describe("WaTree - render", () => {
     );
   });
 
-
   it("Table #1", () => {
     // --- Arrange
     const tree = new WaTree();
@@ -371,14 +370,9 @@ describe("WaTree - render", () => {
       WaType.f32
     );
     func.addLocal("$myPar", WaType.i32);
-    func.inject(
-      constVal(
-        WaType.i32,
-        100,
-        constVal(WaType.i64, 200),
-        constVal(WaType.f32, 300)
-      )
-    );
+    func.inject(constVal(WaType.i64, 200));
+    func.inject(constVal(WaType.f32, 300));
+    func.inject(constVal(WaType.i32, 100));
 
     // --- Act
     const text = tree.renderFunctionNode(func);
@@ -387,10 +381,9 @@ describe("WaTree - render", () => {
     expect(text).toBe(
       `(func $myFunc (param $addr i32) (param $val i64) (result f32)
   (local $myPar i32)
-  (i32.const 100
-    (i64.const 200)
-    (f32.const 300)
-  )
+  i64.const 200
+  f32.const 300
+  i32.const 100
 )`
     );
   });
