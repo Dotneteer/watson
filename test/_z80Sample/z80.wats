@@ -27,12 +27,11 @@ export void reset() {
   // TODO: Implement it
 }
 
-r16[4] b;
-f32 c;
-i64 d;
+f32 d;
+i32 e;
+f32 f;
 
 inline void setA(f64 a) {
-  local i32 idx;
-  local i32 other = b[idx].h[2];
+  local f32 other = min(d, e, f);
   af.l = a;
 }

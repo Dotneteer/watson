@@ -442,7 +442,7 @@ export interface Ctz extends WaInstructionBase {
  * Integer population count
  */
 export interface PopCnt extends WaInstructionBase {
-  type: "Clz";
+  type: "PopCnt";
   valueType: WaType;
 }
 

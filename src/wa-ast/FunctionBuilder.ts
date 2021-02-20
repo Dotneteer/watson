@@ -47,6 +47,7 @@ import {
   Neg,
   Nop,
   Or,
+  PopCnt,
   Promote32,
   ReinterpretF32,
   ReinterpretF64,
@@ -408,6 +409,18 @@ export function ctz(valueType: WaType): Ctz {
   checkInteger(valueType, "ctz");
   return <Ctz>{
     type: "Ctz",
+    valueType,
+  };
+}
+
+/**
+ * Factory method for a popcnt WA instruction
+ * @param valueType Value type of operation
+ */
+export function popcnt(valueType: WaType): PopCnt {
+  checkInteger(valueType, "popcnt");
+  return <PopCnt>{
+    type: "PopCnt",
     valueType,
   };
 }
