@@ -12,12 +12,11 @@ import {
   GlobalDeclaration,
   Identifier,
   IfStatement,
-  ItemAccessExpression,
+  IndirectAccessExpression,
   Literal,
   LiteralSource,
   LocalFunctionInvocation,
   LocalVariable,
-  MemberAccessExpression,
   Node,
   ReturnStatement,
   TypeCastExpression,
@@ -28,6 +27,7 @@ import {
 import {
   WaBitSpec,
   WaInstruction,
+  WaNode,
   WaParameter,
   WaType,
 } from "../wa-ast/wa-nodes";
@@ -92,7 +92,6 @@ import {
   sub,
   trunc32,
   trunc64,
-  unreachable,
   wrap64,
   xor,
 } from "../wa-ast/FunctionBuilder";
@@ -103,7 +102,7 @@ import {
   applyUnaryOperation,
   renderExpression,
 } from "./expression-resolver";
-import { resolve } from "path";
+import { optimizeWat } from "./wat-optimizer";
 
 /**
  * This class is responsible for compiling a function body
@@ -152,6 +151,16 @@ export class FunctionCompiler {
   process(): void {
     this.processHead();
     this.func.body.forEach((stmt) => this.processStatement(stmt));
+    optimizeWat(this._builder.body);
+    this._builder.body.forEach((ins) => {
+      if (ins.type !== "Comment") {
+        this.addTrace(() => [
+          "inject",
+          0,
+          this.wsCompiler.waTree.renderInstructionNode(ins),
+        ]);
+      }
+    });
   }
 
   /**
@@ -687,7 +696,6 @@ export class FunctionCompiler {
    * @returns Type specification of the result
    */
   private compileExpression(expr: Expression, emit = true): TypeSpec | null {
-    this.injectComment(emit, () => renderExpression(expr));
     switch (expr.type) {
       case "Literal":
         return this.compileLiteral(expr, emit);
@@ -703,9 +711,11 @@ export class FunctionCompiler {
         return this.compileTypeCast(expr, emit);
       case "MemberAccess":
       case "ItemAccess":
+      case "DereferenceExpression":
         return this.compileIndirectAccess(expr, emit);
       case "BuiltInFunctionInvocation":
         return this.compileBuiltinFunctionInvocation(expr, emit);
+        break;
       case "FunctionInvocation":
         break;
     }
@@ -765,11 +775,8 @@ export class FunctionCompiler {
         this.reportError("W143", id);
         return null;
       }
-      this.compileIntrinsicVariableAccess(
-        resolvedId.var.address,
-        typeSpec,
-        emit
-      );
+      this.inject(emit, constVal(WaType.i32, resolvedId.var.address));
+      this.compileIntrinsicVariableAccess(typeSpec, emit);
       return typeSpec;
     }
   }
@@ -780,13 +787,9 @@ export class FunctionCompiler {
    * @param emit Should emit code?
    */
   private compileIntrinsicVariableAccess(
-    address: number,
     typeSpec: IntrinsicType,
     emit = true
   ): void {
-    if (address >= 0) {
-      this.inject(emit, constVal(WaType.i32, address));
-    }
     const waType = waTypeMappings[typeSpec.underlying];
     switch (typeSpec.underlying) {
       case "f32":
@@ -949,10 +952,7 @@ export class FunctionCompiler {
         }
         return i32Desc;
       }
-      case "*":
-        break;
     }
-    return null;
   }
 
   /**
@@ -1200,19 +1200,17 @@ export class FunctionCompiler {
    * @returns Type specification of the result
    */
   private compileIndirectAccess(
-    expr: MemberAccessExpression | ItemAccessExpression,
+    expr: IndirectAccessExpression,
     emit = true
   ): TypeSpec | null {
     const varAddr = this.calculateAddressOf(expr, emit);
     if (varAddr == null) {
       return null;
     }
-    const typeSpec = varAddr.spec;
-    if (typeSpec.type !== "Intrinsic") {
-      this.reportError("W143", expr);
-      return null;
+    let typeSpec = varAddr.spec;
+    if (typeSpec.type === "Intrinsic") {
+      this.compileIntrinsicVariableAccess(typeSpec, emit);
     }
-    this.compileIntrinsicVariableAccess(-1, typeSpec, emit);
     return typeSpec;
   }
 
@@ -1619,7 +1617,6 @@ export class FunctionCompiler {
     expr: Expression,
     emit = true
   ): ResolvedAddress | null {
-    this.injectComment(emit, () => `Address of ${renderExpression(expr)}`);
     switch (expr.type) {
       case "Identifier": {
         // --- Only variables have an address
@@ -1639,9 +1636,32 @@ export class FunctionCompiler {
         };
       }
 
+      case "DereferenceExpression": {
+        // --- Start with the calculation of the operand address
+        const operandAddr = this.calculateAddressOf(expr.operand);
+        if (operandAddr === null) {
+          return null;
+        }
+
+        // --- Member access needs a struct object
+        if (operandAddr.spec.type !== "Pointer") {
+          this.reportError("W152", expr);
+          return null;
+        }
+
+        // --- Load the pointer from the address
+        this.inject(emit, load(WaType.i32));
+
+        // --- Retrieve address/type information
+        return {
+          address: operandAddr.address,
+          spec: operandAddr.spec.spec,
+        };
+      }
+
       case "MemberAccess": {
         // --- Start with the calculation of the object address
-        const leftAddress = this.calculateAddressOf(expr.object, false);
+        const leftAddress = this.calculateAddressOf(expr.object);
         if (leftAddress === null) {
           return null;
         }
@@ -1664,19 +1684,9 @@ export class FunctionCompiler {
         // --- Field exists, add its offset to the address
         let address = leftAddress.address;
         const offset = field[0].offset;
-        if (leftAddress.address < 0) {
-          // --- Calculated address
-          address = -1;
-          this.calculateAddressOf(expr.object, true);
-          if (offset) {
-            this.injectComment(true, () => `Field: ${expr.member}`);
-            this.inject(true, constVal(WaType.i32, offset));
-            this.inject(true, add(WaType.i32));
-          }
-        } else {
-          // --- Constant address
-          address += offset;
-          this.inject(emit, constVal(WaType.i32, address));
+        if (offset !== 0) {
+          this.inject(true, constVal(WaType.i32, offset));
+          this.inject(true, add(WaType.i32));
         }
         return {
           address,
@@ -1686,7 +1696,7 @@ export class FunctionCompiler {
 
       case "ItemAccess": {
         // --- Start with the calculation of the object address
-        const arrayAddress = this.calculateAddressOf(expr.array, false);
+        const arrayAddress = this.calculateAddressOf(expr.array);
         if (arrayAddress === null) {
           return null;
         }
@@ -1699,31 +1709,14 @@ export class FunctionCompiler {
         }
         const itemSize = this.wsCompiler.getSizeof(arrayAddress.spec.spec);
 
-        if (expr.index.type === "Literal" && address >= 0) {
-          // --- We can get a constant address
-          address += itemSize * Number(expr.index.value);
-          this.inject(emit, constVal(WaType.i32, address));
-        } else {
-          // --- We use a calculated address
-          if (address > 0) {
-            this.inject(emit, constVal(WaType.i32, address));
-          }
-          const indexType = this.compileExpression(expr.index, emit);
-          if (indexType === null) {
-            return null;
-          }
-          this.injectComment(
-            true,
-            () => `Item: ${renderExpression(expr.index)}`
-          );
-          this.castForStorage(i32Desc, indexType, emit, expr.index.value);
-          this.inject(emit, constVal(WaType.i32, itemSize));
-          this.inject(emit, mul(WaType.i32));
-          if (address !== 0) {
-            this.inject(emit, add(WaType.i32));
-          }
-          address = -1;
+        const indexType = this.compileExpression(expr.index, emit);
+        if (indexType === null) {
+          return null;
         }
+        this.castForStorage(i32Desc, indexType, emit, expr.index.value);
+        this.inject(emit, constVal(WaType.i32, itemSize));
+        this.inject(emit, mul(WaType.i32));
+        this.inject(emit, add(WaType.i32));
         return {
           address,
           spec: arrayAddress.spec.spec,
@@ -1767,26 +1760,6 @@ export class FunctionCompiler {
       return;
     }
     this._builder.inject(...instr);
-    instr.forEach((ins) => {
-      if (ins.type !== "Comment") {
-        this.addTrace(() => [
-          "inject",
-          0,
-          this.wsCompiler.waTree.renderInstructionNode(ins),
-        ]);
-      }
-    });
-  }
-
-  /**
-   * Injects comments
-   * @param emit Should emit comment?
-   */
-  private injectComment(emit: boolean, text: string | (() => string)): void {
-    if (!emit || !this.wsCompiler.options.generateComments) {
-      return;
-    }
-    this._builder.inject(comment(typeof text === "string" ? text : text()));
   }
 
   /**
@@ -1893,16 +1866,6 @@ const i32Desc: IntrinsicType = {
 const i64Desc: IntrinsicType = {
   type: "Intrinsic",
   underlying: "i64",
-} as IntrinsicType;
-
-const u32Desc: IntrinsicType = {
-  type: "Intrinsic",
-  underlying: "u32",
-} as IntrinsicType;
-
-const u64Desc: IntrinsicType = {
-  type: "Intrinsic",
-  underlying: "u64",
 } as IntrinsicType;
 
 const f32Desc: IntrinsicType = {

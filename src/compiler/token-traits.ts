@@ -58,7 +58,6 @@ tokenTraits.set(TokenType.AndAsgn, { assignmentOp: true });
 tokenTraits.set(TokenType.Asgn, { assignmentOp: true });
 tokenTraits.set(TokenType.Asterisk, {
   expressionStart: true,
-  unaryOp: true,
   typeStart: true,
 });
 

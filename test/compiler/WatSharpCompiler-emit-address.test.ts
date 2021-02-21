@@ -101,7 +101,6 @@ describe("WatSharpCompiler - emit address", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc_a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 10");
     expect(instrs[1].message).toBe("set_local $loc_a");
   });

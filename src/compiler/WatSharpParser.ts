@@ -58,6 +58,7 @@ import {
   MemberLValue,
   IndexedLValue,
   LiteralSource,
+  DereferenceExpression,
 } from "./source-tree";
 import { MultiChunkInputStream } from "../core/MultiChunkInputStream";
 import { report } from "process";
@@ -1534,7 +1535,7 @@ export class WatSharpParser {
 
   /**
    * unaryExpr
-   *   : ( | "+" | "-" | "~" | "!" | "&" | "*" ) unaryExpr
+   *   : ( | "+" | "-" | "~" | "!" | "&" ) unaryExpr
    *   ;
    */
   private parseUnaryExpr(): Expression | null {
@@ -1552,6 +1553,28 @@ export class WatSharpParser {
       {
         operator: start.text,
         operand: unaryOperand,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * dereferenceExpr
+   *   : "*" primaryExpr
+   *   ;
+   */
+  private parseDereferenceExpr(): Expression | null {
+    const start = this._lexer.get();
+    const operand = this.parsePrimaryExpr();
+    if (!operand) {
+      this.reportError("W002");
+      return null;
+    }
+    return this.createExpressionNode<DereferenceExpression>(
+      "DereferenceExpression",
+      {
+        operand,
       },
       start,
       start
@@ -1683,8 +1706,10 @@ export class WatSharpParser {
       case TokenType.BinaryNot:
       case TokenType.Not:
       case TokenType.Ampersand:
-      case TokenType.Asterisk:
         return this.parseUnaryExpr();
+
+      case TokenType.Asterisk:
+        return this.parseDereferenceExpr();
     }
     return null;
   }

@@ -143,6 +143,7 @@ export interface NamedType extends TypeSpecBase {
  * All syntax nodes that represent an expression
  */
 export type Expression =
+  | DereferenceExpression
   | UnaryExpression
   | BinaryExpression
   | ConditionalExpression
@@ -154,6 +155,14 @@ export type Expression =
   | ItemAccessExpression
   | Identifier
   | Literal;
+
+/**
+ * These expressions reference indirect access
+ */
+export type IndirectAccessExpression =
+  | DereferenceExpression
+  | MemberAccessExpression
+  | ItemAccessExpression;
 
 /**
  * Common base node for all expression syntax nodes
@@ -169,7 +178,7 @@ export interface ExpressionBase extends BaseNode {
 /**
  * Symbols that can be unary operators
  */
-export type UnaryOpSymbols = "+" | "-" | "~" | "!" | "&" | "*";
+export type UnaryOpSymbols = "+" | "-" | "~" | "!" | "&";
 
 /**
  * Symbols that can be unary operators
@@ -210,6 +219,14 @@ export type BuiltInFunctionNames =
   | "max"
   | "neg"
   | "copysign";
+
+/**
+ * Represents a dereference expression
+ */
+export interface DereferenceExpression extends ExpressionBase {
+  type: "DereferenceExpression";
+  operand: Expression;
+}
 
 /**
  * Represents an unary expression
@@ -316,7 +333,7 @@ export interface Literal extends ExpressionBase {
 export enum LiteralSource {
   Int,
   BigInt,
-  Real
+  Real,
 }
 
 // ============================================================================
