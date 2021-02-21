@@ -265,21 +265,6 @@ describe("WatSharpCompiler - global resolution", () => {
     expect(wComp.errors[0].code).toBe("W105");
   });
 
-  it("Error with unary *", () => {
-    // --- Arrange
-    const wComp = new WatSharpCompiler(`
-      global u8 a = *123;
-      `);
-
-    // --- Act
-    wComp.compile();
-
-    // --- Assert
-    expect(wComp.hasErrors).toBe(true);
-    expect(wComp.errors.length).toBe(1);
-    expect(wComp.errors[0].code).toBe("W105");
-  });
-
   it("Error with unary ~", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`

@@ -100,6 +100,7 @@ export type ErrorCodes =
   | "W149"
   | "W150"
   | "W151"
+  | "W152";
 
 /**
  * Error message type description
@@ -183,4 +184,5 @@ export const errorMessages: ErrorText = {
   W149: "The item access operator can be used only with arrays",
   W150: "The {0} built-in function works only with floating-point types",
   W151: "The {0} built-in function works only with integer types",
+  W152: "Non-pointer expressions cannot be dereferenced",
 };

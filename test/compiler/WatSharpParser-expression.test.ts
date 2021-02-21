@@ -206,8 +206,6 @@ describe("WatSharpParser - expressions", () => {
     { source: "!0xaa55", op: "!", value: 0xaa55 },
     { source: "&0", op: "&", value: 0 },
     { source: "&0xaa55", op: "&", value: 0xaa55 },
-    { source: "*0", op: "*", value: 0 },
-    { source: "*0xaa55", op: "*", value: 0xaa55 },
   ];
   unarySamples.forEach((c) => {
     it(`Unary: ${c.source}`, () => {

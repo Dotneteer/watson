@@ -120,7 +120,7 @@ export function resolveConstantExpression(
         reportError
       );
       if (expr.operand.value !== undefined) {
-        if (expr.operator === "&" || expr.operator === "*") {
+        if (expr.operator === "&") {
           reportError("W105", expr);
           return;
         }
