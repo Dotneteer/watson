@@ -9,6 +9,7 @@ import {
   ContinueStatement,
   DoStatement,
   Expression,
+  FunctionInvocationExpression,
   GlobalDeclaration,
   Identifier,
   IfStatement,
@@ -22,6 +23,7 @@ import {
   TypeCastExpression,
   UnaryExpression,
   VariableDeclaration,
+  VoidType,
   WhileStatement,
 } from "../compiler/source-tree";
 import {
@@ -50,6 +52,7 @@ import {
   abs,
   add,
   and,
+  call,
   ceil,
   clz,
   comment,
@@ -60,6 +63,7 @@ import {
   ctz,
   demote64,
   div,
+  drop,
   eq,
   eqz,
   extend32,
@@ -329,7 +333,12 @@ export class FunctionCompiler {
   private processLocalFunctionInvocation(
     invocation: LocalFunctionInvocation
   ): void {
-    // TODO: Implement this method
+    const resultTypeSpec = this.compileFunctionInvocation(invocation.invoked);
+
+    // --- Remove the result of a non-void function
+    if (resultTypeSpec.type === "Void") {
+      this.inject(true, drop());
+    }
   }
 
   /**
@@ -715,9 +724,8 @@ export class FunctionCompiler {
         return this.compileIndirectAccess(expr, emit);
       case "BuiltInFunctionInvocation":
         return this.compileBuiltinFunctionInvocation(expr, emit);
-        break;
       case "FunctionInvocation":
-        break;
+        return this.compileFunctionInvocation(expr, emit);
     }
     return i32Desc;
   }
@@ -1358,6 +1366,69 @@ export class FunctionCompiler {
   }
 
   /**
+   * Compiles a function invocation
+   * @param invoc Expression to compile
+   * @param emit Should emit code?
+   * @returns Type specification of the result
+   */
+  private compileFunctionInvocation(
+    invoc: FunctionInvocationExpression,
+    emit = true
+  ): TypeSpec | null {
+    // --- Check if the invoked function exists
+    const calledFunc = this.wsCompiler.declarations.get(invoc.name);
+    if (calledFunc === null) {
+      this.reportError("W153", invoc, invoc.name);
+      return null;
+    }
+    if (calledFunc.type !== "FunctionDeclaration") {
+      this.reportError("W153", invoc, invoc.name);
+      return null;
+    }
+
+    // --- Test if number of arguments equals the number of parameters
+    if (calledFunc.params.length !== invoc.arguments.length) {
+      this.reportError(
+        "W154",
+        invoc,
+        calledFunc.params.length,
+        invoc.arguments.length
+      );
+    }
+
+    // --- Match and convert parameter types one-by-one
+    for (let i = 0; i < calledFunc.params.length; i++) {
+      const par = calledFunc.params[i];
+      const waParType =
+        par.spec.type === "Pointer"
+          ? WaType.i32
+          : waTypeMappings[(par.spec as IntrinsicType).underlying];
+      const argType = this.compileExpression(invoc.arguments[i]);
+      const waArgType =
+        argType.type === "Pointer"
+          ? WaType.i32
+          : waTypeMappings[(argType as IntrinsicType).underlying];
+
+      // --- Do not allow implicit type mappings from floating-point to integer
+      if (
+        (waParType === WaType.i32 || waParType === WaType.i64) &&
+        (waArgType === WaType.f32 || waArgType === WaType.f64)
+      ) {
+        this.reportError("W155", invoc);
+      }
+
+      // --- Argument is OK, cast it to the parameter's type
+      this.castForStorage(par.spec, argType);
+    }
+
+    // --- Call the function
+    this.inject(emit, call(createGlobalName(invoc.name)));
+
+    // --- Done
+    return calledFunc.resultType ?? voidDesc;
+  }
+
+  /**
    * Casts a storage type to another storage type
    * @param left
    * @param right
@@ -1858,6 +1929,10 @@ function createLiteral(value: number | bigint, asU64 = false): Literal {
 }
 
 // --- Intrinsic type instances
+const voidDesc: VoidType = {
+  type: "Void",
+} as VoidType;
+
 const i32Desc: IntrinsicType = {
   type: "Intrinsic",
   underlying: "i32",

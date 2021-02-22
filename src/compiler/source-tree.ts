@@ -57,6 +57,7 @@ export interface BaseNode {
  * Discriminated unions of type specifications
  */
 export type TypeSpec =
+  | VoidType
   | IntrinsicType
   | PointerType
   | ArrayType
@@ -83,6 +84,13 @@ export interface TypeSpecBase extends BaseNode {
   resolved?: boolean;
   flattened?: boolean;
   sizeof?: number;
+}
+
+/**
+ * Represents a void function result type
+ */
+export interface VoidType extends TypeSpecBase {
+  type: "Void";
 }
 
 /**
@@ -509,8 +517,7 @@ export interface Assignment extends StatementBase {
  */
 export interface LocalFunctionInvocation extends StatementBase {
   type: "LocalFunctionInvocation";
-  name: string;
-  args: Expression[];
+  invoked: FunctionInvocationExpression;
 }
 
 /**

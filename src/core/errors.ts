@@ -100,7 +100,10 @@ export type ErrorCodes =
   | "W149"
   | "W150"
   | "W151"
-  | "W152";
+  | "W152"
+  | "W153"
+  | "W154"
+  | "W155";
 
 /**
  * Error message type description
@@ -148,7 +151,7 @@ export const errorMessages: ErrorText = {
   W016: "'(' expected",
   W017: "')' expected",
   W018: "Unexpected token in variable/function declaration",
-  W019: "Function parameters can be intrinsic types of pointers only",
+  W019: "Function parameters can be intrinsic types or pointers only",
   W020: "Function result types can be intrinsic types, pointers, or 'void'",
   W021: "Missing function parameter name",
   W022: "'while' expected",
@@ -185,4 +188,7 @@ export const errorMessages: ErrorText = {
   W150: "The {0} built-in function works only with floating-point types",
   W151: "The {0} built-in function works only with integer types",
   W152: "Non-pointer expressions cannot be dereferenced",
+  W153: "Cannot resolve name '{0}' to a function declaration",
+  W154: "The function has {0} argument(s) but it is called with {1}",
+  W155: "Cannot convert floating-point arguments to integer function parameters implicitly",
 };

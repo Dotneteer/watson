@@ -759,12 +759,21 @@ export class WatSharpParser {
       return;
     }
     const semicolon = this.expectToken(TokenType.Semicolon, "W006");
+    const funcExpr = this.createExpressionNode<FunctionInvocationExpression>(
+      "FunctionInvocation",
+      {
+        name: id.text,
+        arguments: args,
+      },
+      id,
+      id
+    );
     this.createStatementNode<LocalFunctionInvocation>(
       body,
       "LocalFunctionInvocation",
       {
         name: id.text,
-        args,
+        invoked: funcExpr,
       },
       id,
       semicolon
