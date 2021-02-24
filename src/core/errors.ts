@@ -103,7 +103,9 @@ export type ErrorCodes =
   | "W152"
   | "W153"
   | "W154"
-  | "W155";
+  | "W155"
+  | "W156"
+  | "W157";
 
 /**
  * Error message type description
@@ -191,4 +193,6 @@ export const errorMessages: ErrorText = {
   W153: "Cannot resolve name '{0}' to a function declaration",
   W154: "The function has {0} argument(s) but it is called with {1}",
   W155: "Cannot convert floating-point arguments to integer function parameters implicitly",
+  W156: "A function with void result type should return no value",
+  W157: "A function with non-void result type should return a value",
 };

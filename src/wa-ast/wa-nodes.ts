@@ -96,6 +96,7 @@ export type WaExportNode = FuncExport;
  * Types in WebAssembly
  */
 export enum WaType {
+  None,
   i32,
   i64,
   f32,

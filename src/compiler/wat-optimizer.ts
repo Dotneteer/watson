@@ -6,6 +6,7 @@ import { ConstVal, WaInstruction, WaNode } from "../wa-ast/wa-nodes";
  * @param instrs
  */
 export function optimizeWat(instrs: WaInstruction[]): void {
+  removeDeadCode(instrs);
   optimizeConstantOperations(instrs);
 }
 
@@ -39,6 +40,19 @@ function optimizeConstantOperations(instrs: WaInstruction[]): void {
       }
     }
   } while (changed);
+}
+
+function removeDeadCode(instrs: WaInstruction[]): void {
+  let retIndex = -1;
+  for (let i = instrs.length - 1; i >= 0; i--) {
+    if (instrs[i].type === "Return") {
+      retIndex = i;
+      break;
+    }
+  }
+  if (retIndex >= 0) {
+    instrs.splice(retIndex, instrs.length - retIndex);
+  }
 }
 
 /**
@@ -98,20 +112,49 @@ function reduceBinary(instrs: WaInstruction[], index: number): boolean {
   const left = leftOp.value;
   const waType = leftOp.valueType;
   const right = (instrs[index + 1] as ConstVal).value;
-  const opType = instrs[index + 2].type;
+  const op = instrs[index + 2];
   let value: number | bigint | null = null;
-  switch (opType) {
+  switch (op.type) {
     case "Mul":
       value =
         typeof left === "number" && typeof right === "number"
           ? left * right
           : BigInt(left) * BigInt(right);
       break;
+
     case "Add":
       value =
         typeof left === "number" && typeof right === "number"
           ? left + right
           : BigInt(left) + BigInt(right);
+      break;
+
+    case "And":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left & right
+          : BigInt(left) & BigInt(right);
+      break;
+
+    case "Shl":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left << right
+          : BigInt(left) << BigInt(right);
+      break;
+
+    case "Shr":
+      if (op.signed) {
+        value =
+          typeof left === "number" && typeof right === "number"
+            ? left >> right
+            : BigInt(left) >> BigInt(right);
+      } else {
+        value =
+          typeof left === "number" && typeof right === "number"
+            ? left >>> right
+            : Number(left) >>> Number(right);
+      }
       break;
   }
   if (value !== null) {
@@ -145,7 +188,7 @@ function reduceCascadedBinary(instrs: WaInstruction[], index: number): boolean {
   }
   if (value !== null) {
     instrs[index] = constVal(waType, value);
-    instrs[index + 1] = add(waType)
+    instrs[index + 1] = add(waType);
     instrs.splice(index + 2, 2);
     return true;
   }

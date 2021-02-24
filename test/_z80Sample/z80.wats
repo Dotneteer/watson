@@ -40,4 +40,5 @@ inline i32 setF(u8 value) {
 inline i32 called(u32 value) {
   setA(value);
   setF(value);
+  return 123;
 }

@@ -89,6 +89,7 @@ import {
   popcnt,
   promote32,
   rem,
+  ret,
   select,
   shl,
   shr,
@@ -336,7 +337,7 @@ export class FunctionCompiler {
     const resultTypeSpec = this.compileFunctionInvocation(invocation.invoked);
 
     // --- Remove the result of a non-void function
-    if (resultTypeSpec.type === "Void") {
+    if (resultTypeSpec.type !== "Void") {
       this.inject(true, drop());
     }
   }
@@ -345,7 +346,30 @@ export class FunctionCompiler {
    * Processes an if statement
    */
   private processReturn(retStmt: ReturnStatement): void {
-    // TODO: Implement this method
+    // --- Check for return argument
+    if (!this.func.resultType && retStmt.expr) {
+      this.reportError("W156", retStmt);
+      return;
+    }
+    if (this.func.resultType && !retStmt.expr) {
+      this.reportError("W157", retStmt);
+      return;
+    }
+
+    // --- Ok, we can compile this return
+    if (retStmt.expr) {
+      // --- Compile the expression
+      const returnType = this.compileExpression(retStmt.expr);
+      if (returnType === null) {
+        return null;
+      }
+
+      // --- Cast it to the return type
+      this.castForStorage(this.func.resultType, returnType);
+    }
+
+    // --- Issue the return
+    this.inject(true, ret());
   }
 
   // ==========================================================================
@@ -1394,6 +1418,7 @@ export class FunctionCompiler {
         calledFunc.params.length,
         invoc.arguments.length
       );
+      return null;
     }
 
     // --- Match and convert parameter types one-by-one
@@ -1415,6 +1440,7 @@ export class FunctionCompiler {
         (waArgType === WaType.f32 || waArgType === WaType.f64)
       ) {
         this.reportError("W155", invoc);
+        return null;
       }
 
       // --- Argument is OK, cast it to the parameter's type

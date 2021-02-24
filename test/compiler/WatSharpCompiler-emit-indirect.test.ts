@@ -264,6 +264,4 @@ describe("WatSharpCompiler - emit indirect", () => {
     expect(instrs[2].message).toBe("i64.load");
     expect(instrs[3].message).toBe("set_local $loc_a");
   });
-
-
 });
