@@ -23,7 +23,8 @@ u16 bc_;
 u16 de_;
 u16 hl_;
 
-table void a() { reset, reset, reset };
+table *i32 tableA(u8 b, f64 c) { ddd, ddd, ddd };
+table *i32 tableB(u8 b, f64 c) { ddd, ddd, ddd };
 
 export void reset() {
   // TODO: Implement it
@@ -42,9 +43,11 @@ inline i32 setF(u8 value) {
 inline i32 called(u32 value) {
   setA(value);
   setF(value);
+  tableA(1, 1.1)[2];
+  tableB(2, 2.1)[value];
   return 123;
 }
 
-*i32 ddd() {
+*i32 ddd(u8 a, f64 b) {
   return 0;
 }

@@ -107,6 +107,8 @@ export type ErrorCodes =
   | "W156"
   | "W157"
   | "W158"
+  | "W159"
+  | "W160"
 
 /**
  * Error message type description
@@ -197,4 +199,6 @@ export const errorMessages: ErrorText = {
   W156: "A function with void result type should return no value",
   W157: "A function with non-void result type should return a value",
   W158: "Function signature of '{0}' does not match table signature",
+  W159: "A table function invocation requires a dispatcher expression",
+  W160: "Only a table function invocation can have a dispatcher expression",
 };

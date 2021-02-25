@@ -4,11 +4,8 @@ import {
   Declaration,
   Expression,
   FunctionDeclaration,
-  FunctionParameter,
   instrisicSizes as intrisicSizes,
   Intrinsics,
-  IntrinsicType,
-  PointerType,
   TableDeclaration,
   TypeSpec,
 } from "./source-tree";
@@ -522,6 +519,37 @@ export class WatSharpCompiler {
   }
 
   /**
+   * Processes table declarations
+   */
+  private emitTables(): void {
+    let header = false;
+    let itemCount = 0;
+    for (const table of this._parser.declarations.values()) {
+      if (table.type !== "TableDeclaration") {
+        continue;
+      }
+
+      this.waTree.separatorLine();
+      if (!header) {
+        this.waTree.comment("Table definitions");
+        header = true;
+      }
+      itemCount += table.ids.length;
+      const resultType = mapFunctionParameterType(table.resultType);
+      const params = table.params.map(
+        (p) =>
+          <WaParameter>{
+            id: createParameterName(p.name),
+            type: mapFunctionParameterType(p.spec),
+          }
+      );
+      this.waTree.typeDef(createTableName(table.name), params, resultType);
+      this.waTree.element(table.entryIndex, table.ids.map(id => createGlobalName(id)));
+    }
+    this.waTree.setTable(itemCount, "$tables$");
+  }
+
+  /**
    * Get the size of a type specification
    * @param typeSpec
    */
@@ -547,6 +575,7 @@ export class WatSharpCompiler {
     this.emitExports();
     this.emitGlobals();
     this.emitVariableMap();
+    this.emitTables();
   }
 
   /**
@@ -784,18 +813,16 @@ export const bitwiseNotMasks: Record<Intrinsics, number | bigint> = {
  * Maps a function parameter type to an intrinsic type
  * @param spec Type specification
  */
-export function mapFunctionParameterType(
-  spec?: IntrinsicType | PointerType
-): WaType | null {
+export function mapFunctionParameterType(spec?: TypeSpec): WaType | null {
   if (spec) {
     if (spec.type === "Pointer") {
       return WaType.i32;
-    } else {
+    }
+    if (spec.type === "Intrinsic") {
       return waTypeMappings[spec.underlying];
     }
-  } else {
-    return null;
   }
+  return null;
 }
 
 /**

@@ -7,6 +7,7 @@ export type WaModuleField =
   | WaExportNode
   | WaImportNode
   | Table
+  | Element
   | Global
   | TypeDef
   | Func
@@ -180,6 +181,15 @@ export interface Table extends WaNodeBase {
 }
 
 /**
+ * Webassembly element
+ */
+export interface Element extends WaNodeBase {
+  readonly type: "Element";
+  readonly index: number;
+  readonly ids: string[];
+}
+
+/**
  * Mutable global declaration
  */
 export interface Global extends WaNodeBase {
@@ -328,7 +338,6 @@ export interface Call extends WaInstructionBase {
  */
 export interface CallIndirect extends WaInstructionBase {
   type: "CallIndirect";
-  id: string;
   typeId: string;
 }
 

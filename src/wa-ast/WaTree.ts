@@ -4,6 +4,7 @@ import {
   FuncImport,
   Comment,
   Global,
+  Element,
   Local,
   Module,
   TypeDef,
@@ -168,6 +169,22 @@ export class WaTree {
   }
 
   /**
+   * Injects an element into the tree
+   * @param index Element index
+   * @param ids Element IDs
+   */
+  element(index: number, ids: string[]): Element {
+    this.ensureFields();
+    const newNode = <Element>{
+      type: "Element",
+      index,
+      ids,
+    };
+    this._module.fields.push(newNode);
+    return newNode;
+  }
+
+  /**
    * Injects a function into the tree
    * @param id Function identifier
    * @param params Function parameters
@@ -316,12 +333,7 @@ export class WaTree {
       // --- Memory specification
     }(memory (export \"${module.memory.export.name ?? "memory"}\") ${
       module.memory.limit ?? 10
-    })${otherFields.length > 0 ? "\n" : ""}${
-      // --- Other module fields
-      otherFields
-        .map((field) => this.renderModuleField(field, indent))
-        .join("\n")
-    }${module.table ? "\n" : ""}${
+    })${module.table ? "\n" : ""}${
       // --- Table specification
       module.table
         ? indentation +
@@ -331,6 +343,11 @@ export class WaTree {
           module.table.limit +
           " anyfunc)"
         : ""
+    }${otherFields.length > 0 ? "\n" : ""}${
+      // --- Other module fields
+      otherFields
+        .map((field) => this.renderModuleField(field, indent))
+        .join("\n")
     }`;
   }
 
@@ -352,6 +369,7 @@ export class WaTree {
    */
   private renderModuleField(field: WaModuleField, indent: number): string {
     const indentation = "".padStart(indent * this._indentSpaces, " ");
+    const gap = "".padStart(this._indentSpaces, " ");
     switch (field.type) {
       case "FuncExport":
         return `${indentation}(export "${field.export.name}" (func ${field.id}))`;
@@ -367,6 +385,11 @@ export class WaTree {
         return `${indentation}(type ${field.id} (func${
           field.params.length > 0 || field.resultType ? " " : ""
         }${this.renderFuncSignature(field.params, field.resultType)}))`;
+
+      case "Element":
+        return `${indentation}(elem (i32.const ${field.index})\n${field.ids
+          .map((id) => indentation + gap + id)
+          .join("\n")}\n${indentation})`;
 
       case "Func":
         return this.renderFunctionNode(field, indent);
@@ -420,7 +443,7 @@ export class WaTree {
    * @param local Local declaration
    */
   renderLocal(local: Local): string {
-    return `(local ${local.id} ${WaType[local.valueType]})`
+    return `(local ${local.id} ${WaType[local.valueType]})`;
   }
 
   /**
@@ -452,7 +475,7 @@ export class WaTree {
       case "Call":
         return `call ${node.id}`;
       case "CallIndirect":
-        return `call_indirect ${node.id} ${node.typeId}`;
+        return `call_indirect (type ${node.typeId})`;
       case "Drop":
         return "drop";
       case "Select":
@@ -486,8 +509,8 @@ export class WaTree {
       case "Ctz":
         return `${WaType[node.valueType]}.ctz`;
       case "PopCnt":
-          return `${WaType[node.valueType]}.popcnt`;
-        case "Add":
+        return `${WaType[node.valueType]}.popcnt`;
+      case "Add":
         return `${WaType[node.valueType]}.add`;
       case "Sub":
         return `${WaType[node.valueType]}.sub`;

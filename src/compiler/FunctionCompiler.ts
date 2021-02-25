@@ -10,6 +10,7 @@ import {
   DoStatement,
   Expression,
   FunctionInvocationExpression,
+  FunctionParameter,
   GlobalDeclaration,
   Identifier,
   IfStatement,
@@ -19,6 +20,7 @@ import {
   LocalFunctionInvocation,
   LocalVariable,
   Node,
+  PointerType,
   ReturnStatement,
   TypeCastExpression,
   UnaryExpression,
@@ -45,6 +47,8 @@ import {
   createGlobalName,
   createLocalName,
   createParameterName,
+  createTableName,
+  mapFunctionParameterType,
   WatSharpCompiler,
   waTypeMappings,
 } from "./WatSharpCompiler";
@@ -53,6 +57,7 @@ import {
   add,
   and,
   call,
+  callIndirect,
   ceil,
   clz,
   comment,
@@ -173,15 +178,7 @@ export class FunctionCompiler {
    */
   private processHead(): void {
     // --- Map the result type
-    if (this.func.resultType) {
-      if (this.func.resultType.type === "Pointer") {
-        this._resultType = WaType.i32;
-      } else {
-        this._resultType = waTypeMappings[this.func.resultType.underlying];
-      }
-    } else {
-      this._resultType = null;
-    }
+    this._resultType = mapFunctionParameterType(this.func.resultType);
 
     // --- Map parameters to locals
     const waPars: WaParameter[] = [];
@@ -189,10 +186,7 @@ export class FunctionCompiler {
       if (this._locals.has(param.name)) {
         this.reportError("W140", this.func);
       } else {
-        const paramType =
-          param.spec.type === "Pointer"
-            ? WaType.i32
-            : waTypeMappings[(param.spec as IntrinsicType).underlying];
+        const paramType = mapFunctionParameterType(param.spec);
         const paramName = createParameterName(param.name);
         this.locals.set(param.name, {
           name: paramName,
@@ -1406,31 +1400,50 @@ export class FunctionCompiler {
     emit = true
   ): TypeSpec | null {
     // --- Check if the invoked function exists
-    const calledFunc = this.wsCompiler.declarations.get(invoc.name);
-    if (calledFunc === null) {
+    const calledDecl = this.wsCompiler.declarations.get(invoc.name);
+    if (calledDecl === null) {
       this.reportError("W153", invoc, invoc.name);
       return null;
     }
 
-    if (calledFunc.type !== "FunctionDeclaration") {
+    // --- Only function and table invocations are allowed
+    if (
+      calledDecl.type !== "FunctionDeclaration" &&
+      calledDecl.type !== "TableDeclaration"
+    ) {
       this.reportError("W153", invoc, invoc.name);
+      return null;
+    }
+
+    // --- Prepare the function parameters
+    const funcParams = calledDecl.params;
+    const funcResult = calledDecl.resultType;
+
+    // --- Check the dispatch expression
+    if (calledDecl.type === "TableDeclaration") {
+      if (!invoc.dispatcher) {
+        this.reportError("W159", invoc);
+        return null;
+      }
+    } else if (invoc.dispatcher) {
+      this.reportError("W160", invoc);
       return null;
     }
 
     // --- Test if number of arguments equals the number of parameters
-    if (calledFunc.params.length !== invoc.arguments.length) {
+    if (funcParams.length !== invoc.arguments.length) {
       this.reportError(
         "W154",
         invoc,
-        calledFunc.params.length,
+        funcParams.length,
         invoc.arguments.length
       );
       return null;
     }
 
     // --- Match and convert parameter types one-by-one
-    for (let i = 0; i < calledFunc.params.length; i++) {
-      const par = calledFunc.params[i];
+    for (let i = 0; i < funcParams.length; i++) {
+      const par = funcParams[i];
       const waParType =
         par.spec.type === "Pointer"
           ? WaType.i32
@@ -1455,10 +1468,20 @@ export class FunctionCompiler {
     }
 
     // --- Call the function
-    this.inject(emit, call(createGlobalName(invoc.name)));
+    if (calledDecl.type === "TableDeclaration") {
+      this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex))
+      const exprType = this.compileExpression(invoc.dispatcher, emit);
+      if (exprType) {
+        this.castForStorage(i32Desc, exprType);
+        this.inject(emit, add(WaType.i32))
+        this.inject(emit, callIndirect(createTableName(invoc.name)))
+      }
+    } else {
+      this.inject(emit, call(createGlobalName(invoc.name)));
+    }
 
     // --- Done
-    return calledFunc.resultType ?? voidDesc;
+    return funcResult ?? voidDesc;
   }
 
   /**

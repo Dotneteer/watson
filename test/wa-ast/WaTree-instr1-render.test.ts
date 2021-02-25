@@ -229,13 +229,13 @@ describe("WaTree - render instructions #1", () => {
   it("call_indirect", () => {
     // --- Arrange
     const tree = new WaTree();
-    const instr = callIndirect("$myFunc", "$myType");
+    const instr = callIndirect("$myType");
 
     // --- Act
     const text = tree.renderInstructionNode(instr);
 
     // --- Assert
-    expect(text).toBe("call_indirect $myFunc $myType");
+    expect(text).toBe("call_indirect (type $myType)");
   });
 
   it("drop", () => {
