@@ -173,9 +173,15 @@ export class FunctionCompiler {
    */
   private processHead(): void {
     // --- Map the result type
-    this._resultType = this.func.resultType
-      ? waTypeMappings[this.func.resultType.underlying]
-      : null;
+    if (this.func.resultType) {
+      if (this.func.resultType.type === "Pointer") {
+        this._resultType = WaType.i32;
+      } else {
+        this._resultType = waTypeMappings[this.func.resultType.underlying];
+      }
+    } else {
+      this._resultType = null;
+    }
 
     // --- Map parameters to locals
     const waPars: WaParameter[] = [];
@@ -1405,6 +1411,7 @@ export class FunctionCompiler {
       this.reportError("W153", invoc, invoc.name);
       return null;
     }
+
     if (calledFunc.type !== "FunctionDeclaration") {
       this.reportError("W153", invoc, invoc.name);
       return null;

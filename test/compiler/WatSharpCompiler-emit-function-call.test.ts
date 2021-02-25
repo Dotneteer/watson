@@ -23,14 +23,14 @@ describe("WatSharpCompiler - emit function call", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)");
+    expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     // myFunc
     expect(instrs[0].message).toBe("i32.const 0");
 
     // test
     expect(instrs[1].message).toBe("call $myFunc");
-    expect(instrs[2].message).toBe("set_local $loc_a");
+    expect(instrs[2].message).toBe("set_local $loc$a");
   });
 
   it("function call #2", () => {
@@ -52,16 +52,16 @@ describe("WatSharpCompiler - emit function call", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)");
+    expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
 
     // myFunc
-    expect(instrs[0].message).toBe("get_local $par_val");
+    expect(instrs[0].message).toBe("get_local $par$val");
 
     // test
     expect(instrs[1].message).toBe("i32.const 123");
     expect(instrs[2].message).toBe("call $myFunc");
-    expect(instrs[3].message).toBe("set_local $loc_a");
+    expect(instrs[3].message).toBe("set_local $loc$a");
   });
 
   it("function call #3", () => {
@@ -83,13 +83,13 @@ describe("WatSharpCompiler - emit function call", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)");
+    expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
 
     // myFunc
-    expect(instrs[0].message).toBe("get_local $par_val");
+    expect(instrs[0].message).toBe("get_local $par$val");
     expect(instrs[1].message).toBe("f64.convert_u/i32");
-    expect(instrs[2].message).toBe("get_local $par_other");
+    expect(instrs[2].message).toBe("get_local $par$other");
     expect(instrs[3].message).toBe("f64.promote/f32");
     expect(instrs[4].message).toBe("f64.add");
     expect(instrs[5].message).toBe("f32.demote/f64");
@@ -100,7 +100,7 @@ describe("WatSharpCompiler - emit function call", () => {
     expect(instrs[8].message).toBe("f32.demote/f64");
     expect(instrs[9].message).toBe("call $myFunc");
     expect(instrs[10].message).toBe("i32.trunc_s/f32");
-    expect(instrs[11].message).toBe("set_local $loc_a");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 
   it("function call #4", () => {

@@ -37,7 +37,7 @@ describe("WatSharpCompiler - emit return", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_inp");
+    expect(instrs[0].message).toBe("get_local $par$inp");
     expect(instrs[1].message).toBe("i32.const 123");
     expect(instrs[2].message).toBe("i32.add");
   });
@@ -77,7 +77,7 @@ describe("WatSharpCompiler - emit return", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_inp");
+    expect(instrs[0].message).toBe("get_local $par$inp");
     expect(instrs[1].message).toBe("i32.const 123");
     expect(instrs[2].message).toBe("i32.add");
   });

@@ -298,6 +298,7 @@ export interface FunctionInvocationExpression extends ExpressionBase {
   type: "FunctionInvocation";
   name: string;
   arguments: Expression[];
+  dispatcher?: Expression;
 }
 
 /**
@@ -399,6 +400,8 @@ export interface TypeDeclaration extends DeclarationBase {
 export interface TableDeclaration extends DeclarationBase {
   type: "TableDeclaration";
   ids: string[];
+  resultType?: IntrinsicType;
+  params: FunctionParameter[];
   entryIndex?: number;
 }
 
@@ -437,7 +440,7 @@ export interface ImportedFunctionDeclaration extends DeclarationBase {
  */
 export interface FunctionDeclaration extends DeclarationBase {
   type: "FunctionDeclaration";
-  resultType?: IntrinsicType;
+  resultType?: IntrinsicType | PointerType;
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;

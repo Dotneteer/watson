@@ -220,7 +220,7 @@ describe("WatSharpParser - declarations", () => {
   it("table #1", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1 };
+      table void myTable() { myId1 };
       `);
 
     // --- Act
@@ -231,6 +231,8 @@ describe("WatSharpParser - declarations", () => {
     const decl = wParser.declarations.get("myTable");
     expect(decl).toBeDefined();
     const tableDecl = decl as TableDeclaration;
+    expect(tableDecl.resultType).toBeUndefined();
+    expect(tableDecl.params.length).toBe(0);
     expect(tableDecl.ids.length).toBe(1);
     expect(tableDecl.ids[0]).toBe("myId1");
   });
@@ -238,7 +240,7 @@ describe("WatSharpParser - declarations", () => {
   it("table #2", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1, myId2 };
+      table i32 myTable(i32 a) { myId1, myId2 };
       `);
 
     // --- Act
@@ -250,6 +252,8 @@ describe("WatSharpParser - declarations", () => {
     expect(decl).toBeDefined();
     const tableDecl = decl as TableDeclaration;
     expect(tableDecl.ids.length).toBe(2);
+    expect(tableDecl.resultType.type).toBe("Intrinsic");
+    expect(tableDecl.params.length).toBe(1);
     expect(tableDecl.ids[0]).toBe("myId1");
     expect(tableDecl.ids[1]).toBe("myId2");
   });
@@ -257,7 +261,7 @@ describe("WatSharpParser - declarations", () => {
   it("table #3", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1, myId2, myId3 };
+      table *i64 myTable(i32 a, u8 b) { myId1, myId2, myId3 };
       `);
 
     // --- Act
@@ -269,6 +273,8 @@ describe("WatSharpParser - declarations", () => {
     expect(decl).toBeDefined();
     const tableDecl = decl as TableDeclaration;
     expect(tableDecl.ids.length).toBe(3);
+    expect(tableDecl.resultType.type).toBe("Pointer");
+    expect(tableDecl.params.length).toBe(2);
     expect(tableDecl.ids[0]).toBe("myId1");
     expect(tableDecl.ids[1]).toBe("myId2");
     expect(tableDecl.ids[2]).toBe("myId3");
@@ -277,7 +283,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #1", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-    table { };
+    table i32 { };
     `);
 
     // --- Act
@@ -292,7 +298,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #2", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { };
+      table i32 myTable() { };
       `);
 
     // --- Act
@@ -307,7 +313,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #3", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable };
+      table i32 myTable() };
       `);
 
     // --- Act
@@ -322,7 +328,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #4", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1, };
+      table void myTable() { myId1, };
       `);
 
     // --- Act
@@ -337,7 +343,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #5", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1, myId2 ;
+      table i32 myTable(i32 a) { myId1, myId2 ;
       `);
 
     // --- Act
@@ -352,7 +358,7 @@ describe("WatSharpParser - declarations", () => {
   it("table issue #6", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
-      table myTable { myId1, myId2 }
+      table i32 myTable() { myId1, myId2 }
       `);
 
     // --- Act

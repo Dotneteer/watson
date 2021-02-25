@@ -23,6 +23,8 @@ u16 bc_;
 u16 de_;
 u16 hl_;
 
+table void a() { reset, reset, reset };
+
 export void reset() {
   // TODO: Implement it
 }
@@ -41,4 +43,8 @@ inline i32 called(u32 value) {
   setA(value);
   setF(value);
   return 123;
+}
+
+*i32 ddd() {
+  return 0;
 }

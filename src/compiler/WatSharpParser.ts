@@ -180,6 +180,9 @@ export class WatSharpParser {
    *   | globalDeclaration
    *   | typeDeclaration
    *   | tableDeclaration
+   *   | dataDeclaration
+   *   | importedFunctionDeclaration
+   *   | functionDeclaration
    *   ;
    */
   private parseDeclaration(): void {
@@ -341,12 +344,38 @@ export class WatSharpParser {
 
   /**
    * tableDeclaration
-   *  : "table" identifier "{" identifier ("," identifier)* "}" ";"
+   *  : "table" (intrinsicType | "void") identifier "(" functionParam? ("," functionParam)* ")"
+   *    "{" identifier ("," identifier)* "}" ";"
    *  ;
    */
   private parseTableDeclaration(): void {
     const keyword = this._lexer.get();
+    let resultType: TypeSpec | undefined;
+
+    // --- Table reult type
+    const { start, traits } = this.getParsePoint();
+    if (traits.typeStart) {
+      resultType = this.parseTypeSpecification();
+    } else if (start.type === TokenType.Void) {
+      this._lexer.get();
+    } else {
+      this.reportError("W008");
+      return;
+    }
+
+    // --- Check the result type
+    if (
+      resultType &&
+      resultType.type !== "Intrinsic" &&
+      resultType.type !== "Pointer"
+    ) {
+      this.reportError("W020");
+      return;
+    }
+
     const id = this.expectToken(TokenType.Identifier, "W004");
+    this.expectToken(TokenType.LParent, "W016");
+    const params = this.parseFunctionParameters();
     this.expectToken(TokenType.LBrace, "W009");
     const ids: string[] = [];
     do {
@@ -369,6 +398,8 @@ export class WatSharpParser {
       {
         name: id.text,
         ids,
+        params,
+        resultType,
       },
       keyword,
       semicolon
@@ -582,7 +613,7 @@ export class WatSharpParser {
     isInline: boolean = false
   ): void {
     // --- We are before the opening parenthesis
-    this.expectToken(TokenType.LParent);
+    this.expectToken(TokenType.LParent, "W016");
 
     // --- Check the result type
     if (
@@ -593,6 +624,31 @@ export class WatSharpParser {
       this.reportError("W020");
       return;
     }
+    const params = this.parseFunctionParameters();
+    if (!params) {
+      return;
+    }
+    const body: Statement[] = [];
+    this.parseBlockStatement(body, 0);
+    this.addDeclaration<FunctionDeclaration>(
+      "FunctionDeclaration",
+      {
+        name,
+        resultType,
+        params,
+        isExport,
+        isInline,
+        body,
+      },
+      start,
+      start
+    );
+  }
+
+  /**
+   * Parses function parameters
+   */
+  private parseFunctionParameters(): FunctionParameter[] | null {
     let params: FunctionParameter[] = [];
     do {
       const { start, traits } = this.getParsePoint();
@@ -602,11 +658,11 @@ export class WatSharpParser {
       const paramType = this.parseTypeSpecification();
       if (!paramType) {
         this.reportError("W008");
-        return;
+        return null;
       }
       if (paramType.type !== "Intrinsic" && paramType.type !== "Pointer") {
         this.reportError("W019");
-        return;
+        return null;
       }
       const id = this.expectToken(TokenType.Identifier, "W021");
       params.push({
@@ -628,23 +684,9 @@ export class WatSharpParser {
     this.expectToken(TokenType.RParent, "W017");
     if (this._lexer.peek().type !== TokenType.LBrace) {
       this.reportError("W009");
-      return;
+      return null;
     }
-    const body: Statement[] = [];
-    this.parseBlockStatement(body, 0);
-    this.addDeclaration<FunctionDeclaration>(
-      "FunctionDeclaration",
-      {
-        name,
-        resultType,
-        params,
-        isExport,
-        isInline,
-        body,
-      },
-      start,
-      start
-    );
+    return params;
   }
 
   /**
@@ -763,7 +805,8 @@ export class WatSharpParser {
       "FunctionInvocation",
       {
         name: id.text,
-        arguments: args,
+        arguments: args.args,
+        dispatcher: args.dispatcher,
       },
       id,
       id
@@ -1615,7 +1658,8 @@ export class WatSharpParser {
         "BuiltInFunctionInvocation",
         {
           name: start.text,
-          arguments: args,
+          arguments: args.args,
+          dispatcher: args.dispatcher,
         },
         start,
         start
@@ -1657,7 +1701,8 @@ export class WatSharpParser {
             "FunctionInvocation",
             {
               name: idToken.text,
-              arguments: args,
+              arguments: args.args,
+              dispatcher: args.dispatcher,
             },
             idToken,
             idToken
@@ -1749,11 +1794,12 @@ export class WatSharpParser {
 
   /**
    * functionArgsExpr
-   *   : "(" expr? ("," expr)* )"
+   *   : "(" expr? ("," expr)* ")" ("[" expr "]")?
    *   ;
    */
-  private parseFunctionArgs(): Expression[] | null {
+  private parseFunctionArgs(): FunctionArgs | null {
     const args: Expression[] = [];
+    let dispatcher: Expression | undefined;
     this.expectToken(TokenType.LParent, "W016");
     do {
       const { traits } = this.getParsePoint();
@@ -1771,7 +1817,20 @@ export class WatSharpParser {
       }
     } while (true);
     this.expectToken(TokenType.RParent);
-    return args;
+    const next = this._lexer.peek();
+    if (next.type === TokenType.LSquare) {
+      // --- Optional dispatcher
+      this._lexer.get();
+      dispatcher = this.parseExpr();
+      if (!dispatcher) {
+        return null;
+      }
+      this.expectToken(TokenType.RSquare, "W012");
+    }
+    return {
+      args,
+      dispatcher,
+    };
   }
 
   /**
@@ -2284,4 +2343,12 @@ interface ParsePoint {
    * Traist of the start token
    */
   traits: TokenTraits;
+}
+
+/**
+ * Represents function arguments
+ */
+interface FunctionArgs {
+  args: Expression[];
+  dispatcher?: Expression;
 }

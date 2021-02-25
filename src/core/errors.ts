@@ -105,7 +105,8 @@ export type ErrorCodes =
   | "W154"
   | "W155"
   | "W156"
-  | "W157";
+  | "W157"
+  | "W158"
 
 /**
  * Error message type description
@@ -195,4 +196,5 @@ export const errorMessages: ErrorText = {
   W155: "Cannot convert floating-point arguments to integer function parameters implicitly",
   W156: "A function with void result type should return no value",
   W157: "A function with non-void result type should return a value",
+  W158: "Function signature of '{0}' does not match table signature",
 };
