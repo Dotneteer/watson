@@ -23,15 +23,31 @@ u16 bc_;
 u16 de_;
 u16 hl_;
 
+table *i32 tableA(u8 b, f64 c) { ddd, ddd, ddd };
+table *i32 tableB(u8 b, f64 c) { ddd, ddd, ddd };
+
 export void reset() {
   // TODO: Implement it
 }
 
-f32 d;
-i32 e;
-f32 f;
+inline i32 setA(u8 value) {
+  af.h = value;
+  return 0;
+}
 
-inline void setA(f64 a) {
-  local f32 other = min(d, e, f);
-  af.l = a;
+inline i32 setF(u8 value) {
+  af.l = value;
+  return 0;
+}
+
+inline i32 called(u32 value) {
+  setA(value);
+  setF(value);
+  tableA(1, 1.1)[2];
+  tableB(2, 2.1)[value];
+  return 123;
+}
+
+*i32 ddd(u8 a, f64 b) {
+  return 0;
 }

@@ -864,9 +864,10 @@ describe("WatSharpParser - expressions", () => {
 
     // --- Assert
     expect(expr.type).toBe("FunctionInvocation");
-    const cast = expr as FunctionInvocationExpression;
-    expect(cast.name).toBe("myFunc");
-    expect(cast.arguments.length).toBe(0);
+    const func = expr as FunctionInvocationExpression;
+    expect(func.name).toBe("myFunc");
+    expect(func.dispatcher).toBeUndefined();
+    expect(func.arguments.length).toBe(0);
   });
 
   it("Function invocation #2", () => {
@@ -879,10 +880,11 @@ describe("WatSharpParser - expressions", () => {
 
     // --- Assert
     expect(expr.type).toBe("FunctionInvocation");
-    const cast = expr as FunctionInvocationExpression;
-    expect(cast.name).toBe("myFunc");
-    expect(cast.arguments.length).toBe(1);
-    let arg = cast.arguments[0];
+    const func = expr as FunctionInvocationExpression;
+    expect(func.name).toBe("myFunc");
+    expect(func.dispatcher).toBeUndefined();
+    expect(func.arguments.length).toBe(1);
+    let arg = func.arguments[0];
     expect(arg.type).toBe("Literal");
   });
 
@@ -896,12 +898,31 @@ describe("WatSharpParser - expressions", () => {
 
     // --- Assert
     expect(expr.type).toBe("FunctionInvocation");
-    const cast = expr as FunctionInvocationExpression;
-    expect(cast.name).toBe("myFunc");
-    expect(cast.arguments.length).toBe(2);
-    expect(cast.arguments[0].type).toBe("Literal");
-    expect(cast.arguments[1].type).toBe("Identifier");
+    const func = expr as FunctionInvocationExpression;
+    expect(func.name).toBe("myFunc");
+    expect(func.dispatcher).toBeUndefined();
+    expect(func.arguments.length).toBe(2);
+    expect(func.arguments[0].type).toBe("Literal");
+    expect(func.arguments[1].type).toBe("Identifier");
   });
+
+  it("Function invocation #4", () => {
+    // --- Arrange
+    const source = "myFunc()[123]";
+    const wParser = new WatSharpParser(source);
+
+    // --- Act
+    const expr = wParser.parseExpr();
+
+    // --- Assert
+    expect(expr.type).toBe("FunctionInvocation");
+    const func = expr as FunctionInvocationExpression;
+    expect(func.name).toBe("myFunc");
+    expect(func.dispatcher).toBeDefined();
+    expect(func.dispatcher.type).toBe("Literal");
+    expect(func.arguments.length).toBe(0);
+  });
+
 
   const builtInFunc1Cases = [
     { src: "abs(12)", name: "abs" },

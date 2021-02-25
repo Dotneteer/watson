@@ -8,7 +8,7 @@ describe("WatSharpCompiler - table resolution", () => {
   it("Single item #1", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
-      table a { func1 } ;
+      table void a() { func1 } ;
       void func1() {};
       `);
 
@@ -30,7 +30,7 @@ describe("WatSharpCompiler - table resolution", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
       void func1() {};
-      table a { func1 };
+      table void a() { func1 };
       `);
 
     // --- Act
@@ -51,7 +51,7 @@ describe("WatSharpCompiler - table resolution", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
       void func2() {};
-      table a { func1 };
+      table void a() { func1 };
       `);
 
     // --- Act
@@ -66,7 +66,7 @@ describe("WatSharpCompiler - table resolution", () => {
   it("Single item #4", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
-      table a { func1 };
+      table void a() { func1 };
       const u8 func1 = 113;
       `);
 
@@ -82,7 +82,7 @@ describe("WatSharpCompiler - table resolution", () => {
   it("Multiple items #1", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
-      table a { func1, func2 } ;
+      table void a() { func1, func2 } ;
       void func1() {};
       void func2() {};
       `);
@@ -106,7 +106,7 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
     void func1() {};
     void func2() {};
-    table a { func1, func2 } ;
+    table void a() { func1, func2 } ;
     `);
 
     // --- Act
@@ -128,7 +128,7 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
       void func2() {};
       void func1() {};
-      table a { func1, func3 };
+      table void a() { func1, func3 };
       `);
 
     // --- Act
@@ -145,7 +145,7 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
     void func2() {};
     void func1() {};
-    table a { func1, func3, func4 };
+    table void a() { func1, func3, func4 };
     `);
 
     // --- Act
@@ -163,7 +163,7 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
     const i32 func2 = 123;
     void func1() {};
-    table a { func1, func2 };
+    table void a() { func1, func2 };
     `);
 
     // --- Act
@@ -181,7 +181,7 @@ describe("WatSharpCompiler - table resolution", () => {
     const i32 func2 = 123;
     const i32 func3 = 123;
     void func1() {};
-    table a { func1, func2, func3 };
+    table void a() { func1, func2, func3 };
     `);
 
     // --- Act
@@ -199,8 +199,8 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
     void func1() {};
     void func2() {};
-    table a { func1, func2 };
-    table b { func1 };
+    table void a() { func1, func2 };
+    table void b() { func1 };
     `);
 
     // --- Act
@@ -229,9 +229,9 @@ describe("WatSharpCompiler - table resolution", () => {
     const wComp = new WatSharpCompiler(`
     void func1() {};
     void func2() {};
-    table a { func1, func2 };
-    table b { func1 };
-    table c { func1, func2 };
+    table void a() { func1, func2 };
+    table void b() { func1 };
+    table void c() { func1, func2 };
     `);
 
     // --- Act
@@ -260,5 +260,254 @@ describe("WatSharpCompiler - table resolution", () => {
     tableDecl = decl as TableDeclaration;
     expect(tableDecl.resolved).toBe(true);
     expect(tableDecl.entryIndex).toBe(3);
+  });
+
+  it("Signature ok #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1() {};
+      table i32 a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1() {};
+      i32 func2() {};
+      table i32 a() { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #3", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      *i32 func1() {};
+      *i32 func2() {};
+      table *i32 a() { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #4", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      *u8 func1() {};
+      *i32 func2() {};
+      table *i16 a() { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #5", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void func1(u8 a) {};
+      void func2(u8 a) {};
+      table void a(u8 a) { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #6", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void func1(u8 a, f64 b) {};
+      void func2(u8 a, f64 b) {};
+      table void a(u8 a, f64 c) { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature ok #7", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void func1(u8 a, *f64 b) {};
+      void func2(u8 a, *f32 b) {};
+      table void a(u8 a, *i8 c) { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+  });
+
+  it("Signature issue #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1() {};
+      table void a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void func1() {};
+      table i32 a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #3", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i8 func1() {};
+      table i32 a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #4", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      *i32 func1() {};
+      table i32 a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #5", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1(u8 p) {};
+      table i32 a() { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #6", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1() {};
+      table i32 a(u8 p) { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #7", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1(i32 p) {};
+      table i32 a(*i32 p) { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #8", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1(*i32 p) {};
+      table i32 a(i32 p) { func1 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
+  });
+
+  it("Signature issue #9", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 func1(*i32 p) {};
+      i32 func2(i32 p) {};
+      table i32 a(i32 p) { func1, func2 };
+      `);
+
+    // --- Act
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(true);
+    expect(wComp.errors.length).toBe(1);
+    expect(wComp.errors[0].code).toBe("W158");
   });
 });

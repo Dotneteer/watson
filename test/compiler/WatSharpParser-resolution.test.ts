@@ -42,7 +42,7 @@ describe("WatSharpParser - resolution", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`
     const long a = 1;
-    table a { myFunc };
+    table i32 a() { myFunc };
     `);
 
     // --- Act

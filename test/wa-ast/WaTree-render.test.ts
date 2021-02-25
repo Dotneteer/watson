@@ -154,6 +154,27 @@ describe("WaTree - render", () => {
     );
   });
 
+  it("Element #1", () => {
+    // --- Arrange
+    const tree = new WaTree();
+    tree.element(12, ["$a", "$b"]);
+
+    // --- Act
+    const text = tree.render();
+
+    // --- Assert
+    expect(text).toBe(
+      `(module
+  (memory (export "memory") 10)
+  (elem (i32.const 12)
+    $a
+    $b
+  )
+)`
+    );
+  });
+
+
   it("Global #1", () => {
     // --- Arrange
     const tree = new WaTree();

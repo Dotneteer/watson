@@ -7,6 +7,7 @@ export type WaModuleField =
   | WaExportNode
   | WaImportNode
   | Table
+  | Element
   | Global
   | TypeDef
   | Func
@@ -96,6 +97,7 @@ export type WaExportNode = FuncExport;
  * Types in WebAssembly
  */
 export enum WaType {
+  None,
   i32,
   i64,
   f32,
@@ -176,6 +178,15 @@ export interface Table extends WaNodeBase {
   readonly type: "Table";
   readonly id: string;
   readonly limit: number;
+}
+
+/**
+ * Webassembly element
+ */
+export interface Element extends WaNodeBase {
+  readonly type: "Element";
+  readonly index: number;
+  readonly ids: string[];
 }
 
 /**
@@ -327,7 +338,6 @@ export interface Call extends WaInstructionBase {
  */
 export interface CallIndirect extends WaInstructionBase {
   type: "CallIndirect";
-  id: string;
   typeId: string;
 }
 

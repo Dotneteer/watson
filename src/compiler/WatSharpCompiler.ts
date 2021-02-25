@@ -382,6 +382,14 @@ export class WatSharpCompiler {
      * @param table Table declaration
      */
     function resolveTableDeclaration(table: TableDeclaration): void {
+      // --- Resolve the result type
+      if (table.resultType) {
+        resolveTypeSpecification(table.resultType);
+      }
+
+      // --- Resolve parameter types
+      table.params.forEach((p) => resolveTypeSpecification(p.spec));
+
       // --- Iterate through all table idetifiers
       table.entryIndex = compiler._tableEntries;
       table.ids.forEach((id) => {
@@ -394,10 +402,78 @@ export class WatSharpCompiler {
         if (decl.type !== "FunctionDeclaration") {
           // --- This ID is not a function
           compiler.reportError("W109", table, id);
+          return;
+        }
+        if (!matchSignature(decl, table)) {
+          return;
         }
         compiler._tableEntries++;
       });
       table.resolved = true;
+    }
+
+    /**
+     * Matches the specified function signature with the provided parameters and result type
+     * @param func Function signature to check
+     * @param resultType Result type specification
+     * @param params Function parameters
+     */
+    function matchSignature(
+      func: FunctionDeclaration,
+      table: TableDeclaration
+    ): boolean {
+      // --- Void versus non-void result type
+      if (
+        (!func.resultType && table.resultType) ||
+        (!table.resultType && func.resultType)
+      ) {
+        compiler.reportError("W158", table, func.name);
+        return false;
+      }
+
+      // --- Compare non-void result types
+      if (func.resultType && table.resultType) {
+        if (!matchFunctionParamaterTypes(func.resultType, table.resultType)) {
+          compiler.reportError("W158", table, func.name);
+          return false;
+        }
+      }
+
+      // --- Compare parameters
+      if (func.params.length !== table.params.length) {
+        compiler.reportError("W158", table, func.name);
+        return false;
+      }
+      func.params.forEach((fp, index) => {
+        if (!matchFunctionParamaterTypes(fp.spec, table.params[index].spec)) {
+          compiler.reportError("W158", table, func.name);
+          return false;
+        }
+      });
+      return true;
+    }
+
+    /**
+     * Tests if two function parameter types match or not
+     * @param type1
+     * @param type2
+     */
+    function matchFunctionParamaterTypes(
+      type1: TypeSpec,
+      type2: TypeSpec
+    ): boolean {
+      if (type1.type === "Intrinsic") {
+        // --- Match intrinsic types
+        if (
+          type2.type !== "Intrinsic" ||
+          type1.underlying !== type2.underlying
+        ) {
+          return false;
+        }
+      } else if (type1.type === "Pointer" && type2.type !== "Pointer") {
+        return false;
+      }
+      return true;
     }
   }
 
@@ -443,6 +519,37 @@ export class WatSharpCompiler {
   }
 
   /**
+   * Processes table declarations
+   */
+  private emitTables(): void {
+    let header = false;
+    let itemCount = 0;
+    for (const table of this._parser.declarations.values()) {
+      if (table.type !== "TableDeclaration") {
+        continue;
+      }
+
+      this.waTree.separatorLine();
+      if (!header) {
+        this.waTree.comment("Table definitions");
+        header = true;
+      }
+      itemCount += table.ids.length;
+      const resultType = mapFunctionParameterType(table.resultType);
+      const params = table.params.map(
+        (p) =>
+          <WaParameter>{
+            id: createParameterName(p.name),
+            type: mapFunctionParameterType(p.spec),
+          }
+      );
+      this.waTree.typeDef(createTableName(table.name), params, resultType);
+      this.waTree.element(table.entryIndex, table.ids.map(id => createGlobalName(id)));
+    }
+    this.waTree.setTable(itemCount, "$tables$");
+  }
+
+  /**
    * Get the size of a type specification
    * @param typeSpec
    */
@@ -468,6 +575,7 @@ export class WatSharpCompiler {
     this.emitExports();
     this.emitGlobals();
     this.emitVariableMap();
+    this.emitTables();
   }
 
   /**
@@ -538,9 +646,13 @@ export class WatSharpCompiler {
     for (const decl of this.declarations.values()) {
       if (decl.type === "VariableDeclaration") {
         this._waTree.comment(
-          `0x${decl.address.toString(16).padStart(8, "0")} (${decl.address.toString(10).padStart(10, " ")}) [${this.getSizeof(
-            decl.spec
-          ).toString(10).padStart(10, " ")}]: ${decl.name}`
+          `0x${decl.address
+            .toString(16)
+            .padStart(8, "0")} (${decl.address
+            .toString(10)
+            .padStart(10, " ")}) [${this.getSizeof(decl.spec)
+            .toString(10)
+            .padStart(10, " ")}]: ${decl.name}`
         );
       }
     }
@@ -698,6 +810,22 @@ export const bitwiseNotMasks: Record<Intrinsics, number | bigint> = {
 };
 
 /**
+ * Maps a function parameter type to an intrinsic type
+ * @param spec Type specification
+ */
+export function mapFunctionParameterType(spec?: TypeSpec): WaType | null {
+  if (spec) {
+    if (spec.type === "Pointer") {
+      return WaType.i32;
+    }
+    if (spec.type === "Intrinsic") {
+      return waTypeMappings[spec.underlying];
+    }
+  }
+  return null;
+}
+
+/**
  * Creates a WebAssembly function name
  * @param name Name to use as input
  */
@@ -710,7 +838,7 @@ export function createGlobalName(name: string): string {
  * @param name Name to use as input
  */
 export function createLocalName(name: string): string {
-  return `$loc_${name}`;
+  return `$loc$${name}`;
 }
 
 /**
@@ -718,5 +846,13 @@ export function createLocalName(name: string): string {
  * @param name Name to use as input
  */
 export function createParameterName(name: string): string {
-  return `$par_${name}`;
+  return `$par$${name}`;
+}
+
+/**
+ * Creates a WebAssembly function name
+ * @param name Name to use as input
+ */
+export function createTableName(name: string): string {
+  return `$tbl$${name}`;
 }

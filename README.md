@@ -316,7 +316,7 @@ Syntax:
 
 ```
 jumpTableDeclaration
-    : "table" identifier "{" identifier? ("," identifier)* "}" ";"
+    : "table" identifier "(" functionParam? ("," functionParam)* ")" "{" identifier? ("," identifier)* "}" ";"
     ;
 ```
 

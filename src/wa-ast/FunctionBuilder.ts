@@ -215,16 +215,13 @@ export function call(id: string): Call {
 
 /**
  * Factory method for a call_indirect WA instruction
- * @param id Function ID
  * @param typeId Function type identifier
  */
 export function callIndirect(
-  id: string,
   typeId: string,
 ): CallIndirect {
   return <CallIndirect>{
     type: "CallIndirect",
-    id,
     typeId,
   };
 }

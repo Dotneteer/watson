@@ -57,6 +57,7 @@ export interface BaseNode {
  * Discriminated unions of type specifications
  */
 export type TypeSpec =
+  | VoidType
   | IntrinsicType
   | PointerType
   | ArrayType
@@ -83,6 +84,13 @@ export interface TypeSpecBase extends BaseNode {
   resolved?: boolean;
   flattened?: boolean;
   sizeof?: number;
+}
+
+/**
+ * Represents a void function result type
+ */
+export interface VoidType extends TypeSpecBase {
+  type: "Void";
 }
 
 /**
@@ -290,6 +298,7 @@ export interface FunctionInvocationExpression extends ExpressionBase {
   type: "FunctionInvocation";
   name: string;
   arguments: Expression[];
+  dispatcher?: Expression;
 }
 
 /**
@@ -391,6 +400,8 @@ export interface TypeDeclaration extends DeclarationBase {
 export interface TableDeclaration extends DeclarationBase {
   type: "TableDeclaration";
   ids: string[];
+  resultType?: IntrinsicType;
+  params: FunctionParameter[];
   entryIndex?: number;
 }
 
@@ -429,7 +440,7 @@ export interface ImportedFunctionDeclaration extends DeclarationBase {
  */
 export interface FunctionDeclaration extends DeclarationBase {
   type: "FunctionDeclaration";
-  resultType?: IntrinsicType;
+  resultType?: IntrinsicType | PointerType;
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;
@@ -509,8 +520,7 @@ export interface Assignment extends StatementBase {
  */
 export interface LocalFunctionInvocation extends StatementBase {
   type: "LocalFunctionInvocation";
-  name: string;
-  args: Expression[];
+  invoked: FunctionInvocationExpression;
 }
 
 /**

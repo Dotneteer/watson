@@ -19,11 +19,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f32)")
+    expect(locals[0].message).toBe("(local $loc$a f32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("f32.convert_u/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->f64 #1", () => {
@@ -41,11 +41,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f64)")
+    expect(locals[0].message).toBe("(local $loc$a f64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("f64.convert_u/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->i32 #1", () => {
@@ -63,11 +63,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->u32 #1", () => {
@@ -85,11 +85,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->u8 #1", () => {
@@ -107,13 +107,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
     expect(instrs[2].message).toBe("i32.const 255")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->i8 #1", () => {
@@ -131,7 +131,7 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
@@ -141,7 +141,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 24")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->u16 #1", () => {
@@ -159,13 +159,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
     expect(instrs[2].message).toBe("i32.const 65535")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->i16 #1", () => {
@@ -183,7 +183,7 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
@@ -193,7 +193,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 16")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->f32 #1", () => {
@@ -211,11 +211,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f32)")
+    expect(locals[0].message).toBe("(local $loc$a f32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
     expect(instrs[1].message).toBe("f32.convert_u/i32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->f64 #1", () => {
@@ -233,11 +233,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f64)")
+    expect(locals[0].message).toBe("(local $loc$a f64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
     expect(instrs[1].message).toBe("f64.convert_u/i32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->i64 #1", () => {
@@ -255,11 +255,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
     expect(instrs[1].message).toBe("i64.extend_s/i32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->u64 #1", () => {
@@ -277,11 +277,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
     expect(instrs[1].message).toBe("i64.extend_u/i32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->i16 #1", () => {
@@ -299,10 +299,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
-    expect(instrs[1].message).toBe("set_local $loc_a")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->i16 #2", () => {
@@ -320,16 +320,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 123456")
-    expect(instrs[1].message).toBe("i32.const 65535")
-    expect(instrs[2].message).toBe("i32.and")
-    expect(instrs[3].message).toBe("i32.const 16")
-    expect(instrs[4].message).toBe("i32.shl")
-    expect(instrs[5].message).toBe("i32.const 16")
-    expect(instrs[6].message).toBe("i32.shr_s")
-    expect(instrs[7].message).toBe("set_local $loc_a")
+    expect(instrs[0].message).toBe("i32.const -7616")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->u16 #1", () => {
@@ -347,10 +341,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 12345")
-    expect(instrs[1].message).toBe("set_local $loc_a")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->u16 #2", () => {
@@ -368,12 +362,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 123456")
-    expect(instrs[1].message).toBe("i32.const 65535")
-    expect(instrs[2].message).toBe("i32.and")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[0].message).toBe("i32.const 57920")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->i8 #1", () => {
@@ -391,16 +383,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 12345")
-    expect(instrs[1].message).toBe("i32.const 255")
-    expect(instrs[2].message).toBe("i32.and")
-    expect(instrs[3].message).toBe("i32.const 24")
-    expect(instrs[4].message).toBe("i32.shl")
-    expect(instrs[5].message).toBe("i32.const 24")
-    expect(instrs[6].message).toBe("i32.shr_s")
-    expect(instrs[7].message).toBe("set_local $loc_a")
+    expect(instrs[0].message).toBe("i32.const 57")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i32-->u8 #1", () => {
@@ -418,12 +404,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 12345")
-    expect(instrs[1].message).toBe("i32.const 255")
-    expect(instrs[2].message).toBe("i32.and")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[0].message).toBe("i32.const 57")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->*u32 #1", () => {
@@ -441,11 +425,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local i64-->*struct #1", () => {
@@ -463,11 +447,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i64.const 123456789123456789")
     expect(instrs[1].message).toBe("i32.wrap/i64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->f32 #1", () => {
@@ -485,11 +469,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f32)")
+    expect(locals[0].message).toBe("(local $loc$a f32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("f64.const 12345.678")
     expect(instrs[1].message).toBe("f32.demote/f64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->i64 #1", () => {
@@ -507,11 +491,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i64.trunc_s/f64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->u64 #1", () => {
@@ -529,11 +513,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i64.trunc_u/f64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->i32 #1", () => {
@@ -551,11 +535,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_s/f64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->u32 #1", () => {
@@ -573,11 +557,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f64")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->i16 #1", () => {
@@ -595,9 +579,9 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f64")
     expect(instrs[2].message).toBe("i32.const 65535")
     expect(instrs[3].message).toBe("i32.and")
@@ -605,7 +589,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 16")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->u16 #1", () => {
@@ -623,13 +607,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f64")
     expect(instrs[2].message).toBe("i32.const 65535")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->i8 #1", () => {
@@ -647,9 +631,9 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f64")
     expect(instrs[2].message).toBe("i32.const 255")
     expect(instrs[3].message).toBe("i32.and")
@@ -657,7 +641,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 24")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local f64-->u8 #1", () => {
@@ -675,13 +659,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f64")
     expect(instrs[2].message).toBe("i32.const 255")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->f64 #1", () => {
@@ -699,11 +683,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a f64)")
+    expect(locals[0].message).toBe("(local $loc$a f64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("f64.promote/f32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->i64 #1", () => {
@@ -721,11 +705,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i64.trunc_s/f32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->u64 #1", () => {
@@ -743,11 +727,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i64)")
+    expect(locals[0].message).toBe("(local $loc$a i64)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i64.trunc_u/f32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->i32 #1", () => {
@@ -765,11 +749,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_s/f32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->u32 #1", () => {
@@ -787,11 +771,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f32")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->i16 #1", () => {
@@ -809,9 +793,9 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f32")
     expect(instrs[2].message).toBe("i32.const 65535")
     expect(instrs[3].message).toBe("i32.and")
@@ -819,7 +803,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 16")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->u16 #1", () => {
@@ -837,13 +821,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f32")
     expect(instrs[2].message).toBe("i32.const 65535")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->i8 #1", () => {
@@ -861,9 +845,9 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f32")
     expect(instrs[2].message).toBe("i32.const 255")
     expect(instrs[3].message).toBe("i32.and")
@@ -871,7 +855,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 24")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("local f32-->u8 #1", () => {
@@ -889,13 +873,13 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $par_par")
+    expect(instrs[0].message).toBe("get_local $par$par")
     expect(instrs[1].message).toBe("i32.trunc_u/f32")
     expect(instrs[2].message).toBe("i32.const 255")
     expect(instrs[3].message).toBe("i32.and")
-    expect(instrs[4].message).toBe("set_local $loc_a")
+    expect(instrs[4].message).toBe("set_local $loc$a")
   });
 
   it("local get #1", () => {
@@ -914,11 +898,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_dummy i32)")
-    expect(locals[1].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$dummy i32)")
+    expect(locals[1].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("get_local $loc_dummy")
-    expect(instrs[1].message).toBe("set_local $loc_a")
+    expect(instrs[0].message).toBe("get_local $loc$dummy")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("global get #1", () => {
@@ -937,10 +921,10 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("get_global $dummy")
-    expect(instrs[1].message).toBe("set_local $loc_a")
+    expect(instrs[1].message).toBe("set_local $loc$a")
   });
 
   it("var get f64 #1", () => {
@@ -959,12 +943,12 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("f64.load")
     expect(instrs[2].message).toBe("i32.trunc_s/f64")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[3].message).toBe("set_local $loc$a")
   });
 
   it("var get f32 #1", () => {
@@ -983,12 +967,12 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("f32.load")
     expect(instrs[2].message).toBe("i32.trunc_s/f32")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[3].message).toBe("set_local $loc$a")
   });
 
   it("var get i64 #1", () => {
@@ -1007,12 +991,12 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i64.load")
     expect(instrs[2].message).toBe("i32.wrap/i64")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[3].message).toBe("set_local $loc$a")
   });
 
   it("var get u64 #1", () => {
@@ -1031,12 +1015,12 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i64.load")
     expect(instrs[2].message).toBe("i32.wrap/i64")
-    expect(instrs[3].message).toBe("set_local $loc_a")
+    expect(instrs[3].message).toBe("set_local $loc$a")
   });
 
   it("var get i32 #1", () => {
@@ -1055,11 +1039,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get u32 #1", () => {
@@ -1078,11 +1062,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get i16 #1", () => {
@@ -1101,11 +1085,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load16_s")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get i16 #2", () => {
@@ -1124,11 +1108,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load16_s")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get i16 #3", () => {
@@ -1147,7 +1131,7 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load16_s")
@@ -1157,7 +1141,7 @@ describe("WatSharpCompiler - emit locals", () => {
     expect(instrs[5].message).toBe("i32.shl")
     expect(instrs[6].message).toBe("i32.const 24")
     expect(instrs[7].message).toBe("i32.shr_s")
-    expect(instrs[8].message).toBe("set_local $loc_a")
+    expect(instrs[8].message).toBe("set_local $loc$a")
   });
 
   it("var get u16 #1", () => {
@@ -1176,11 +1160,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load16_u")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get i8 #1", () => {
@@ -1199,12 +1183,12 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load8_s")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 
   it("var get u8 #1", () => {
@@ -1223,11 +1207,11 @@ describe("WatSharpCompiler - emit locals", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $loc_a i32)")
+    expect(locals[0].message).toBe("(local $loc$a i32)")
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 0")
     expect(instrs[1].message).toBe("i32.load8_u")
-    expect(instrs[2].message).toBe("set_local $loc_a")
+    expect(instrs[2].message).toBe("set_local $loc$a")
   });
 });

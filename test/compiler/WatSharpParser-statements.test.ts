@@ -33,8 +33,8 @@ describe("WatSharpParser - statements", () => {
     expect(body.length).toBe(1);
     expect(body[0].type).toBe("LocalFunctionInvocation");
     const call = body[0] as LocalFunctionInvocation;
-    expect(call.name).toBe("myCall");
-    expect(call.args.length).toBe(0);
+    expect(call.invoked.name).toBe("myCall");
+    expect(call.invoked.arguments.length).toBe(0);
   });
 
   it("Local function declaration #2", () => {
@@ -57,8 +57,8 @@ describe("WatSharpParser - statements", () => {
     expect(body.length).toBe(1);
     expect(body[0].type).toBe("LocalFunctionInvocation");
     const call = body[0] as LocalFunctionInvocation;
-    expect(call.name).toBe("myCall");
-    expect(call.args.length).toBe(1);
+    expect(call.invoked.name).toBe("myCall");
+    expect(call.invoked.arguments.length).toBe(1);
   });
 
   it("Local function declaration #3", () => {
@@ -81,8 +81,8 @@ describe("WatSharpParser - statements", () => {
     expect(body.length).toBe(1);
     expect(body[0].type).toBe("LocalFunctionInvocation");
     const call = body[0] as LocalFunctionInvocation;
-    expect(call.name).toBe("myCall");
-    expect(call.args.length).toBe(2);
+    expect(call.invoked.name).toBe("myCall");
+    expect(call.invoked.arguments.length).toBe(2);
   });
 
   it("Local function declaration #4", () => {
