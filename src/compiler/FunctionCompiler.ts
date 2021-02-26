@@ -10,7 +10,6 @@ import {
   DoStatement,
   Expression,
   FunctionInvocationExpression,
-  FunctionParameter,
   GlobalDeclaration,
   Identifier,
   IfStatement,
@@ -20,7 +19,6 @@ import {
   LocalFunctionInvocation,
   LocalVariable,
   Node,
-  PointerType,
   ReturnStatement,
   TypeCastExpression,
   UnaryExpression,
@@ -31,13 +29,11 @@ import {
 import {
   WaBitSpec,
   WaInstruction,
-  WaNode,
   WaParameter,
   WaType,
 } from "../wa-ast/wa-nodes";
 import {
   FunctionDeclaration,
-  Intrinsics,
   IntrinsicType,
   Statement,
   TypeSpec,
@@ -60,7 +56,6 @@ import {
   callIndirect,
   ceil,
   clz,
-  comment,
   constVal,
   convert32,
   convert64,
@@ -162,7 +157,9 @@ export class FunctionCompiler {
    */
   process(): void {
     this.processHead();
-    this.func.body.forEach((stmt) => this.processStatement(stmt));
+    this.func.body.forEach((stmt) =>
+      this.processStatement(stmt, this._builder.body)
+    );
     optimizeWat(this._builder.body);
     this._builder.body.forEach((ins) => {
       if (ins.type !== "Comment") {
@@ -214,44 +211,48 @@ export class FunctionCompiler {
   /**
    * Processes the specified function statement
    * @param stmt Statement to process
+   * @param body Body to put the statements in
    */
-  private processStatement(stmt: Statement): void {
+  private processStatement(stmt: Statement, body: WaInstruction[]): void {
     switch (stmt.type) {
       case "LocalVariable":
-        this.processLocalDeclaration(stmt);
+        this.processLocalDeclaration(stmt, body);
         return;
-
       case "Assignment":
-        this.processAssignment(stmt);
+        this.processAssignment(stmt, body);
         return;
       case "Break":
-        this.processBreak(stmt);
+        this.processBreak(stmt, body);
         return;
       case "Continue":
-        this.processContinue(stmt);
+        this.processContinue(stmt, body);
         return;
       case "Do":
-        this.processDoWhileLoop(stmt);
+        this.processDoWhileLoop(stmt, body);
         return;
       case "If":
-        this.processIf(stmt);
+        this.processIf(stmt, body);
         return;
       case "LocalFunctionInvocation":
-        this.processLocalFunctionInvocation(stmt);
+        this.processLocalFunctionInvocation(stmt, body);
         return;
       case "Return":
-        this.processReturn(stmt);
+        this.processReturn(stmt, body);
         return;
       case "While":
-        this.processWhileLoop(stmt);
+        this.processWhileLoop(stmt, body);
         return;
     }
   }
 
   /**
    * Processes a local variable declaration
+   * @param body Body to put the statements in
    */
-  private processLocalDeclaration(localVar: LocalVariable): void {
+  private processLocalDeclaration(
+    localVar: LocalVariable,
+    body: WaInstruction[]
+  ): void {
     if (this._locals.has(localVar.name)) {
       this.reportError("W140", this.func);
       return;
@@ -259,15 +260,16 @@ export class FunctionCompiler {
       const localName = createLocalName(localVar.name);
       let initExpr: ProcessedExpression | null = null;
       if (localVar.initExpr) {
-        initExpr = this.processExpression(localVar.initExpr);
+        initExpr = this.processExpression(localVar.initExpr, body);
         if (initExpr) {
           this.castForStorage(
             localVar.spec,
             initExpr.exprType,
+            body,
             true,
             initExpr?.expr.value
           );
-          this.inject(true, localSet(localName));
+          this.inject(true, localSet(localName), body);
         }
       }
       const paramType =
@@ -290,8 +292,9 @@ export class FunctionCompiler {
 
   /**
    * Processes the specified assignment
+   * @param body Body to put the statements in
    */
-  private processAssignment(asgn: Assignment): void {
+  private processAssignment(asgn: Assignment, body: WaInstruction[]): void {
     // --- Check the left value type
     let leftSide: "local" | "global" | "var" = "var";
     let leftType: TypeSpec | undefined;
@@ -325,11 +328,11 @@ export class FunctionCompiler {
       } else {
         // --- Left side is a variable with a const address
         leftType = resolvedId.var.spec;
-        this.inject(true, constVal(WaType.i32, resolvedId.var.address));
+        this.inject(true, constVal(WaType.i32, resolvedId.var.address), body);
       }
     } else {
       // --- Left side is a compound left value expression
-      const resolvedAddr = this.calculateAddressOf(asgn.lval);
+      const resolvedAddr = this.calculateAddressOf(asgn.lval, body);
       if (!resolvedAddr) {
         return;
       }
@@ -348,8 +351,8 @@ export class FunctionCompiler {
       // --- Do we need double access to this address?
       if (!idAddress && asgn.asgn !== "=") {
         tmpAddrVar = this.createTempLocal(WaType.i32, "asgn");
-        this.inject(true, localTee(tmpAddrVar));
-        this.inject(true, localGet(tmpAddrVar));
+        this.inject(true, localTee(tmpAddrVar), body);
+        this.inject(true, localGet(tmpAddrVar), body);
         // --- At this point we have the variable acces on the top of the stack
       }
     }
@@ -359,19 +362,19 @@ export class FunctionCompiler {
     if (asgn.asgn !== "=") {
       switch (leftSide) {
         case "global":
-          this.inject(true, globalGet(createGlobalName(varName)));
+          this.inject(true, globalGet(createGlobalName(varName)), body);
           break;
         case "local":
-          this.inject(true, localGet(createLocalName(varName)));
+          this.inject(true, localGet(createLocalName(varName)), body);
           break;
         case "var":
-          this.compileIntrinsicVariableGet(leftIntrinsic);
+          this.compileIntrinsicVariableGet(leftIntrinsic, body);
           break;
       }
     }
 
     // --- Now, evaluate the right-side expression
-    const rightType = this.compileExpression(asgn.expr);
+    const rightType = this.compileExpression(asgn.expr, body);
 
     // --- Valid type?
     if (!rightType) {
@@ -419,64 +422,64 @@ export class FunctionCompiler {
       }
 
       // --- Compile the operands and cast them to the appropriate type
-      this.castIntrinsicToIntrinsic(resultType, rightIntrinsic);
+      this.castIntrinsicToIntrinsic(resultType, rightIntrinsic, body);
       const waType = waTypeMappings[resultType.underlying];
 
       // --- Compile the assignment operation
       switch (asgn.asgn) {
         case "+=":
-          this.inject(true, add(waType));
+          this.inject(true, add(waType), body);
           break;
         case "-=":
-          this.inject(true, sub(waType));
+          this.inject(true, sub(waType), body);
           break;
         case "*=":
-          this.inject(true, mul(waType));
+          this.inject(true, mul(waType), body);
           break;
         case "/=":
-          this.inject(true, div(waType, isSigned));
+          this.inject(true, div(waType, isSigned), body);
           break;
         case "%=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "remainder (%)");
             return;
           }
-          this.inject(true, rem(waType, isSigned));
+          this.inject(true, rem(waType, isSigned), body);
           break;
         case "&=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "bitwise AND");
             return;
           }
-          this.inject(true, and(waType));
+          this.inject(true, and(waType), body);
           break;
         case "|=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "bitwise OR");
             return;
           }
-          this.inject(true, or(waType));
+          this.inject(true, or(waType), body);
           break;
         case "^=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "bitwise XOR");
             return;
           }
-          this.inject(true, xor(waType));
+          this.inject(true, xor(waType), body);
           break;
         case "<<=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "shift left");
             return;
           }
-          this.inject(true, shl(waType));
+          this.inject(true, shl(waType), body);
           break;
         case ">>=":
           if (resultType.underlying.startsWith("f")) {
             this.reportError("W145", asgn, "signed shift right");
             return;
           }
-          this.inject(true, shr(waType, true));
+          this.inject(true, shr(waType, true), body);
           break;
 
         case ">>>=":
@@ -484,81 +487,99 @@ export class FunctionCompiler {
             this.reportError("W145", asgn, "shift right");
             return;
           }
-          this.inject(true, shr(waType, false));
+          this.inject(true, shr(waType, false), body);
           break;
       }
     }
 
     // --- Cast the result
-    this.castIntrinsicToIntrinsic(leftIntrinsic, rightIntrinsic);
+    this.castIntrinsicToIntrinsic(leftIntrinsic, rightIntrinsic, body);
 
     // --- Store the resuls
     switch (leftSide) {
       case "global":
-        this.inject(true, globalSet(createGlobalName(varName)));
+        this.inject(true, globalSet(createGlobalName(varName)), body);
         break;
       case "local":
-        this.inject(true, localSet(createLocalName(varName)));
+        this.inject(true, localSet(createLocalName(varName)), body);
         break;
       case "var":
-        this.compileIntrinsicVariableSet(leftIntrinsic);
+        this.compileIntrinsicVariableSet(leftIntrinsic, body);
         break;
     }
   }
 
   /**
    * Processes a break statement
+   * @param body Body to put the statements in
    */
-  private processBreak(breakStmt: BreakStatement): void {
+  private processBreak(breakStmt: BreakStatement, body: WaInstruction[]): void {
     // TODO: Implement this method
   }
 
   /**
    * Processes a continue statement
+   * @param body Body to put the statements in
    */
-  private processContinue(contStmt: ContinueStatement): void {
+  private processContinue(
+    contStmt: ContinueStatement,
+    body: WaInstruction[]
+  ): void {
     // TODO: Implement this method
   }
 
   /**
    * Processes a do..while loop
+   * @param body Body to put the statements in
    */
-  private processDoWhileLoop(doLoop: DoStatement): void {
+  private processDoWhileLoop(doLoop: DoStatement, body: WaInstruction[]): void {
     // TODO: Implement this method
   }
 
   /**
    * Processes a while loop
+   * @param body Body to put the statements in
    */
-  private processWhileLoop(doLoop: WhileStatement): void {
+  private processWhileLoop(
+    doLoop: WhileStatement,
+    body: WaInstruction[]
+  ): void {
     // TODO: Implement this method
   }
 
   /**
    * Processes an if statement
+   * @param body Body to put the statements in
    */
-  private processIf(ifStmt: IfStatement): void {
-    // TODO: Implement this method
+  private processIf(ifStmt: IfStatement, body: WaInstruction[]): void {
+    this.compileExpression(ifStmt.test, body);
+    //this.inject(true, ifBlock())
   }
 
   /**
    * Processes a local function invocation
+   * @param body Body to put the statements in
    */
   private processLocalFunctionInvocation(
-    invocation: LocalFunctionInvocation
+    invocation: LocalFunctionInvocation,
+    body: WaInstruction[]
   ): void {
-    const resultTypeSpec = this.compileFunctionInvocation(invocation.invoked);
+    const resultTypeSpec = this.compileFunctionInvocation(
+      invocation.invoked,
+      body
+    );
 
     // --- Remove the result of a non-void function
     if (resultTypeSpec.type !== "Void") {
-      this.inject(true, drop());
+      this.inject(true, drop(), body);
     }
   }
 
   /**
-   * Processes an if statement
+   * Processes a return statement
+   * @param body Body to put the statements in
    */
-  private processReturn(retStmt: ReturnStatement): void {
+  private processReturn(retStmt: ReturnStatement, body: WaInstruction[]): void {
     // --- Check for return argument
     if (!this.func.resultType && retStmt.expr) {
       this.reportError("W156", retStmt);
@@ -572,17 +593,17 @@ export class FunctionCompiler {
     // --- Ok, we can compile this return
     if (retStmt.expr) {
       // --- Compile the expression
-      const returnType = this.compileExpression(retStmt.expr);
+      const returnType = this.compileExpression(retStmt.expr, body);
       if (returnType === null) {
         return null;
       }
 
       // --- Cast it to the return type
-      this.castForStorage(this.func.resultType, returnType);
+      this.castForStorage(this.func.resultType, returnType, body);
     }
 
     // --- Issue the return
-    this.inject(true, ret());
+    this.inject(true, ret(), body);
   }
 
   // ==========================================================================
@@ -590,12 +611,16 @@ export class FunctionCompiler {
 
   /**
    * Processes the specified expression
+   * @param body Body to put the statements in
    */
-  private processExpression(expr: Expression): ProcessedExpression | null {
+  private processExpression(
+    expr: Expression,
+    body: WaInstruction[]
+  ): ProcessedExpression | null {
     this.addTrace(() => ["pExpr", 0, renderExpression(expr)]);
     const simplified = this.simplifyExpression(expr);
     this.addTrace(() => ["pExpr", 1, renderExpression(simplified)]);
-    const exprType = this.compileExpression(simplified);
+    const exprType = this.compileExpression(simplified, body);
     if (!exprType) {
       return null;
     }
@@ -938,31 +963,36 @@ export class FunctionCompiler {
   /**
    * Compiles the specified expression
    * @param expr Expression to compile
+   * @param body Body to inject the code into
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
-  private compileExpression(expr: Expression, emit = true): TypeSpec | null {
+  private compileExpression(
+    expr: Expression,
+    body: WaInstruction[],
+    emit = true
+  ): TypeSpec | null {
     switch (expr.type) {
       case "Literal":
-        return this.compileLiteral(expr, emit);
+        return this.compileLiteral(expr, body, emit);
       case "Identifier":
-        return this.compileIdentifier(expr, emit);
+        return this.compileIdentifier(expr, body, emit);
       case "UnaryExpression":
-        return this.compileUnaryExpression(expr, emit);
+        return this.compileUnaryExpression(expr, body, emit);
       case "BinaryExpression":
-        return this.compileBinaryExpression(expr, emit);
+        return this.compileBinaryExpression(expr, body, emit);
       case "ConditionalExpression":
-        return this.compileConditionalExpression(expr, emit);
+        return this.compileConditionalExpression(expr, body, emit);
       case "TypeCast":
-        return this.compileTypeCast(expr, emit);
+        return this.compileTypeCast(expr, body, emit);
       case "MemberAccess":
       case "ItemAccess":
       case "DereferenceExpression":
-        return this.compileIndirectAccess(expr, emit);
+        return this.compileIndirectAccess(expr, body, emit);
       case "BuiltInFunctionInvocation":
-        return this.compileBuiltinFunctionInvocation(expr, emit);
+        return this.compileBuiltinFunctionInvocation(expr, body, emit);
       case "FunctionInvocation":
-        return this.compileFunctionInvocation(expr, emit);
+        return this.compileFunctionInvocation(expr, body, emit);
     }
     return i32Desc;
   }
@@ -970,10 +1000,15 @@ export class FunctionCompiler {
   /**
    * Compiles a literal
    * @param lit Literal to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
-  private compileLiteral(lit: Literal, emit = true): TypeSpec | null {
+  private compileLiteral(
+    lit: Literal,
+    body: WaInstruction[],
+    emit = true
+  ): TypeSpec | null {
     let instr: WaInstruction;
     let typeSpec: TypeSpec;
     if (typeof lit.value === "number") {
@@ -990,27 +1025,36 @@ export class FunctionCompiler {
       instr = constVal(WaType.i64, shrunkVal);
       typeSpec = i64Desc;
     }
-    this.inject(emit, instr);
+    this.inject(emit, instr, body);
     return typeSpec;
   }
 
   /**
    * Compiles an identifier
    * @param id Identifier to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
-  private compileIdentifier(id: Identifier, emit = true): TypeSpec | null {
+  private compileIdentifier(
+    id: Identifier,
+    body: WaInstruction[],
+    emit = true
+  ): TypeSpec | null {
     const resolvedId = this.resolveIdentifier(id);
     if (!resolvedId) {
       return null;
     }
     if (resolvedId.local) {
-      this.inject(emit, localGet(resolvedId.local.name));
+      this.inject(emit, localGet(resolvedId.local.name), body);
       return resolvedId.local.type;
     }
     if (resolvedId.global) {
-      this.inject(emit, globalGet(createGlobalName(resolvedId.global.name)));
+      this.inject(
+        emit,
+        globalGet(createGlobalName(resolvedId.global.name)),
+        body
+      );
       return <IntrinsicType>{
         type: "Intrinsic",
         underlying: resolvedId.global.underlyingType,
@@ -1022,8 +1066,8 @@ export class FunctionCompiler {
         this.reportError("W143", id);
         return null;
       }
-      this.inject(emit, constVal(WaType.i32, resolvedId.var.address));
-      this.compileIntrinsicVariableGet(typeSpec, emit);
+      this.inject(emit, constVal(WaType.i32, resolvedId.var.address), body);
+      this.compileIntrinsicVariableGet(typeSpec, body, emit);
       return typeSpec;
     }
   }
@@ -1031,17 +1075,19 @@ export class FunctionCompiler {
   /**
    * Compiles getter to a variable with the specified type
    * @param typeSpec Variabel type
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    */
   private compileIntrinsicVariableGet(
     typeSpec: IntrinsicType,
+    body: WaInstruction[],
     emit = true
   ): void {
     const waType = waTypeMappings[typeSpec.underlying];
     switch (typeSpec.underlying) {
       case "f32":
       case "f64":
-        this.inject(emit, load(waType));
+        this.inject(emit, load(waType), body);
         break;
       case "i8":
       case "u8":
@@ -1053,7 +1099,8 @@ export class FunctionCompiler {
             undefined,
             undefined,
             typeSpec.underlying === "i8"
-          )
+          ),
+          body
         );
         break;
       case "i16":
@@ -1066,7 +1113,8 @@ export class FunctionCompiler {
             undefined,
             undefined,
             typeSpec.underlying === "i16"
-          )
+          ),
+          body
         );
         break;
       case "i32":
@@ -1079,7 +1127,8 @@ export class FunctionCompiler {
             undefined,
             undefined,
             typeSpec.underlying === "i32"
-          )
+          ),
+          body
         );
         break;
       case "i64":
@@ -1092,7 +1141,8 @@ export class FunctionCompiler {
             undefined,
             undefined,
             typeSpec.underlying === "i64"
-          )
+          ),
+          body
         );
     }
   }
@@ -1100,50 +1150,54 @@ export class FunctionCompiler {
   /**
    * Compiles setter to a variable with the specified type
    * @param typeSpec Variabel type
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    */
   private compileIntrinsicVariableSet(
     typeSpec: IntrinsicType,
+    body: WaInstruction[],
     emit = true
   ): void {
     const waType = waTypeMappings[typeSpec.underlying];
     switch (typeSpec.underlying) {
       case "f32":
       case "f64":
-        this.inject(emit, store(waType));
+        this.inject(emit, store(waType), body);
         break;
       case "i8":
       case "u8":
-        this.inject(emit, store(waType, WaBitSpec.Bit8));
+        this.inject(emit, store(waType, WaBitSpec.Bit8), body);
         break;
       case "i16":
       case "u16":
-        this.inject(emit, store(waType, WaBitSpec.Bit16));
+        this.inject(emit, store(waType, WaBitSpec.Bit16), body);
         break;
       case "i32":
       case "u32":
-        this.inject(emit, store(waType, WaBitSpec.Bit32));
+        this.inject(emit, store(waType, WaBitSpec.Bit32), body);
         break;
       case "i64":
       case "u64":
-        this.inject(emit, store(waType));
+        this.inject(emit, store(waType), body);
     }
   }
 
   /**
    * Compiles a unary expression
    * @param unary Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileUnaryExpression(
     unary: UnaryExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
     switch (unary.operator) {
       case "+": {
         // --- Compile the operand
-        const operandType = this.compileExpression(unary.operand, emit);
+        const operandType = this.compileExpression(unary.operand, body, emit);
         if (operandType === null) {
           return null;
         }
@@ -1158,6 +1212,7 @@ export class FunctionCompiler {
         this.castIntrinsicToIntrinsic(
           i32Desc,
           operandType as IntrinsicType,
+          body,
           emit,
           unary.operand?.value
         );
@@ -1166,7 +1221,7 @@ export class FunctionCompiler {
 
       case "-": {
         // --- Compile the operand
-        const operandType = this.compileExpression(unary.operand, emit);
+        const operandType = this.compileExpression(unary.operand, body, emit);
         if (operandType === null) {
           return null;
         }
@@ -1179,15 +1234,15 @@ export class FunctionCompiler {
 
         // --- "-" --> -1 * operand
         const waType = waTypeMappings[operandType.underlying];
-        this.inject(emit, constVal(waType, -1));
-        this.inject(emit, mul(waType));
+        this.inject(emit, constVal(waType, -1), body);
+        this.inject(emit, mul(waType), body);
         return operandType;
       }
 
       case "!":
       case "~": {
         // --- Compile the operand
-        const operandType = this.compileExpression(unary.operand, emit);
+        const operandType = this.compileExpression(unary.operand, body, emit);
         if (operandType === null) {
           return null;
         }
@@ -1206,7 +1261,7 @@ export class FunctionCompiler {
         }
         if (unary.operator === "!") {
           // --- "!" --> eqz
-          this.inject(emit, eqz(waType));
+          this.inject(emit, eqz(waType), body);
           return i32Desc;
         } else {
           // --- "~" --> xor with all bits 1
@@ -1215,15 +1270,16 @@ export class FunctionCompiler {
             constVal(
               waType,
               bitwiseNotMasks[(operandType as IntrinsicType).underlying]
-            )
+            ),
+            body
           );
-          this.inject(emit, xor(waType));
+          this.inject(emit, xor(waType), body);
           return operandType;
         }
       }
 
       case "&": {
-        const address = this.calculateAddressOf(unary.operand, emit);
+        const address = this.calculateAddressOf(unary.operand, body, emit);
         if (address === null) {
           return null;
         }
@@ -1235,19 +1291,21 @@ export class FunctionCompiler {
   /**
    * Compiles a binary expression
    * @param binary Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileBinaryExpression(
     binary: BinaryExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
     // --- Compile the left and right operands to obtain result types
-    const left = this.compileExpression(binary.left, false);
+    const left = this.compileExpression(binary.left, body, false);
     if (left === null) {
       return null;
     }
-    const right = this.compileExpression(binary.right, false);
+    const right = this.compileExpression(binary.right, body, false);
     if (right === null) {
       return null;
     }
@@ -1274,28 +1332,28 @@ export class FunctionCompiler {
     }
 
     // --- Compile the operands and cast them to the appropriate type
-    this.compileExpression(binary.left, emit);
-    this.castIntrinsicToIntrinsic(resultType, left, emit);
-    this.compileExpression(binary.right, emit);
-    this.castIntrinsicToIntrinsic(resultType, right, emit);
+    this.compileExpression(binary.left, body, emit);
+    this.castIntrinsicToIntrinsic(resultType, left, body, emit);
+    this.compileExpression(binary.right, body, emit);
+    this.castIntrinsicToIntrinsic(resultType, right, body, emit);
     const waType = waTypeMappings[resultType.underlying];
 
     // --- Process operations
     switch (binary.operator) {
       case "+":
-        this.inject(emit, add(waType));
+        this.inject(emit, add(waType), body);
         break;
 
       case "-":
-        this.inject(emit, sub(waType));
+        this.inject(emit, sub(waType), body);
         break;
 
       case "*":
-        this.inject(emit, mul(waType));
+        this.inject(emit, mul(waType), body);
         break;
 
       case "/":
-        this.inject(emit, div(waType, isSigned));
+        this.inject(emit, div(waType, isSigned), body);
         break;
 
       case "%":
@@ -1303,7 +1361,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "remainder (%)");
           return null;
         }
-        this.inject(emit, rem(waType, isSigned));
+        this.inject(emit, rem(waType, isSigned), body);
         break;
 
       case "&":
@@ -1311,7 +1369,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "bitwise AND");
           return null;
         }
-        this.inject(emit, and(waType));
+        this.inject(emit, and(waType), body);
         break;
 
       case "|":
@@ -1319,7 +1377,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "bitwise OR");
           return null;
         }
-        this.inject(emit, or(waType));
+        this.inject(emit, or(waType), body);
         break;
 
       case "^":
@@ -1327,7 +1385,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "bitwise XOR");
           return null;
         }
-        this.inject(emit, xor(waType));
+        this.inject(emit, xor(waType), body);
         break;
 
       case "<<":
@@ -1335,7 +1393,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "shift left");
           return null;
         }
-        this.inject(emit, shl(waType));
+        this.inject(emit, shl(waType), body);
         break;
 
       case ">>":
@@ -1343,7 +1401,7 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "signed shift right");
           return null;
         }
-        this.inject(emit, shr(waType, true));
+        this.inject(emit, shr(waType, true), body);
         break;
 
       case ">>>":
@@ -1351,30 +1409,30 @@ export class FunctionCompiler {
           this.reportError("W145", binary, "shift right");
           return null;
         }
-        this.inject(emit, shr(waType, false));
+        this.inject(emit, shr(waType, false), body);
         break;
 
       case "==":
-        this.inject(emit, eq(waType));
+        this.inject(emit, eq(waType), body);
         break;
 
       case "!=":
-        this.inject(emit, ne(waType));
+        this.inject(emit, ne(waType), body);
         break;
 
       case "<":
-        this.inject(emit, lt(waType, isSigned));
+        this.inject(emit, lt(waType, isSigned), body);
         break;
 
       case "<=":
-        this.inject(emit, le(waType, isSigned));
+        this.inject(emit, le(waType, isSigned), body);
         break;
       case ">":
-        this.inject(emit, gt(waType, isSigned));
+        this.inject(emit, gt(waType, isSigned), body);
         break;
 
       case ">=":
-        this.inject(emit, ge(waType, isSigned));
+        this.inject(emit, ge(waType, isSigned), body);
         break;
     }
     return resultType;
@@ -1383,23 +1441,37 @@ export class FunctionCompiler {
   /**
    * Compiles a conditional expression
    * @param conditional Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileConditionalExpression(
     conditional: ConditionalExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
     // --- Compile the condition, consequent, and alternate values
-    const condition = this.compileExpression(conditional.condition, false);
+    const condition = this.compileExpression(
+      conditional.condition,
+      body,
+      false
+    );
     if (condition === null) {
       return null;
     }
-    const consequent = this.compileExpression(conditional.consequent, false);
+    const consequent = this.compileExpression(
+      conditional.consequent,
+      body,
+      false
+    );
     if (consequent === null) {
       return null;
     }
-    const alternate = this.compileExpression(conditional.alternate, false);
+    const alternate = this.compileExpression(
+      conditional.alternate,
+      body,
+      false
+    );
     if (alternate === null) {
       return null;
     }
@@ -1429,15 +1501,15 @@ export class FunctionCompiler {
     }
 
     // --- Compile the operands and cast them to the appropriate type
-    this.compileExpression(conditional.consequent, emit);
-    this.castIntrinsicToIntrinsic(resultType, consequent, emit);
-    this.compileExpression(conditional.alternate, emit);
-    this.castIntrinsicToIntrinsic(resultType, alternate, emit);
-    this.compileExpression(conditional.condition, emit);
-    this.castIntrinsicToIntrinsic(i32Desc, condition, emit);
+    this.compileExpression(conditional.consequent, body, emit);
+    this.castIntrinsicToIntrinsic(resultType, consequent, body, emit);
+    this.compileExpression(conditional.alternate, body, emit);
+    this.castIntrinsicToIntrinsic(resultType, alternate, body, emit);
+    this.compileExpression(conditional.condition, body, emit);
+    this.castIntrinsicToIntrinsic(i32Desc, condition, body, emit);
 
     // --- Inject the "select" operation
-    this.inject(emit, select());
+    this.inject(emit, select(), body);
 
     // --- Done
     return resultType;
@@ -1446,14 +1518,16 @@ export class FunctionCompiler {
   /**
    * Compiles a type cast
    * @param cast Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileTypeCast(
     cast: TypeCastExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
-    const operand = this.compileExpression(cast.operand, false);
+    const operand = this.compileExpression(cast.operand, body, false);
     if (operand === null) {
       return null;
     }
@@ -1465,28 +1539,30 @@ export class FunctionCompiler {
       type: "Intrinsic",
       underlying: cast.name,
     };
-    this.compileExpression(cast.operand, emit);
-    this.castIntrinsicToIntrinsic(resultType, operand, emit);
+    this.compileExpression(cast.operand, body, emit);
+    this.castIntrinsicToIntrinsic(resultType, operand, body, emit);
     return resultType;
   }
 
   /**
    * Compiles an indirect value access
    * @param expr Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileIndirectAccess(
     expr: IndirectAccessExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
-    const varAddr = this.calculateAddressOf(expr, emit);
+    const varAddr = this.calculateAddressOf(expr, body, emit);
     if (varAddr == null) {
       return null;
     }
     let typeSpec = varAddr.spec;
     if (typeSpec.type === "Intrinsic") {
-      this.compileIntrinsicVariableGet(typeSpec, emit);
+      this.compileIntrinsicVariableGet(typeSpec, body, emit);
     }
     return typeSpec;
   }
@@ -1494,16 +1570,18 @@ export class FunctionCompiler {
   /**
    * Compiles a built-in function invocation
    * @param func Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileBuiltinFunctionInvocation(
     func: BuiltInFunctionInvocationExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
     // --- Prepare function argument types
     const argTypes = func.arguments.map((arg) =>
-      this.compileExpression(arg, false)
+      this.compileExpression(arg, body, false)
     );
     const hasF64Arg =
       argTypes.filter(
@@ -1518,11 +1596,12 @@ export class FunctionCompiler {
 
     // --- Compile function argument types
     func.arguments.forEach((arg, index) => {
-      this.compileExpression(arg, emit);
+      this.compileExpression(arg, body, emit);
       if (func.name === "min" || func.name === "max") {
         this.castIntrinsicToIntrinsic(
           hasF64Arg ? f64Desc : f32Desc,
-          argTypes[index] as IntrinsicType
+          argTypes[index] as IntrinsicType,
+          body
         );
       }
     });
@@ -1535,17 +1614,20 @@ export class FunctionCompiler {
           const local = this.createTempLocal(waType);
           this.inject(
             emit,
-            localTee(local),
-            constVal(waType, 0),
-            lt(waType, true),
-            ifBlock(
-              [localGet(local), constVal(waType, -1), mul(waType)],
-              [localGet(local)],
-              waType
-            )
+            [
+              localTee(local),
+              constVal(waType, 0),
+              lt(waType, true),
+              ifBlock(
+                [localGet(local), constVal(waType, -1), mul(waType)],
+                [localGet(local)],
+                waType
+              ),
+            ],
+            body
           );
         } else if (argIns.startsWith("f")) {
-          this.inject(emit, abs(waType));
+          this.inject(emit, abs(waType), body);
         }
         break;
       }
@@ -1555,7 +1637,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "ceil");
           return null;
         }
-        this.inject(emit, ceil(waType));
+        this.inject(emit, ceil(waType), body);
         break;
 
       case "clz":
@@ -1563,7 +1645,7 @@ export class FunctionCompiler {
           this.reportError("W151", func, "clz");
           return null;
         }
-        this.inject(emit, clz(waType));
+        this.inject(emit, clz(waType), body);
         break;
 
       case "copysign":
@@ -1571,7 +1653,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "copysign");
           return null;
         }
-        this.inject(emit, copysign(waType));
+        this.inject(emit, copysign(waType), body);
         break;
 
       case "ctz":
@@ -1579,7 +1661,7 @@ export class FunctionCompiler {
           this.reportError("W151", func, "ctz");
           return null;
         }
-        this.inject(emit, ctz(waType));
+        this.inject(emit, ctz(waType), body);
         break;
 
       case "floor":
@@ -1587,7 +1669,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "floor");
           return null;
         }
-        this.inject(emit, floor(waType));
+        this.inject(emit, floor(waType), body);
         break;
 
       case "nearest":
@@ -1595,7 +1677,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "nearest");
           return null;
         }
-        this.inject(emit, nearest(waType));
+        this.inject(emit, nearest(waType), body);
         break;
 
       case "neg":
@@ -1603,7 +1685,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "neg");
           return null;
         }
-        this.inject(emit, neg(waType));
+        this.inject(emit, neg(waType), body);
         break;
 
       case "popcnt":
@@ -1611,7 +1693,7 @@ export class FunctionCompiler {
           this.reportError("W151", func, "popcnt");
           return null;
         }
-        this.inject(emit, popcnt(waType));
+        this.inject(emit, popcnt(waType), body);
         break;
 
       case "sqrt":
@@ -1619,7 +1701,7 @@ export class FunctionCompiler {
           this.reportError("W150", func, "sqrt");
           return null;
         }
-        this.inject(emit, sqrt(waType));
+        this.inject(emit, sqrt(waType), body);
         break;
 
       case "min":
@@ -1627,7 +1709,11 @@ export class FunctionCompiler {
         resultType = hasF64Arg ? f64Desc : f32Desc;
         waType = hasF64Arg ? WaType.f64 : WaType.f32;
         for (let i = 1; i < func.arguments.length; i++) {
-          this.inject(emit, func.name === "min" ? min(waType) : max(waType));
+          this.inject(
+            emit,
+            func.name === "min" ? min(waType) : max(waType),
+            body
+          );
         }
         break;
     }
@@ -1637,11 +1723,13 @@ export class FunctionCompiler {
   /**
    * Compiles a function invocation
    * @param invoc Expression to compile
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    * @returns Type specification of the result
    */
   private compileFunctionInvocation(
     invoc: FunctionInvocationExpression,
+    body: WaInstruction[],
     emit = true
   ): TypeSpec | null {
     // --- Check if the invoked function exists
@@ -1693,7 +1781,7 @@ export class FunctionCompiler {
         par.spec.type === "Pointer"
           ? WaType.i32
           : waTypeMappings[(par.spec as IntrinsicType).underlying];
-      const argType = this.compileExpression(invoc.arguments[i]);
+      const argType = this.compileExpression(invoc.arguments[i], body);
       const waArgType =
         argType.type === "Pointer"
           ? WaType.i32
@@ -1709,20 +1797,20 @@ export class FunctionCompiler {
       }
 
       // --- Argument is OK, cast it to the parameter's type
-      this.castForStorage(par.spec, argType);
+      this.castForStorage(par.spec, argType, body);
     }
 
     // --- Call the function
     if (calledDecl.type === "TableDeclaration") {
-      this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex));
-      const exprType = this.compileExpression(invoc.dispatcher, emit);
+      this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex), body);
+      const exprType = this.compileExpression(invoc.dispatcher, body, emit);
       if (exprType) {
-        this.castForStorage(i32Desc, exprType);
-        this.inject(emit, add(WaType.i32));
-        this.inject(emit, callIndirect(createTableName(invoc.name)));
+        this.castForStorage(i32Desc, exprType, body);
+        this.inject(emit, add(WaType.i32), body);
+        this.inject(emit, callIndirect(createTableName(invoc.name)), body);
       }
     } else {
-      this.inject(emit, call(createGlobalName(invoc.name)));
+      this.inject(emit, call(createGlobalName(invoc.name)), body);
     }
 
     // --- Done
@@ -1733,11 +1821,13 @@ export class FunctionCompiler {
    * Casts a storage type to another storage type
    * @param left
    * @param right
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    */
   private castForStorage(
     left: TypeSpec,
     right: TypeSpec,
+    body: WaInstruction[],
     emit = true,
     value?: number | bigint
   ): void {
@@ -1747,7 +1837,7 @@ export class FunctionCompiler {
           this.reportError("W141", right);
           return;
         }
-        this.castIntrinsicToIntrinsic(left, right, emit, value);
+        this.castIntrinsicToIntrinsic(left, right, body, emit, value);
         break;
 
       case "Pointer":
@@ -1763,7 +1853,7 @@ export class FunctionCompiler {
           return;
         }
         if (right.underlying === "i64" || right.underlying === "u64") {
-          this.inject(emit, wrap64());
+          this.inject(emit, wrap64(), body);
         }
         break;
     }
@@ -1778,6 +1868,7 @@ export class FunctionCompiler {
   private castIntrinsicToIntrinsic(
     left: IntrinsicType,
     right: IntrinsicType,
+    body: WaInstruction[],
     emit = true,
     value?: number | bigint
   ): void {
@@ -1803,24 +1894,24 @@ export class FunctionCompiler {
       case "u64":
         switch (left.underlying) {
           case "f32":
-            this.inject(emit, convert32(WaType.i64));
+            this.inject(emit, convert32(WaType.i64), body);
             return;
           case "f64":
-            this.inject(emit, convert64(WaType.i64));
+            this.inject(emit, convert64(WaType.i64), body);
             return;
           case "i32":
           case "u32":
-            this.inject(emit, wrap64());
+            this.inject(emit, wrap64(), body);
             return;
           case "i16":
           case "u16":
-            this.inject(emit, wrap64());
-            tighten(0xffff, 16, left.underlying, emit, value);
+            this.inject(emit, wrap64(), body);
+            tighten(0xffff, 16, left.underlying, body, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(emit, wrap64());
-            tighten(0xff, 24, left.underlying, emit, value);
+            this.inject(emit, wrap64(), body);
+            tighten(0xff, 24, left.underlying, body, emit, value);
             return;
         }
         break;
@@ -1833,24 +1924,24 @@ export class FunctionCompiler {
       case "u8":
         switch (left.underlying) {
           case "f32":
-            this.inject(emit, convert32(WaType.i32));
+            this.inject(emit, convert32(WaType.i32), body);
             return;
           case "f64":
-            this.inject(emit, convert64(WaType.i32));
+            this.inject(emit, convert64(WaType.i32), body);
             return;
           case "i64":
-            this.inject(emit, extend32(true));
+            this.inject(emit, extend32(true), body);
             return;
           case "u64":
-            this.inject(emit, extend32(false));
+            this.inject(emit, extend32(false), body);
             return;
           case "i16":
           case "u16":
-            tighten(0xffff, 16, left.underlying, emit, value);
+            tighten(0xffff, 16, left.underlying, body, emit, value);
             return;
           case "i8":
           case "u8":
-            tighten(0xff, 24, left.underlying, emit, value);
+            tighten(0xff, 24, left.underlying, body, emit, value);
             return;
         }
         break;
@@ -1858,29 +1949,29 @@ export class FunctionCompiler {
       case "f64":
         switch (left.underlying) {
           case "f32":
-            this.inject(emit, demote64());
+            this.inject(emit, demote64(), body);
             return;
           case "i64":
-            this.inject(emit, trunc64(WaType.f64, true));
+            this.inject(emit, trunc64(WaType.f64, true), body);
             return;
           case "u64":
-            this.inject(emit, trunc64(WaType.f64, false));
+            this.inject(emit, trunc64(WaType.f64, false), body);
             return;
           case "i32":
-            this.inject(emit, trunc32(WaType.f64, true));
+            this.inject(emit, trunc32(WaType.f64, true), body);
             return;
           case "u32":
-            this.inject(emit, trunc32(WaType.f64, false));
+            this.inject(emit, trunc32(WaType.f64, false), body);
             return;
           case "i16":
           case "u16":
-            this.inject(emit, trunc32(WaType.f64, false));
-            tighten(0xffff, 16, left.underlying, emit, value);
+            this.inject(emit, trunc32(WaType.f64, false), body);
+            tighten(0xffff, 16, left.underlying, body, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(emit, trunc32(WaType.f64, false));
-            tighten(0xff, 24, left.underlying, emit, value);
+            this.inject(emit, trunc32(WaType.f64, false), body);
+            tighten(0xff, 24, left.underlying, body, emit, value);
             return;
         }
         break;
@@ -1888,29 +1979,29 @@ export class FunctionCompiler {
       case "f32":
         switch (left.underlying) {
           case "f64":
-            this.inject(emit, promote32());
+            this.inject(emit, promote32(), body);
             return;
           case "i64":
-            this.inject(emit, trunc64(WaType.f32, true));
+            this.inject(emit, trunc64(WaType.f32, true), body);
             return;
           case "u64":
-            this.inject(emit, trunc64(WaType.f32, false));
+            this.inject(emit, trunc64(WaType.f32, false), body);
             return;
           case "i32":
-            this.inject(emit, trunc32(WaType.f32, true));
+            this.inject(emit, trunc32(WaType.f32, true), body);
             return;
           case "u32":
-            this.inject(emit, trunc32(WaType.f32, false));
+            this.inject(emit, trunc32(WaType.f32, false), body);
             return;
           case "i16":
           case "u16":
-            this.inject(emit, trunc32(WaType.f32, false));
-            tighten(0xffff, 16, left.underlying, emit, value);
+            this.inject(emit, trunc32(WaType.f32, false), body);
+            tighten(0xffff, 16, left.underlying, body, emit, value);
             return;
           case "i8":
           case "u8":
-            this.inject(emit, trunc32(WaType.f32, false));
-            tighten(0xff, 24, left.underlying, emit, value);
+            this.inject(emit, trunc32(WaType.f32, false), body);
+            tighten(0xff, 24, left.underlying, body, emit, value);
             return;
         }
         break;
@@ -1921,6 +2012,7 @@ export class FunctionCompiler {
      * @param mask Bit mask
      * @param bits Bit count
      * @param typename Type name
+     * @param body Body to put the statements in
      * @param emit Should emit code?
      * @param value: Optional value to check if tightening is needed at all
      */
@@ -1928,6 +2020,7 @@ export class FunctionCompiler {
       mask: number,
       bits: number,
       typename: string,
+      body: WaInstruction[],
       emit = true,
       value?: number | bigint
     ): void {
@@ -1939,13 +2032,13 @@ export class FunctionCompiler {
           return;
         }
       }
-      compiler.inject(emit, constVal(WaType.i32, mask));
-      compiler.inject(emit, and(WaType.i32));
+      compiler.inject(emit, constVal(WaType.i32, mask), body);
+      compiler.inject(emit, and(WaType.i32), body);
       if (typename.startsWith("i")) {
-        compiler.inject(emit, constVal(WaType.i32, bits));
-        compiler.inject(emit, shl(WaType.i32));
-        compiler.inject(emit, constVal(WaType.i32, bits));
-        compiler.inject(emit, shr(WaType.i32, true));
+        compiler.inject(emit, constVal(WaType.i32, bits), body);
+        compiler.inject(emit, shl(WaType.i32), body);
+        compiler.inject(emit, constVal(WaType.i32, bits), body);
+        compiler.inject(emit, shr(WaType.i32, true), body);
       }
     }
   }
@@ -1983,10 +2076,12 @@ export class FunctionCompiler {
   /**
    * Calculates the address of the specified expression
    * @param expr Address expression
+   * @param body Body to put the statements in
    * @param emit Should emit code?
    */
   private calculateAddressOf(
     expr: Expression,
+    body: WaInstruction[],
     emit = true
   ): ResolvedAddress | null {
     switch (expr.type) {
@@ -1999,7 +2094,7 @@ export class FunctionCompiler {
         }
 
         // --- Inject variable address if requested
-        this.inject(emit, constVal(WaType.i32, resolvedId.var.address));
+        this.inject(emit, constVal(WaType.i32, resolvedId.var.address), body);
 
         // --- Retrieve address/type information
         return {
@@ -2010,7 +2105,7 @@ export class FunctionCompiler {
 
       case "DereferenceExpression": {
         // --- Start with the calculation of the operand address
-        const operandAddr = this.calculateAddressOf(expr.operand);
+        const operandAddr = this.calculateAddressOf(expr.operand, body);
         if (operandAddr === null) {
           return null;
         }
@@ -2022,7 +2117,7 @@ export class FunctionCompiler {
         }
 
         // --- Load the pointer from the address
-        this.inject(emit, load(WaType.i32));
+        this.inject(emit, load(WaType.i32), body);
 
         // --- Retrieve address/type information
         return {
@@ -2033,7 +2128,7 @@ export class FunctionCompiler {
 
       case "MemberAccess": {
         // --- Start with the calculation of the object address
-        const leftAddress = this.calculateAddressOf(expr.object);
+        const leftAddress = this.calculateAddressOf(expr.object, body);
         if (leftAddress === null) {
           return null;
         }
@@ -2057,8 +2152,8 @@ export class FunctionCompiler {
         let address = leftAddress.address;
         const offset = field[0].offset;
         if (offset !== 0) {
-          this.inject(true, constVal(WaType.i32, offset));
-          this.inject(true, add(WaType.i32));
+          this.inject(true, constVal(WaType.i32, offset), body);
+          this.inject(true, add(WaType.i32), body);
         }
         return {
           address,
@@ -2068,7 +2163,7 @@ export class FunctionCompiler {
 
       case "ItemAccess": {
         // --- Start with the calculation of the object address
-        const arrayAddress = this.calculateAddressOf(expr.array);
+        const arrayAddress = this.calculateAddressOf(expr.array, body);
         if (arrayAddress === null) {
           return null;
         }
@@ -2081,14 +2176,14 @@ export class FunctionCompiler {
         }
         const itemSize = this.wsCompiler.getSizeof(arrayAddress.spec.spec);
 
-        const indexType = this.compileExpression(expr.index, emit);
+        const indexType = this.compileExpression(expr.index, body, emit);
         if (indexType === null) {
           return null;
         }
-        this.castForStorage(i32Desc, indexType, emit, expr.index.value);
-        this.inject(emit, constVal(WaType.i32, itemSize));
-        this.inject(emit, mul(WaType.i32));
-        this.inject(emit, add(WaType.i32));
+        this.castForStorage(i32Desc, indexType, body, emit, expr.index.value);
+        this.inject(emit, constVal(WaType.i32, itemSize), body);
+        this.inject(emit, mul(WaType.i32), body);
+        this.inject(emit, add(WaType.i32), body);
         return {
           address,
           spec: arrayAddress.spec.spec,
@@ -2124,14 +2219,23 @@ export class FunctionCompiler {
 
   /**
    * Injects the specifiec WebAssembly instructions into the function
-   * @param instr Instructions to inject
    * @param emit Should emit code?
+   * @param instr Instructions to inject
+   * @param body Body to inject the instructions
    */
-  private inject(emit: boolean, ...instr: WaInstruction[]): void {
+  private inject(
+    emit: boolean,
+    instr: WaInstruction | WaInstruction[],
+    body: WaInstruction[]
+  ): void {
     if (!emit) {
       return;
     }
-    this._builder.inject(...instr);
+    if (Array.isArray(instr)) {
+      body.push(...instr);
+    } else {
+      body.push(instr);
+    }
   }
 
   /**
