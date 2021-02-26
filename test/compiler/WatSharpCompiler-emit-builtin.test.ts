@@ -23,16 +23,16 @@ describe("WatSharpCompiler - emit built-in function", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $tloc_i64 i64)");
+    expect(locals[0].message).toBe("(local $tloc$i64 i64)");
     expect(locals[1].message).toBe("(local $loc$a i64)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i64.load");
-    expect(instrs[2].message).toBe("tee_local $tloc_i64");
+    expect(instrs[2].message).toBe("tee_local $tloc$i64");
     expect(instrs[3].message).toBe("i64.const 0");
     expect(instrs[4].message).toBe("i64.lt_s");
     expect(instrs[5].message).toBe(
-      "if (result i64)\n  get_local $tloc_i64\n  i64.const -1\n  i64.mul\nelse\n  get_local $tloc_i64\nend"
+      "if (result i64)\n  get_local $tloc$i64\n  i64.const -1\n  i64.mul\nelse\n  get_local $tloc$i64\nend"
     );
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
@@ -53,16 +53,16 @@ describe("WatSharpCompiler - emit built-in function", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $tloc_i32 i32)");
+    expect(locals[0].message).toBe("(local $tloc$i32 i32)");
     expect(locals[1].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("tee_local $tloc_i32");
+    expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
     expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc_i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc_i32\nend"
+      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
     );
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
@@ -83,16 +83,16 @@ describe("WatSharpCompiler - emit built-in function", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $tloc_i32 i32)");
+    expect(locals[0].message).toBe("(local $tloc$i32 i32)");
     expect(locals[1].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load16_s");
-    expect(instrs[2].message).toBe("tee_local $tloc_i32");
+    expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
     expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc_i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc_i32\nend"
+      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
     );
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
@@ -113,16 +113,16 @@ describe("WatSharpCompiler - emit built-in function", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
-    expect(locals[0].message).toBe("(local $tloc_i32 i32)");
+    expect(locals[0].message).toBe("(local $tloc$i32 i32)");
     expect(locals[1].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load8_s");
-    expect(instrs[2].message).toBe("tee_local $tloc_i32");
+    expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
     expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc_i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc_i32\nend"
+      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
     );
     expect(instrs[6].message).toBe("set_local $loc$a");
   });

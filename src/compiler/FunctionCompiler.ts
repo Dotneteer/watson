@@ -76,6 +76,7 @@ import {
   FunctionBuilder,
   ge,
   globalGet,
+  globalSet,
   gt,
   ifBlock,
   le,
@@ -99,6 +100,7 @@ import {
   shl,
   shr,
   sqrt,
+  store,
   sub,
   trunc32,
   trunc64,
@@ -290,7 +292,218 @@ export class FunctionCompiler {
    * Processes the specified assignment
    */
   private processAssignment(asgn: Assignment): void {
-    // TODO: Implement this method
+    // --- Check the left value type
+    let leftSide: "local" | "global" | "var" = "var";
+    let leftType: TypeSpec | undefined;
+    let idAddress = false;
+    let varName: string | undefined;
+    if (asgn.lval.type == "Identifier") {
+      // --- A single identifier may be a global, a local, or a memory variable
+      varName = asgn.lval.name;
+      const resolvedId = this.resolveIdentifier(asgn.lval);
+      if (!resolvedId) {
+        return;
+      }
+      idAddress = true;
+      if (resolvedId.global) {
+        // --- Left side is a global
+        leftSide = "global";
+        leftType = <IntrinsicType>{
+          type: "Intrinsic",
+          underlying: resolvedId.global.underlyingType,
+        };
+      } else if (resolvedId.local) {
+        // --- Left side is a local
+        leftSide = "local";
+        leftType = <IntrinsicType>{
+          type: "Intrinsic",
+          underlying:
+            resolvedId.local.type.type === "Intrinsic"
+              ? resolvedId.local.type.underlying
+              : "i32",
+        };
+      } else {
+        // --- Left side is a variable with a const address
+        leftType = resolvedId.var.spec;
+        this.inject(true, constVal(WaType.i32, resolvedId.var.address));
+      }
+    } else {
+      // --- Left side is a compound left value expression
+      const resolvedAddr = this.calculateAddressOf(asgn.lval);
+      if (!resolvedAddr) {
+        return;
+      }
+      leftType = resolvedAddr.spec;
+    }
+
+    // --- Now, we accept only intrinsic types and pointers as left values
+    if (leftType.type !== "Intrinsic" && leftType.type !== "Pointer") {
+      this.reportError("W161", asgn);
+      return;
+    }
+
+    // --- If it is an addressed variable, calculate the address
+    let tmpAddrVar = "";
+    if (leftSide === "var") {
+      // --- Do we need double access to this address?
+      if (!idAddress && asgn.asgn !== "=") {
+        tmpAddrVar = this.createTempLocal(WaType.i32, "asgn");
+        this.inject(true, localTee(tmpAddrVar));
+        this.inject(true, localGet(tmpAddrVar));
+        // --- At this point we have the variable acces on the top of the stack
+      }
+    }
+
+    // --- We need to get the value
+    const leftIntrinsic = leftType.type === "Intrinsic" ? leftType : i32Desc;
+    if (asgn.asgn !== "=") {
+      switch (leftSide) {
+        case "global":
+          this.inject(true, globalGet(createGlobalName(varName)));
+          break;
+        case "local":
+          this.inject(true, localGet(createLocalName(varName)));
+          break;
+        case "var":
+          this.compileIntrinsicVariableGet(leftIntrinsic);
+          break;
+      }
+    }
+
+    // --- Now, evaluate the right-side expression
+    const rightType = this.compileExpression(asgn.expr);
+
+    // --- Valid type?
+    if (!rightType) {
+      return;
+    }
+
+    // --- Match intrinsic left type with intrinsic right type
+    if (leftType.type === "Intrinsic" && rightType.type !== "Intrinsic") {
+      this.reportError("W141", asgn);
+      return;
+    }
+
+    // --- Match pointer left type with pointer or integral right type
+    if (
+      leftType.type === "Pointer" &&
+      rightType.type !== "Pointer" &&
+      (rightType.type !== "Intrinsic" || rightType.underlying.startsWith("f"))
+    ) {
+      this.reportError("W141", asgn);
+      return;
+    }
+
+    // --- Instrinsic types for the right side
+    const rightIntrinsic = rightType.type === "Intrinsic" ? rightType : i32Desc;
+
+    // --- Is it a compound assignment?
+    if (asgn.asgn !== "=") {
+      // --- Check if the operation should be signed
+      const isSigned =
+        leftIntrinsic.underlying.startsWith("i") ||
+        rightIntrinsic.underlying.startsWith("i");
+
+      // --- Calculate operation type
+      let resultType = i32Desc;
+      if (
+        leftIntrinsic.underlying.startsWith("f") ||
+        rightIntrinsic.underlying.startsWith("f")
+      ) {
+        resultType = f64Desc;
+      } else if (
+        leftIntrinsic.underlying.endsWith("64") ||
+        rightIntrinsic.underlying.endsWith("64")
+      ) {
+        resultType = i64Desc;
+      }
+
+      // --- Compile the operands and cast them to the appropriate type
+      this.castIntrinsicToIntrinsic(resultType, rightIntrinsic);
+      const waType = waTypeMappings[resultType.underlying];
+
+      // --- Compile the assignment operation
+      switch (asgn.asgn) {
+        case "+=":
+          this.inject(true, add(waType));
+          break;
+        case "-=":
+          this.inject(true, sub(waType));
+          break;
+        case "*=":
+          this.inject(true, mul(waType));
+          break;
+        case "/=":
+          this.inject(true, div(waType, isSigned));
+          break;
+        case "%=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "remainder (%)");
+            return;
+          }
+          this.inject(true, rem(waType, isSigned));
+          break;
+        case "&=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "bitwise AND");
+            return;
+          }
+          this.inject(true, and(waType));
+          break;
+        case "|=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "bitwise OR");
+            return;
+          }
+          this.inject(true, or(waType));
+          break;
+        case "^=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "bitwise XOR");
+            return;
+          }
+          this.inject(true, xor(waType));
+          break;
+        case "<<=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "shift left");
+            return;
+          }
+          this.inject(true, shl(waType));
+          break;
+        case ">>=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "signed shift right");
+            return;
+          }
+          this.inject(true, shr(waType, true));
+          break;
+
+        case ">>>=":
+          if (resultType.underlying.startsWith("f")) {
+            this.reportError("W145", asgn, "shift right");
+            return;
+          }
+          this.inject(true, shr(waType, false));
+          break;
+      }
+    }
+
+    // --- Cast the result
+    this.castIntrinsicToIntrinsic(leftIntrinsic, rightIntrinsic);
+
+    // --- Store the resuls
+    switch (leftSide) {
+      case "global":
+        this.inject(true, globalSet(createGlobalName(varName)));
+        break;
+      case "local":
+        this.inject(true, localSet(createLocalName(varName)));
+        break;
+      case "var":
+        this.compileIntrinsicVariableSet(leftIntrinsic);
+        break;
+    }
   }
 
   /**
@@ -765,14 +978,16 @@ export class FunctionCompiler {
     let typeSpec: TypeSpec;
     if (typeof lit.value === "number") {
       if (Number.isInteger(lit.value)) {
-        instr = constVal(WaType.i32, lit.value);
+        const shrunkVal = Number(BigInt.asIntN(32, BigInt(lit.value)));
+        instr = constVal(WaType.i32, shrunkVal);
         typeSpec = i32Desc;
       } else {
         instr = constVal(WaType.f64, lit.value);
         typeSpec = f64Desc;
       }
     } else {
-      instr = constVal(WaType.i64, lit.value);
+      const shrunkVal = BigInt.asIntN(64, BigInt(lit.value));
+      instr = constVal(WaType.i64, shrunkVal);
       typeSpec = i64Desc;
     }
     this.inject(emit, instr);
@@ -808,17 +1023,17 @@ export class FunctionCompiler {
         return null;
       }
       this.inject(emit, constVal(WaType.i32, resolvedId.var.address));
-      this.compileIntrinsicVariableAccess(typeSpec, emit);
+      this.compileIntrinsicVariableGet(typeSpec, emit);
       return typeSpec;
     }
   }
 
   /**
-   * Compiles access to a variable with the specified type
+   * Compiles getter to a variable with the specified type
    * @param typeSpec Variabel type
    * @param emit Should emit code?
    */
-  private compileIntrinsicVariableAccess(
+  private compileIntrinsicVariableGet(
     typeSpec: IntrinsicType,
     emit = true
   ): void {
@@ -826,10 +1041,7 @@ export class FunctionCompiler {
     switch (typeSpec.underlying) {
       case "f32":
       case "f64":
-        this.inject(
-          emit,
-          load(waType, undefined, undefined, undefined, undefined)
-        );
+        this.inject(emit, load(waType));
         break;
       case "i8":
       case "u8":
@@ -882,6 +1094,39 @@ export class FunctionCompiler {
             typeSpec.underlying === "i64"
           )
         );
+    }
+  }
+
+  /**
+   * Compiles setter to a variable with the specified type
+   * @param typeSpec Variabel type
+   * @param emit Should emit code?
+   */
+  private compileIntrinsicVariableSet(
+    typeSpec: IntrinsicType,
+    emit = true
+  ): void {
+    const waType = waTypeMappings[typeSpec.underlying];
+    switch (typeSpec.underlying) {
+      case "f32":
+      case "f64":
+        this.inject(emit, store(waType));
+        break;
+      case "i8":
+      case "u8":
+        this.inject(emit, store(waType, WaBitSpec.Bit8));
+        break;
+      case "i16":
+      case "u16":
+        this.inject(emit, store(waType, WaBitSpec.Bit16));
+        break;
+      case "i32":
+      case "u32":
+        this.inject(emit, store(waType, WaBitSpec.Bit32));
+        break;
+      case "i64":
+      case "u64":
+        this.inject(emit, store(waType));
     }
   }
 
@@ -1241,7 +1486,7 @@ export class FunctionCompiler {
     }
     let typeSpec = varAddr.spec;
     if (typeSpec.type === "Intrinsic") {
-      this.compileIntrinsicVariableAccess(typeSpec, emit);
+      this.compileIntrinsicVariableGet(typeSpec, emit);
     }
     return typeSpec;
   }
@@ -1469,12 +1714,12 @@ export class FunctionCompiler {
 
     // --- Call the function
     if (calledDecl.type === "TableDeclaration") {
-      this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex))
+      this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex));
       const exprType = this.compileExpression(invoc.dispatcher, emit);
       if (exprType) {
         this.castForStorage(i32Desc, exprType);
-        this.inject(emit, add(WaType.i32))
-        this.inject(emit, callIndirect(createTableName(invoc.name)))
+        this.inject(emit, add(WaType.i32));
+        this.inject(emit, callIndirect(createTableName(invoc.name)));
       }
     } else {
       this.inject(emit, call(createGlobalName(invoc.name)));
@@ -1860,8 +2105,8 @@ export class FunctionCompiler {
    * Creates a temporary local with the specified type
    * @param type
    */
-  private createTempLocal(type: WaType): string {
-    const tmpName = `$tloc_${WaType[type].toString()}`;
+  private createTempLocal(type: WaType, prefix: string = ""): string {
+    const tmpName = `$tloc$${prefix}${WaType[type].toString()}`;
     if (!this._tempLocals.has(type)) {
       const local = this._builder.addLocal(tmpName, type);
       this._tempLocals.add(type);

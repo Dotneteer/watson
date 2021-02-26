@@ -96,11 +96,10 @@ describe("WatSharpCompiler - emit function call", () => {
 
     // test
     expect(instrs[6].message).toBe("i32.const 123");
-    expect(instrs[7].message).toBe("f64.const 12.25");
-    expect(instrs[8].message).toBe("f32.demote/f64");
-    expect(instrs[9].message).toBe("call $myFunc");
-    expect(instrs[10].message).toBe("i32.trunc_s/f32");
-    expect(instrs[11].message).toBe("set_local $loc$a");
+    expect(instrs[7].message).toBe("f32.const 12.25");
+    expect(instrs[8].message).toBe("call $myFunc");
+    expect(instrs[9].message).toBe("i32.trunc_s/f32");
+    expect(instrs[10].message).toBe("set_local $loc$a");
   });
 
   it("function call #4", () => {
