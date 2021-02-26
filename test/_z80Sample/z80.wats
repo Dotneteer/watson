@@ -10,7 +10,7 @@ global u32 clock = 3_500_000;
 // Represents a 16-bit register pair
 type r16 = struct {
   u8 l, // LSB register
-  u8[3] h  // MSB register
+  u8 h  // MSB register
 };
 
 // --- Z80 Registers
@@ -50,4 +50,11 @@ inline i32 called(u32 value) {
 
 *i32 ddd(u8 a, f64 b) {
   return 0;
+}
+
+i32 idx;
+*r16 w;
+
+void test() {
+  (*w).h += 326;
 }

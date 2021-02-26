@@ -191,10 +191,9 @@ describe("WatSharpCompiler - emit typecast", () => {
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
     expect(instrs[2].message).toBe("i64.extend_s/i32");
-    expect(instrs[3].message).toBe("i32.const 3");
-    expect(instrs[4].message).toBe("i64.extend_s/i32");
-    expect(instrs[5].message).toBe("i64.add");
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[3].message).toBe("i64.const 3");
+    expect(instrs[4].message).toBe("i64.add");
+    expect(instrs[5].message).toBe("set_local $loc$a");
   });
 
   it("typecast #8", () => {
@@ -218,10 +217,9 @@ describe("WatSharpCompiler - emit typecast", () => {
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
     expect(instrs[2].message).toBe("i64.extend_u/i32");
-    expect(instrs[3].message).toBe("i32.const 3");
-    expect(instrs[4].message).toBe("i64.extend_s/i32");
-    expect(instrs[5].message).toBe("i64.add");
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[3].message).toBe("i64.const 3");
+    expect(instrs[4].message).toBe("i64.add");
+    expect(instrs[5].message).toBe("set_local $loc$a");
   });
 
   it("typecast #9", () => {

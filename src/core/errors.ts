@@ -109,6 +109,7 @@ export type ErrorCodes =
   | "W158"
   | "W159"
   | "W160"
+  | "W161";
 
 /**
  * Error message type description
@@ -186,7 +187,7 @@ export const errorMessages: ErrorText = {
   W143: "Only variables with intrinsic types can be used",
   W144: "The {0} operator works only with instrinsic types",
   W145: "The {0} operator works only with integer types",
-  W146: "The addressOf (&) operator works only with variable identifier",
+  W146: "Only variables have addresses, globals and locals do not",
   W147: "The left operand of the member access operator must be a struct",
   W148: "Unknown struct member: {0}",
   W149: "The item access operator can be used only with arrays",
@@ -201,4 +202,5 @@ export const errorMessages: ErrorText = {
   W158: "Function signature of '{0}' does not match table signature",
   W159: "A table function invocation requires a dispatcher expression",
   W160: "Only a table function invocation can have a dispatcher expression",
+  W161: "Left values can be only intrinsic types or pointers",
 };

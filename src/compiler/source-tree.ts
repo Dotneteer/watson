@@ -5,7 +5,6 @@
 export type Node =
   | TypeSpec
   | Expression
-  | LeftValue
   | Declaration
   | FunctionParameter
   | Statement;
@@ -510,7 +509,7 @@ export interface LocalVariable extends StatementBase {
  */
 export interface Assignment extends StatementBase {
   type: "Assignment";
-  lval: LeftValue;
+  lval: Expression;
   asgn: AssignmentSymbols;
   expr: Expression;
 }
@@ -571,54 +570,6 @@ export interface ContinueStatement extends StatementBase {
 export interface ReturnStatement extends StatementBase {
   type: "Return";
   expr?: Expression;
-}
-
-// ============================================================================
-// Left values
-
-export type LeftValue =
-  | DereferenceLValue
-  | IdentifierLValue
-  | IndexedLValue
-  | MemberLValue;
-
-/**
- * Base class of left value nodes
- */
-export interface LeftValueBase extends BaseNode {}
-
-/**
- * Dereference left value
- */
-export interface DereferenceLValue extends LeftValueBase {
-  type: "DereferenceLValue";
-  lval: LeftValue;
-}
-
-/**
- * Identifier left value
- */
-export interface IdentifierLValue extends LeftValueBase {
-  type: "IdentifierLValue";
-  name: string;
-}
-
-/**
- * Indexed left value
- */
-export interface IndexedLValue extends LeftValueBase {
-  type: "IndexedLValue";
-  lval: LeftValue;
-  indexExpr: Expression;
-}
-
-/**
- * Member left value
- */
-export interface MemberLValue extends LeftValueBase {
-  type: "MemberLValue";
-  lval: LeftValue;
-  member: string;
 }
 
 /**

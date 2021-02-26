@@ -52,11 +52,6 @@ import {
   LocalFunctionInvocation,
   Assignment,
   LocalVariable,
-  LeftValue,
-  DereferenceLValue,
-  IdentifierLValue,
-  MemberLValue,
-  IndexedLValue,
   LiteralSource,
   DereferenceExpression,
 } from "./source-tree";
@@ -739,7 +734,8 @@ export class WatSharpParser {
     // --- Check for assignement
     if (
       next.type === TokenType.Identifier ||
-      next.type === TokenType.Asterisk
+      next.type === TokenType.Asterisk ||
+      next.type === TokenType.LParent
     ) {
       this.parseAssignment(body, loopDepth);
       return;
@@ -905,23 +901,26 @@ export class WatSharpParser {
    *   | addressable
    *   ;
    */
-  private parseLeftValue(): LeftValue | null {
+  private parseLeftValue(): Expression | null {
     const start = this._lexer.peek();
     if (start.type === TokenType.Asterisk) {
       this._lexer.get();
-      const lval = this.parseLeftValue();
-      if (!lval) {
+      const operand = this.parseLeftValue();
+      if (!operand) {
         return;
       }
-      return this.createLValueNode<DereferenceLValue>(
-        "DereferenceLValue",
+      return this.createExpressionNode<DereferenceExpression>(
+        "DereferenceExpression",
         {
-          lval,
+          operand,
         },
         start,
         start
       );
-    } else if (start.type === TokenType.Identifier) {
+    } else if (
+      start.type === TokenType.Identifier ||
+      start.type === TokenType.LParent
+    ) {
       return this.parseAddressable();
     }
     this.reportError("W025");
@@ -930,24 +929,33 @@ export class WatSharpParser {
 
   /**
    * addressable
-   *   : identifier (("[" expr "]") | ("." addressable))*
+   *   : (identifier | ( "(" leftValue ")" ) (("[" expr "]") | ("." addressable))*
    *   ;
    */
-  private parseAddressable(): LeftValue | null {
+  private parseAddressable(): Expression | null {
     const start = this._lexer.peek();
-    if (start.type !== TokenType.Identifier) {
+    let lval: Expression | undefined;
+    if (start.type === TokenType.Identifier) {
+      this._lexer.get();
+      lval = this.createExpressionNode<Identifier>(
+        "Identifier",
+        {
+          name: start.text,
+        },
+        start,
+        start
+      );
+    } else if (start.type === TokenType.LParent) {
+      this._lexer.get();
+      lval = this.parseLeftValue();
+      if (!lval) {
+        return null;
+      }
+      this.expectToken(TokenType.RParent, "W017");
+    } else {
       this.reportError("W004");
       return null;
     }
-    this._lexer.get();
-    let lval: LeftValue = this.createLValueNode<IdentifierLValue>(
-      "IdentifierLValue",
-      {
-        name: start.text,
-      },
-      start,
-      start
-    );
 
     do {
       const next = this._lexer.peek();
@@ -960,11 +968,11 @@ export class WatSharpParser {
           return null;
         }
         this._lexer.get();
-        lval = this.createLValueNode<MemberLValue>(
-          "MemberLValue",
+        lval = this.createExpressionNode<MemberAccessExpression>(
+          "MemberAccess",
           {
             member: idToken.text,
-            lval,
+            object: lval,
           },
           next,
           idToken
@@ -972,13 +980,13 @@ export class WatSharpParser {
       } else if (next.type === TokenType.LSquare) {
         // --- Process index access
         this._lexer.get();
-        const indexExpr = this.parseExpr();
+        const index = this.parseExpr();
         this.expectToken(TokenType.RSquare);
-        lval = this.createLValueNode<IndexedLValue>(
-          "IndexedLValue",
+        lval = this.createExpressionNode<ItemAccessExpression>(
+          "ItemAccess",
           {
-            indexExpr,
-            lval,
+            index,
+            array: lval,
           },
           next,
           this._lexer.peek()
@@ -2230,33 +2238,6 @@ export class WatSharpParser {
       endColumn: endToken.location.startColumn,
     });
   }
-
-  /**
-   * Creates a left value node
-   * @param type Expression type
-   * @param stump Stump properties
-   * @param startToken The token that starts the expression
-   * @param endToken The token that ends the expression
-   */
-  private createLValueNode<T extends LeftValue>(
-    type: LeftValue["type"],
-    stump: any,
-    startToken: Token,
-    endToken: Token
-  ): T {
-    const startPosition = startToken.location.startPosition;
-    const endPosition = endToken.location.startPosition;
-    return Object.assign({}, stump, <LeftValue>{
-      type,
-      startPosition,
-      endPosition,
-      startLine: startToken.location.startLine,
-      startColumn: startToken.location.startColumn,
-      endLine: endToken.location.endLine,
-      endColumn: endToken.location.startColumn,
-    });
-  }
-
   /**
    * Creates an expression node
    * @param body List of statements to add the new statement

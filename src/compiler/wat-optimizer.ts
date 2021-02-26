@@ -1,5 +1,5 @@
 import { add, constVal } from "../wa-ast/FunctionBuilder";
-import { ConstVal, WaInstruction, WaNode } from "../wa-ast/wa-nodes";
+import { ConstVal, WaInstruction, WaNode, WaType } from "../wa-ast/wa-nodes";
 
 /**
  * Optimizes the specified set of instructions
@@ -98,6 +98,28 @@ function isBinary(instrs: WaInstruction[], index: number): boolean {
  * @returns true, if the operation has been reduced
  */
 function reduceUnary(instrs: WaInstruction[], index: number): boolean {
+  const operand = instrs[index] as ConstVal;
+  const operandValue = operand.value;
+  const waType = operand.valueType;
+  const op = instrs[index + 1];
+  let newInstr: WaInstruction | undefined;
+  switch (op.type) {
+    case "Extend32":
+      if (waType === WaType.i32) {
+        newInstr = constVal(WaType.i64, operandValue);
+      }
+      break;
+    case "Demote64":
+      if (waType === WaType.f64) {
+        newInstr = constVal(WaType.f32, operandValue);
+      }
+      break;
+  }
+  if (newInstr) {
+    instrs[index] = newInstr;
+    instrs.splice(index + 1, 1);
+    return true;
+  }
   return false;
 }
 
@@ -228,12 +250,12 @@ const instructionTraits: InstructionTraits = {
   Convert64: InstructionType.None,
   CopySign: InstructionType.None,
   Ctz: InstructionType.None,
-  Demote64: InstructionType.None,
+  Demote64: InstructionType.Unary,
   Div: InstructionType.Binary,
   Drop: InstructionType.None,
   Eq: InstructionType.Binary,
   Eqz: InstructionType.Unary,
-  Extend32: InstructionType.None,
+  Extend32: InstructionType.Unary,
   Floor: InstructionType.None,
   Ge: InstructionType.Binary,
   GlobalGet: InstructionType.None,
