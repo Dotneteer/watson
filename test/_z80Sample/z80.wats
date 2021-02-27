@@ -15,6 +15,7 @@ type r16 = struct {
 
 // --- Z80 Registers
 r16 af;
+u16 afR { af };
 r16 bc;
 r16 de;
 r16 hl;

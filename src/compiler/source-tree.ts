@@ -419,7 +419,7 @@ export interface DataDeclaration extends DeclarationBase {
 export interface VariableDeclaration extends DeclarationBase {
   type: "VariableDeclaration";
   spec: TypeSpec;
-  addressExpr?: Expression;
+  addressAlias?: Identifier;
   address?: number;
 }
 

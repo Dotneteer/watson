@@ -241,11 +241,21 @@ export class WatSharpCompiler {
 
         case "VariableDeclaration":
           resolveTypeSpecification(decl.spec);
-          if (decl.addressExpr) {
-            resolveExpression(decl.addressExpr);
-            if (decl.addressExpr.value) {
-              decl.address = Number(decl.addressExpr.value);
+          if (decl.addressAlias) {
+            const aliasDecl = declarations.get(decl.addressAlias.name);
+            if (!aliasDecl) {
+              compiler.reportError("W101", decl.addressAlias);
+              break;
             }
+            if (aliasDecl.type !== "VariableDeclaration") {
+              compiler.reportError("W162", decl.addressAlias);
+              break;
+            }
+            if (aliasDecl.address === undefined) {
+              compiler.reportError("W163", decl.addressAlias);
+              break;
+            }
+            decl.address = aliasDecl.address;
           }
           if (decl.address === undefined) {
             decl.address = nextMemoryAddress;

@@ -109,7 +109,9 @@ export type ErrorCodes =
   | "W158"
   | "W159"
   | "W160"
-  | "W161";
+  | "W161"
+  | "W162"
+  | "W163";
 
 /**
  * Error message type description
@@ -203,4 +205,6 @@ export const errorMessages: ErrorText = {
   W159: "A table function invocation requires a dispatcher expression",
   W160: "Only a table function invocation can have a dispatcher expression",
   W161: "Left values can be only intrinsic types or pointers",
+  W162: "You can use only variable names for aliases",
+  W163: "Variable {0} has not got an address yet, it cannot be an alias",
 };
