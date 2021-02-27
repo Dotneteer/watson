@@ -163,11 +163,13 @@ export class FunctionCompiler {
     optimizeWat(this._builder.body);
     this._builder.body.forEach((ins) => {
       if (ins.type !== "Comment") {
-        this.addTrace(() => [
-          "inject",
-          0,
-          this.wsCompiler.waTree.renderInstructionNode(ins),
-        ]);
+        const parts = this.wsCompiler.waTree
+          .renderInstructionNode(ins)
+          .split("\n")
+          .map((item) => item.trim());
+        parts.forEach((p) => {
+          this.addTrace(() => ["inject", 0, p]);
+        });
       }
     });
   }
@@ -553,7 +555,18 @@ export class FunctionCompiler {
    */
   private processIf(ifStmt: IfStatement, body: WaInstruction[]): void {
     this.compileExpression(ifStmt.test, body);
-    //this.inject(true, ifBlock())
+    const consequentBody: WaInstruction[] = [];
+    ifStmt.consequent.forEach((stmt) =>
+      this.processStatement(stmt, consequentBody)
+    );
+    let alternateBody: WaInstruction[] | undefined;
+    if (ifStmt.alternate) {
+      alternateBody = [];
+      ifStmt.alternate.forEach((stmt) =>
+        this.processStatement(stmt, alternateBody)
+      );
+    }
+    this.inject(true, ifBlock(consequentBody, alternateBody), body);
   }
 
   /**

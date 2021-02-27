@@ -881,6 +881,7 @@ export class WatSharpParser {
     if (!expr) {
       return;
     }
+    const semicolon = this.expectToken(TokenType.Semicolon, "W006");
     this.createStatementNode<Assignment>(
       body,
       "Assignment",
@@ -890,7 +891,7 @@ export class WatSharpParser {
         expr,
       },
       start,
-      start
+      semicolon
     );
   }
 
