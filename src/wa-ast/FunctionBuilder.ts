@@ -95,15 +95,6 @@ export class FunctionBuilder implements Func {
   }
 
   /**
-   * Injects the specified instructions to the function body
-   * @param instr Instructions to inject
-   */
-  inject(...instr: WaInstruction[]): this {
-    this.body.push(...instr);
-    return this;
-  }
-
-  /**
    * Adds a local node to the function locals
    * @param id
    * @param valueType Value type of operation

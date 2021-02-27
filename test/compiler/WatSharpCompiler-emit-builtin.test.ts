@@ -31,10 +31,14 @@ describe("WatSharpCompiler - emit built-in function", () => {
     expect(instrs[2].message).toBe("tee_local $tloc$i64");
     expect(instrs[3].message).toBe("i64.const 0");
     expect(instrs[4].message).toBe("i64.lt_s");
-    expect(instrs[5].message).toBe(
-      "if (result i64)\n  get_local $tloc$i64\n  i64.const -1\n  i64.mul\nelse\n  get_local $tloc$i64\nend"
-    );
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[5].message).toBe("if (result i64)");
+    expect(instrs[6].message).toBe("get_local $tloc$i64");
+    expect(instrs[7].message).toBe("i64.const -1");
+    expect(instrs[8].message).toBe("i64.mul");
+    expect(instrs[9].message).toBe("else");
+    expect(instrs[10].message).toBe("get_local $tloc$i64");
+    expect(instrs[11].message).toBe("end");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("abs i32 - #1", () => {
@@ -61,10 +65,14 @@ describe("WatSharpCompiler - emit built-in function", () => {
     expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
-    expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
-    );
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[5].message).toBe("if (result i32)");
+    expect(instrs[6].message).toBe("get_local $tloc$i32");
+    expect(instrs[7].message).toBe("i32.const -1");
+    expect(instrs[8].message).toBe("i32.mul");
+    expect(instrs[9].message).toBe("else");
+    expect(instrs[10].message).toBe("get_local $tloc$i32");
+    expect(instrs[11].message).toBe("end");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("abs i16 - #1", () => {
@@ -91,10 +99,14 @@ describe("WatSharpCompiler - emit built-in function", () => {
     expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
-    expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
-    );
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[5].message).toBe("if (result i32)");
+    expect(instrs[6].message).toBe("get_local $tloc$i32");
+    expect(instrs[7].message).toBe("i32.const -1");
+    expect(instrs[8].message).toBe("i32.mul");
+    expect(instrs[9].message).toBe("else");
+    expect(instrs[10].message).toBe("get_local $tloc$i32");
+    expect(instrs[11].message).toBe("end");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("abs i8 - #1", () => {
@@ -121,10 +133,14 @@ describe("WatSharpCompiler - emit built-in function", () => {
     expect(instrs[2].message).toBe("tee_local $tloc$i32");
     expect(instrs[3].message).toBe("i32.const 0");
     expect(instrs[4].message).toBe("i32.lt_s");
-    expect(instrs[5].message).toBe(
-      "if (result i32)\n  get_local $tloc$i32\n  i32.const -1\n  i32.mul\nelse\n  get_local $tloc$i32\nend"
-    );
-    expect(instrs[6].message).toBe("set_local $loc$a");
+    expect(instrs[5].message).toBe("if (result i32)");
+    expect(instrs[6].message).toBe("get_local $tloc$i32");
+    expect(instrs[7].message).toBe("i32.const -1");
+    expect(instrs[8].message).toBe("i32.mul");
+    expect(instrs[9].message).toBe("else");
+    expect(instrs[10].message).toBe("get_local $tloc$i32");
+    expect(instrs[11].message).toBe("end");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("abs u64 - #1", () => {
@@ -1697,5 +1713,4 @@ describe("WatSharpCompiler - emit built-in function", () => {
     expect(instrs[8].message).toBe("f64.max");
     expect(instrs[9].message).toBe("set_local $loc$a");
   });
-
 });

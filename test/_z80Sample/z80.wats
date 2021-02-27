@@ -52,9 +52,10 @@ inline i32 called(u32 value) {
   return 0;
 }
 
-i32 idx;
-*r16 w;
-
 void test() {
-  (*w).h += 326;
+  local i32 a;
+  do {
+    a += 1;
+    break;
+  } while (a < 4);
 }
