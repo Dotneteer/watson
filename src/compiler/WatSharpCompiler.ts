@@ -856,3 +856,19 @@ export function createParameterName(name: string): string {
 export function createTableName(name: string): string {
   return `$tbl$${name}`;
 }
+
+/**
+ * Creates a WebAssembly loop label
+ * @param depth Loop depth
+ */
+export function createLoopLabel(depth: number): string {
+  return `$loop$${depth}`;
+}
+
+/**
+ * Creates a WebAssembly break label
+ * @param depth Loop depth
+ */
+export function createBreakLabel(depth: number): string {
+  return `$break$${depth}`;
+}

@@ -40,8 +40,10 @@ import {
 } from "./source-tree";
 import {
   bitwiseNotMasks,
+  createBreakLabel,
   createGlobalName,
   createLocalName,
+  createLoopLabel,
   createParameterName,
   createTableName,
   mapFunctionParameterType,
@@ -52,6 +54,9 @@ import {
   abs,
   add,
   and,
+  block,
+  branch,
+  branchIf,
   call,
   callIndirect,
   ceil,
@@ -79,6 +84,7 @@ import {
   localGet,
   localSet,
   localTee,
+  loop,
   lt,
   max,
   min,
@@ -126,6 +132,9 @@ export class FunctionCompiler {
 
   // --- Temporary locals assigned to the function
   private _tempLocals = new Set<WaType>();
+
+  // --- The current loop depth
+  private _loopDepth = 0;
 
   /**
    * Initializes a function compiler instance
@@ -224,10 +233,10 @@ export class FunctionCompiler {
         this.processAssignment(stmt, body);
         return;
       case "Break":
-        this.processBreak(stmt, body);
+        this.processBreak(body);
         return;
       case "Continue":
-        this.processContinue(stmt, body);
+        this.processContinue(body);
         return;
       case "Do":
         this.processDoWhileLoop(stmt, body);
@@ -515,38 +524,126 @@ export class FunctionCompiler {
    * Processes a break statement
    * @param body Body to put the statements in
    */
-  private processBreak(breakStmt: BreakStatement, body: WaInstruction[]): void {
-    // TODO: Implement this method
+  private processBreak(body: WaInstruction[]): void {
+    this.inject(true, branch(createBreakLabel(this._loopDepth)), body);
   }
 
   /**
    * Processes a continue statement
    * @param body Body to put the statements in
    */
-  private processContinue(
-    contStmt: ContinueStatement,
-    body: WaInstruction[]
-  ): void {
-    // TODO: Implement this method
+  private processContinue(body: WaInstruction[]): void {
+    this.inject(true, branch(createLoopLabel(this._loopDepth)), body);
   }
 
   /**
    * Processes a do..while loop
    * @param body Body to put the statements in
    */
-  private processDoWhileLoop(doLoop: DoStatement, body: WaInstruction[]): void {
-    // TODO: Implement this method
+  private processDoWhileLoop(dLoop: DoStatement, body: WaInstruction[]): void {
+    const hasBreak = dLoop.loopBody.some((st) => this.hasBreak(st));
+
+    // --- New loop depth
+    this._loopDepth++;
+
+    // --- This contains the body of the loop
+    const loopBody: WaInstruction[] = [];
+
+    // --- Compilet the main loop
+    const loopLabel = createLoopLabel(this._loopDepth);
+    dLoop.loopBody.forEach((stmt) => this.processStatement(stmt, loopBody));
+
+    // --- Compile the test
+    if (!this.compileExpression(dLoop.test, loopBody)) {
+      return;
+    }
+
+    // --- Combine the test and the body into a loop
+    const loopToInject = loop(loopLabel, [
+      ...loopBody,
+      branchIf(loopLabel),
+    ]);
+    
+    if (hasBreak) {
+      // --- Encapsulate the loop into a break block
+      const breakBlock = block(createBreakLabel(this._loopDepth), [
+        loopToInject,
+      ]);
+      this.inject(true, breakBlock, body);
+    } else {
+      // --- Inject the loop
+      this.inject(true, loopToInject, body);
+    }
+
+    // --- Back to previous loop back
+    this._loopDepth--;
   }
 
   /**
    * Processes a while loop
    * @param body Body to put the statements in
    */
-  private processWhileLoop(
-    doLoop: WhileStatement,
-    body: WaInstruction[]
-  ): void {
-    // TODO: Implement this method
+  private processWhileLoop(wLoop: WhileStatement, body: WaInstruction[]): void {
+    const hasBreak = wLoop.loopBody.some((st) => this.hasBreak(st));
+
+    // --- New loop depth
+    this._loopDepth++;
+
+    // --- This contains the body of the loop
+    const loopBody: WaInstruction[] = [];
+
+    // --- Compile the test
+    if (!this.compileExpression(wLoop.test, loopBody)) {
+      return;
+    }
+
+    // --- Compile the loop body
+    const loopMain: WaInstruction[] = [];
+    const loopLabel = createLoopLabel(this._loopDepth);
+    wLoop.loopBody.forEach((stmt) => this.processStatement(stmt, loopMain));
+
+    // --- Combine the test and the body into a loop
+    const loopToInject = loop(loopLabel, [
+      ...loopBody,
+      ifBlock(loopMain),
+      branch(loopLabel),
+    ]);
+
+    if (hasBreak) {
+      // --- Encapsulate the loop into a break block
+      const breakBlock = block(createBreakLabel(this._loopDepth), [
+        loopToInject,
+      ]);
+      this.inject(true, breakBlock, body);
+    } else {
+      // --- Inject the loop
+      this.inject(true, loopToInject, body);
+    }
+
+    // --- Back to previous loop back
+    this._loopDepth--;
+  }
+
+  /**
+   * Tests if the specified statement is a break or contains a break
+   * @param stmt Statement to check
+   * @returns True, if a break found; otherwise, false
+   */
+  private hasBreak(stmt: Statement): boolean {
+    switch (stmt.type) {
+      case "Break":
+        return true;
+      case "If":
+        const hasIt = stmt.consequent.some((st) => this.hasBreak(st));
+        if (hasIt) {
+          return true;
+        }
+        if (stmt.alternate) {
+          return stmt.alternate.some((st) => this.hasBreak(st));
+        }
+        break;
+    }
+    return false;
   }
 
   /**
@@ -554,11 +651,18 @@ export class FunctionCompiler {
    * @param body Body to put the statements in
    */
   private processIf(ifStmt: IfStatement, body: WaInstruction[]): void {
-    this.compileExpression(ifStmt.test, body);
+    // --- Test expression
+    if (!this.compileExpression(ifStmt.test, body)) {
+      return;
+    }
+
+    // --- Consequent branch
     const consequentBody: WaInstruction[] = [];
     ifStmt.consequent.forEach((stmt) =>
       this.processStatement(stmt, consequentBody)
     );
+
+    // --- Alternate branch
     let alternateBody: WaInstruction[] | undefined;
     if (ifStmt.alternate) {
       alternateBody = [];
@@ -566,6 +670,8 @@ export class FunctionCompiler {
         this.processStatement(stmt, alternateBody)
       );
     }
+
+    // --- Combined if statement
     this.inject(true, ifBlock(consequentBody, alternateBody), body);
   }
 

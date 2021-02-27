@@ -1,94 +1,378 @@
-import { add, constVal } from "../wa-ast/FunctionBuilder";
-import { ConstVal, WaInstruction, WaNode, WaType } from "../wa-ast/wa-nodes";
+import {
+  add,
+  branch,
+  branchIf,
+  constVal,
+  localTee,
+} from "../wa-ast/FunctionBuilder";
+import {
+  Block,
+  Branch,
+  ConstVal,
+  If,
+  LocalGet,
+  LocalSet,
+  Loop,
+  WaInstruction,
+  WaType,
+} from "../wa-ast/wa-nodes";
 
 /**
  * Optimizes the specified set of instructions
  * @param instrs
  */
 export function optimizeWat(instrs: WaInstruction[]): void {
-  removeDeadCode(instrs);
-  optimizeConstantOperations(instrs);
+  let changeCount: number;
+  do {
+    changeCount = 0;
+    changeCount += removeDeadCode(instrs);
+    changeCount += convertToBranchIf(instrs);
+    changeCount += removeRedundantBranch(instrs);
+    changeCount += optimizeConstantOperations(instrs);
+    changeCount += optimizeLocalAccessors(instrs);
+    changeCount += optimizeEmptyLoop(instrs);
+    changeCount += optimizeEmptyBlock(instrs);
+    changeCount += peelLoop(instrs);
+    changeCount += peelBlock(instrs);
+  } while (changeCount);
 }
 
 /**
  * Removes constant operations and replaces them with their equivalent
  * constant value
  */
-function optimizeConstantOperations(instrs: WaInstruction[]): void {
+function optimizeConstantOperations(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    let changed = false;
+    if (isConstant(ins, index)) {
+      // --- We found a constant
+      if (isUnary(ins, index + 1)) {
+        // --- We can reduce an unary operation
+        changed = reduceUnary(ins, index);
+      } else if (isConstant(ins, index + 1) && isBinary(ins, index + 2)) {
+        // --- We can reduce a binary operation
+        changed = reduceBinary(ins, index);
+      } else if (
+        isBinary(ins, index + 1) &&
+        isConstant(ins, index + 2) &&
+        isBinary(ins, index + 3)
+      ) {
+        changed = reduceCascadedBinary(ins, index);
+      }
+    }
+    return changed;
+  });
+}
+
+/**
+ * Removed dead code from the specified block
+ * @param instrs Instruction sequence
+ * @param depth Current depth;
+ */
+function removeDeadCode(instrs: WaInstruction[], depth = 0): number {
+  let changeCount = 0;
+  let retIndex = -1;
+  for (let i = instrs.length - 1; i >= 0; i--) {
+    const instr = instrs[i];
+    switch (instr.type) {
+      case "Return":
+        retIndex = depth === 0 ? i : i + 1;
+        break;
+      case "Branch":
+        retIndex = i + 1;
+        break;
+      case "If":
+        changeCount += removeDeadCode(instr.consequtive, depth + 1);
+        if (instr.alternate) {
+          changeCount += removeDeadCode(instr.alternate, depth + 1);
+        }
+        break;
+      case "Block":
+      case "Loop":
+        changeCount += removeDeadCode(instr.body, depth + 1);
+        break;
+    }
+  }
+  if (retIndex >= 0) {
+    const deleteCount = instrs.length - retIndex;
+    instrs.splice(retIndex, deleteCount);
+    if (deleteCount > 0) {
+      changeCount++;
+    }
+  }
+  return changeCount;
+}
+
+/**
+ * Converts "if" instrcutions with a single "br" to "br_if"
+ * @param instrs Instructions to convert
+ */
+function convertToBranchIf(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isIf(ins, index)) {
+      const ifInstr = ins[index] as If;
+      if (
+        ifInstr.consequtive.length === 1 &&
+        !ifInstr.alternate &&
+        ifInstr.consequtive[0].type === "Branch"
+      ) {
+        ins[index] = branchIf(ifInstr.consequtive[0].label);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Removes redundant branch statements
+ * @param instrs Instructions to convert
+ */
+function removeRedundantBranch(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (
+      (isBranch(ins, index) || isBranchIf(ins, index)) &&
+      isBranch(ins, index + 1)
+    ) {
+      const br1Instr = ins[index] as Branch;
+      const br2Instr = ins[index + 1] as Branch;
+      if (br1Instr.label === br2Instr.label) {
+        ins[index] = branch(br1Instr.label);
+        ins.splice(index + 1, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Changes "local_set" and "local_get" to "local_tee"
+ * @param instrs Instructions to convert
+ */
+function optimizeLocalAccessors(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isLocalSet(ins, index) && isLocalGet(ins, index + 1)) {
+      const localSet = ins[index] as LocalSet;
+      const localGet = ins[index + 1] as LocalGet;
+      if (localSet.id === localGet.id) {
+        ins[index] = localTee(localSet.id);
+        ins.splice(index + 1, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Optimizes empty and branch-only loops
+ * @param instrs Instructions to optimize
+ */
+function optimizeEmptyLoop(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    // --- Check for loops
+    if (isLoop(ins, index)) {
+      const loop = ins[index] as Loop;
+      const body = loop.body;
+      if (body.length === 0) {
+        // --- Empty loop
+        ins.splice(index, 1);
+        return true;
+      }
+      if (
+        body.length === 1 &&
+        body[0].type === "Branch" &&
+        body[0].label !== loop.id
+      ) {
+        // --- Branch-only loop
+        ins[index] = branch(body[0].label);
+        return true;
+      }
+      if (
+        body.length === 1 &&
+        body[0].type === "BranchIf" &&
+        body[0].label !== loop.id
+      ) {
+        // --- Branch-only loop
+        ins[index] = branchIf(body[0].label);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Optimizes empty and branch-only loops
+ * @param instrs Instructions to optimize
+ */
+function optimizeEmptyBlock(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    // --- Check for block
+    if (isBlock(ins, index)) {
+      const block = ins[index] as Block;
+      const body = block.body;
+      if (body.length === 0) {
+        // --- Empty loop
+        ins.splice(index, 1);
+        return true;
+      }
+      if (
+        body.length === 1 &&
+        body[0].type === "Branch" &&
+        body[0].label === block.id
+      ) {
+        // --- Branch-only block
+        ins.splice(index, 1);
+        return true;
+      }
+      if (
+        body.length === 1 &&
+        body[0].type === "BranchIf" &&
+        body[0].label === block.id
+      ) {
+        // --- Branch-only block
+        ins.splice(index, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Peels a loop that does not have a branch to itself
+ * @param instrs Instructions to optimize
+ */
+function peelLoop(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isLoop(ins, index)) {
+      const loop = ins[index] as Loop;
+      if (
+        !loop.body.some(
+          (item) =>
+            (item.type === "Branch" || item.type === "BranchIf") &&
+            item.label === loop.id
+        )
+      ) {
+        ins.splice(index, 1, ...loop.body);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Peels a block that has only branches to itself
+ * @param instrs Instructions to optimize
+ */
+function peelBlock(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isBlock(ins, index)) {
+      const block = ins[index] as Block;
+      const reducedBody: WaInstruction[] = [];
+      let hasBranchOut = false;
+      block.body.forEach((item) => {
+        if (item.type === "Branch") {
+          hasBranchOut ||= item.label !== block.id;
+        } else {
+          reducedBody.push(item);
+          if (item.type === "Loop" || item.type === "Block") {
+            hasBranchOut ||= findInstruction(
+              item.body,
+              (it) =>
+                (it.type === "Branch" || it.type === "BranchIf") &&
+                it.label !== block.id
+            );
+          }
+        }
+      });
+      if (
+        !hasBranchOut &&
+        !block.body.some((item) => item.type === "BranchIf")
+      ) {
+        ins.splice(index, 1, ...reducedBody);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Visits the instruction tree recursively to execute an action until there
+ * are any changes
+ * @param instrs Instructions
+ * @param action Action to carry out
+ */
+function instructionsActionLoop(
+  instrs: WaInstruction[],
+  action: (insArr: WaInstruction[], index: number) => boolean
+): number {
+  let changeCount = 0;
   let changed: boolean;
   do {
     changed = false;
     for (let i = 0; i < instrs.length; i++) {
-      if (isConstant(instrs, i)) {
-        // --- We found a constant
-        if (isUnary(instrs, i + 1)) {
-          // --- We can reduce an unary operation
-          changed = reduceUnary(instrs, i);
-        } else if (isConstant(instrs, i + 1) && isBinary(instrs, i + 2)) {
-          // --- We can reduce a binary operation
-          changed = reduceBinary(instrs, i);
-        } else if (
-          isBinary(instrs, i + 1) &&
-          isConstant(instrs, i + 2) &&
-          isBinary(instrs, i + 3)
-        ) {
-          changed = reduceCascadedBinary(instrs, i);
-        }
-      }
+      changed = action(instrs, i);
       if (changed) {
+        changeCount++;
         break;
+      }
+      const instr = instrs[i];
+      switch (instr.type) {
+        case "If":
+          changeCount += instructionsActionLoop(instr.consequtive, action);
+          if (instr.alternate) {
+            changeCount += instructionsActionLoop(instr.alternate, action);
+          }
+          break;
+        case "Block":
+        case "Loop":
+          changeCount += instructionsActionLoop(instr.body, action);
+          break;
       }
     }
   } while (changed);
+  return changeCount;
 }
 
-function removeDeadCode(instrs: WaInstruction[]): void {
-  let retIndex = -1;
-  for (let i = instrs.length - 1; i >= 0; i--) {
-    if (instrs[i].type === "Return") {
-      retIndex = i;
-      break;
+/**
+ * Tests if there is any instruction in the tree with a specific predicate
+ * @param instrs Instrcutions to test recursively
+ * @param predicate Predicate to test
+ */
+function findInstruction(
+  instrs: WaInstruction[],
+  predicate: (instr: WaInstruction) => boolean
+): boolean {
+  for (let i = 0; i < instrs.length; i++) {
+    const instr = instrs[i];
+    switch (instr.type) {
+      case "If":
+        let found = findInstruction(instr.consequtive, predicate);
+        if (found) {
+          return true;
+        }
+        if (instr.alternate) {
+          found = findInstruction(instr.alternate, predicate);
+        }
+        if (found) {
+          return true;
+        }
+        break;
+      case "Block":
+      case "Loop":
+        return findInstruction(instr.body, predicate);
+      default:
+        if (predicate(instr)) {
+          return true;
+        }
     }
   }
-  if (retIndex >= 0) {
-    instrs.splice(retIndex, instrs.length - retIndex);
-  }
-}
-
-/**
- * Tests if the specified instruction is a constant
- * @param index Instruction index in the function body
- */
-function isConstant(instrs: WaInstruction[], index: number): boolean {
-  return (
-    index >= 0 &&
-    index < instrs.length &&
-    instructionTraits[instrs[index].type] === InstructionType.Const
-  );
-}
-
-/**
- * Tests if the specified instruction is a unary operation
- * @param index Instruction index in the function body
- */
-function isUnary(instrs: WaInstruction[], index: number): boolean {
-  return (
-    index >= 0 &&
-    index < instrs.length &&
-    instructionTraits[instrs[index].type] === InstructionType.Unary
-  );
-}
-
-/**
- * Tests if the specified instruction is a binary operation
- * @param index Instruction index in the function body
- */
-function isBinary(instrs: WaInstruction[], index: number): boolean {
-  return (
-    index >= 0 &&
-    index < instrs.length &&
-    instructionTraits[instrs[index].type] === InstructionType.Binary
-  );
+  return false;
 }
 
 /**
@@ -215,6 +499,104 @@ function reduceCascadedBinary(instrs: WaInstruction[], index: number): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Tests if the specified instruction is a constant
+ * @param index Instruction index in the function body
+ */
+function isConstant(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 &&
+    index < instrs.length &&
+    instructionTraits[instrs[index].type] === InstructionType.Const
+  );
+}
+
+/**
+ * Tests if the specified instruction is a unary operation
+ * @param index Instruction index in the function body
+ */
+function isUnary(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 &&
+    index < instrs.length &&
+    instructionTraits[instrs[index].type] === InstructionType.Unary
+  );
+}
+
+/**
+ * Tests if the specified instruction is a binary operation
+ * @param index Instruction index in the function body
+ */
+function isBinary(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 &&
+    index < instrs.length &&
+    instructionTraits[instrs[index].type] === InstructionType.Binary
+  );
+}
+
+/**
+ * Tests if the specified instruction is an "if" operation
+ * @param index Instruction index in the function body
+ */
+function isIf(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "If";
+}
+
+/**
+ * Tests if the specified instruction is a "br" operation
+ * @param index Instruction index in the function body
+ */
+function isBranch(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Branch";
+}
+
+/**
+ * Tests if the specified instruction is a "br" operation
+ * @param index Instruction index in the function body
+ */
+function isBranchIf(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 && index < instrs.length && instrs[index].type === "BranchIf"
+  );
+}
+
+/**
+ * Tests if the specified instruction is a "local_get" operation
+ * @param index Instruction index in the function body
+ */
+function isLocalGet(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 && index < instrs.length && instrs[index].type === "LocalGet"
+  );
+}
+
+/**
+ * Tests if the specified instruction is a "local_set" operation
+ * @param index Instruction index in the function body
+ */
+function isLocalSet(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 && index < instrs.length && instrs[index].type === "LocalSet"
+  );
+}
+
+/**
+ * Tests if the specified instruction is a "block" operation
+ * @param index Instruction index in the function body
+ */
+function isBlock(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Block";
+}
+
+/**
+ * Tests if the specified instruction is a "loop" operation
+ * @param index Instruction index in the function body
+ */
+function isLoop(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Loop";
 }
 
 /**
