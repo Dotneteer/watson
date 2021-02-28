@@ -13,6 +13,7 @@ import {
   If,
   LocalGet,
   LocalSet,
+  LocalTee,
   Loop,
   WaInstruction,
   WaType,
@@ -36,6 +37,7 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += removeRedundantBranch(instrs);
     changeCount += optimizeConstantOperations(instrs);
     changeCount += optimizeLocalAccessors(instrs);
+    changeCount += optimizeLocalTees(instrs);
     changeCount += optimizeEmptyLoop(instrs);
     changeCount += optimizeEmptyBlock(instrs);
     changeCount += peelLoop(instrs);
@@ -246,6 +248,32 @@ function optimizeLocalAccessors(instrs: WaInstruction[]): number {
       if (localSet.id === localGet.id) {
         ins[index] = localTee(localSet.id);
         ins.splice(index + 1, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Removes single local_tee instructions
+ * @param instrs Instructions to convert
+ */
+function optimizeLocalTees(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isLocalTee(ins, index)) {
+      const localTee = ins[index] as LocalTee;
+      let teeCount = 0;
+      visitInstructions(ins, (it) => {
+        if (
+          it.type.startsWith("Local") &&
+          (it as LocalGet).id === localTee.id
+        ) {
+          teeCount++;
+        }
+      });
+      if (teeCount === 1) {
+        ins.splice(index, 1);
         return true;
       }
     }
@@ -594,6 +622,16 @@ function isLocalGet(instrs: WaInstruction[], index: number): boolean {
 function isLocalSet(instrs: WaInstruction[], index: number): boolean {
   return (
     index >= 0 && index < instrs.length && instrs[index].type === "LocalSet"
+  );
+}
+
+/**
+ * Tests if the specified instruction is a "local_tee" operation
+ * @param index Instruction index in the function body
+ */
+function isLocalTee(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 && index < instrs.length && instrs[index].type === "LocalTee"
   );
 }
 
