@@ -82,7 +82,7 @@ import {
 export class FunctionBuilder implements Func {
   readonly type = "Func";
   readonly body: WaInstruction[];
-  readonly locals: Local[];
+  locals: Local[];
   constructor(
     public readonly id: string,
     public readonly params: WaParameter[],
@@ -115,10 +115,7 @@ export class FunctionBuilder implements Func {
  * @param valueType Value type of operation
  * @param value Constant value
  */
-export function constVal(
-  valueType: WaType,
-  value: number | bigint
-): ConstVal {
+export function constVal(valueType: WaType, value: number | bigint): ConstVal {
   return <ConstVal>{
     type: "ConstVal",
     valueType,
@@ -159,9 +156,7 @@ export function branch(label: string): Branch {
  * Factory method for a br_if WA instruction
  * @param label Target label
  */
-export function branchIf(
-  label: string,
-): BranchIf {
+export function branchIf(label: string): BranchIf {
   return <BranchIf>{
     type: "BranchIf",
     label,
@@ -173,10 +168,7 @@ export function branchIf(
  * @param caseIds Branch IDs
  * @param defaultId Default branch ID
  */
-export function branchTable(
-  caseIds: string[],
-  defaultId: string,
-): BranchTable {
+export function branchTable(caseIds: string[], defaultId: string): BranchTable {
   return <BranchTable>{
     type: "BranchTable",
     caseIds,
@@ -208,9 +200,7 @@ export function call(id: string): Call {
  * Factory method for a call_indirect WA instruction
  * @param typeId Function type identifier
  */
-export function callIndirect(
-  typeId: string,
-): CallIndirect {
+export function callIndirect(typeId: string): CallIndirect {
   return <CallIndirect>{
     type: "CallIndirect",
     typeId,
@@ -303,7 +293,7 @@ export function load(
   bits: WaBitSpec = WaBitSpec.None,
   offset: number = 0,
   align: number = 0,
-  signed = false,
+  signed = false
 ): Load {
   // --- Check input consistency
   if (
@@ -337,7 +327,7 @@ export function store(
   valueType: WaType,
   bits: WaBitSpec = WaBitSpec.None,
   offset: number = 0,
-  align: number = 0,
+  align: number = 0
 ): Store {
   // --- Check input consistency
   if (
@@ -451,10 +441,7 @@ export function mul(valueType: WaType): Mul {
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function div(
-  valueType: WaType,
-  signed?: boolean,
-): Div {
+export function div(valueType: WaType, signed?: boolean): Div {
   return <Div>{
     type: "Div",
     valueType,
@@ -467,10 +454,7 @@ export function div(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function rem(
-  valueType: WaType,
-  signed?: boolean,
-): Rem {
+export function rem(valueType: WaType, signed?: boolean): Rem {
   return <Rem>{
     type: "Rem",
     valueType,
@@ -531,10 +515,7 @@ export function shl(valueType: WaType): Shl {
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function shr(
-  valueType: WaType,
-  signed?: boolean,
-): Shr {
+export function shr(valueType: WaType, signed?: boolean): Shr {
   checkInteger(valueType, "shr");
   return <Shr>{
     type: "Shr",
@@ -608,10 +589,7 @@ export function ne(valueType: WaType): Ne {
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function le(
-  valueType: WaType,
-  signed?: boolean,
-): Le {
+export function le(valueType: WaType, signed?: boolean): Le {
   return <Le>{
     type: "Le",
     valueType,
@@ -624,10 +602,7 @@ export function le(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function lt(
-  valueType: WaType,
-  signed?: boolean,
-): Lt {
+export function lt(valueType: WaType, signed?: boolean): Lt {
   return <Lt>{
     type: "Lt",
     valueType,
@@ -640,10 +615,7 @@ export function lt(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function ge(
-  valueType: WaType,
-  signed?: boolean,
-): Ge {
+export function ge(valueType: WaType, signed?: boolean): Ge {
   return <Ge>{
     type: "Ge",
     valueType,
@@ -656,10 +628,7 @@ export function ge(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function gt(
-  valueType: WaType,
-  signed?: boolean,
-): Gt {
+export function gt(valueType: WaType, signed?: boolean): Gt {
   return <Gt>{
     type: "Gt",
     valueType,
@@ -672,7 +641,7 @@ export function gt(
  */
 export function wrap64(): Wrap64 {
   return <Wrap64>{
-    type: "Wrap64"
+    type: "Wrap64",
   };
 }
 
@@ -680,9 +649,7 @@ export function wrap64(): Wrap64 {
  * Factory method for an extend32 WA instruction
  * @param signed Signed operation?
  */
-export function extend32(
-  signed?: boolean,
-): Extend32 {
+export function extend32(signed?: boolean): Extend32 {
   return <Extend32>{
     type: "Extend32",
     signed,
@@ -694,10 +661,7 @@ export function extend32(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function trunc32(
-  valueType: WaType,
-  signed?: boolean,
-): Trunc32 {
+export function trunc32(valueType: WaType, signed?: boolean): Trunc32 {
   checkFloat(valueType, "trunc32");
   return <Trunc32>{
     type: "Trunc32",
@@ -711,10 +675,7 @@ export function trunc32(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function trunc64(
-  valueType: WaType,
-  signed?: boolean,
-): Trunc64 {
+export function trunc64(valueType: WaType, signed?: boolean): Trunc64 {
   checkFloat(valueType, "trunc64");
   return <Trunc64>{
     type: "Trunc64",
@@ -728,10 +689,7 @@ export function trunc64(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function convert32(
-  valueType: WaType,
-  signed?: boolean,
-): Convert32 {
+export function convert32(valueType: WaType, signed?: boolean): Convert32 {
   checkInteger(valueType, "convert32");
   return <Convert32>{
     type: "Convert32",
@@ -745,10 +703,7 @@ export function convert32(
  * @param valueType Value type of operation
  * @param signed Signed operation?
  */
-export function convert64(
-  valueType: WaType,
-  signed?: boolean,
-): Convert64 {
+export function convert64(valueType: WaType, signed?: boolean): Convert64 {
   checkInteger(valueType, "convert64");
   return <Convert64>{
     type: "Convert64",
@@ -875,9 +830,7 @@ export function trunc(valueType: WaType): Trunc {
  * Factory method for a nearest WA instruction
  * @param valueType Value type of operation
  */
-export function nearest(
-  valueType: WaType,
-): Nearest {
+export function nearest(valueType: WaType): Nearest {
   checkFloat(valueType, "nearest");
   return <Nearest>{
     type: "Nearest",
@@ -925,9 +878,7 @@ export function max(valueType: WaType): Max {
  * Factory method for a copysign WA instruction
  * @param valueType Value type of operation
  */
-export function copysign(
-  valueType: WaType,
-): CopySign {
+export function copysign(valueType: WaType): CopySign {
   checkFloat(valueType, "copysign");
   return <CopySign>{
     type: "CopySign",

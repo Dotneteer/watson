@@ -3,6 +3,7 @@ import {
   branch,
   branchIf,
   constVal,
+  FunctionBuilder,
   localTee,
 } from "../wa-ast/FunctionBuilder";
 import {
@@ -16,10 +17,15 @@ import {
   WaInstruction,
   WaType,
 } from "../wa-ast/wa-nodes";
+import {
+  findInstruction,
+  instructionsActionLoop,
+  visitInstructions,
+} from "./wat-helpers";
 
 /**
  * Optimizes the specified set of instructions
- * @param instrs
+ * @param instrs WA instructions to optimize
  */
 export function optimizeWat(instrs: WaInstruction[]): void {
   let changeCount: number;
@@ -38,8 +44,90 @@ export function optimizeWat(instrs: WaInstruction[]): void {
 }
 
 /**
+ * Optimizes constants
+ * @param instrs WA instructions to optimize
+ */
+export function optimizeConstants(instrs: WaInstruction[]): void {
+  let changeCount: number;
+  do {
+    changeCount = optimizeConstantOperations(instrs);
+  } while (changeCount);
+}
+
+/**
+ * Optimizes local usages
+ * @param funcBuilder Builder to optimize
+ */
+export function optimizeLocalUsage(funcBuilder: FunctionBuilder): void {
+  const localUsages = new Set<string>();
+  visitInstructions(funcBuilder.body, (ins) => {
+    if (ins.type.startsWith("Local")) {
+      localUsages.add((ins as LocalGet).id);
+    }
+  });
+  funcBuilder.locals = funcBuilder.locals.filter((l) => localUsages.has(l.id));
+}
+
+/**
+ * Optimizes the usage of the last inline parameter
+ * @param builderBody Body to optimize
+ * @param paramName Name of the last inline parameter
+ * @param startIndex Start index of the inline invocation
+ */
+export function optimizeLastInlineParam(
+  builderBody: WaInstruction[],
+  paramName: string,
+  startIndex: number
+): void {
+  // --- No inline parameter
+  if (!paramName) {
+    return;
+  }
+
+  // --- Let's count the getters for the last param
+  const maxLength = builderBody.length;
+  let getters = 0;
+  let getterParent: WaInstruction[] | undefined;
+  let getterIndex = -1;
+  visitInstructions(
+    builderBody,
+    (ins, parent, index) => {
+      if (ins.type === "LocalGet" && ins.id === paramName) {
+        getters++;
+        getterParent = parent;
+        getterIndex = index;
+      }
+    },
+    startIndex
+  );
+
+  // --- Multiple getters, no optimization
+  if (getters > 1 || getterIndex < 0 || !getterParent) {
+    return;
+  }
+
+  // --- Check for replaceable pattern (constVal, localGet, globalGet)
+  if (
+    (builderBody[startIndex].type === "ConstVal" ||
+      builderBody[startIndex].type === "LocalGet" ||
+      builderBody[startIndex].type === "GlobalGet") &&
+    startIndex + 1 < maxLength &&
+    builderBody[startIndex + 1].type === "LocalSet" &&
+    (builderBody[startIndex + 1] as LocalSet).id === paramName &&
+    (getterParent[getterIndex] as LocalGet).id === paramName
+  ) {
+    // --- Replace the getter with the constant
+    getterParent[getterIndex] = builderBody[startIndex];
+
+    // --- Remove the constant and the setter
+    builderBody.splice(startIndex, 2);
+  }
+}
+
+/**
  * Removes constant operations and replaces them with their equivalent
  * constant value
+ * @param instrs WA instructions to optimize
  */
 function optimizeConstantOperations(instrs: WaInstruction[]): number {
   return instructionsActionLoop(instrs, (ins, index) => {
@@ -66,7 +154,7 @@ function optimizeConstantOperations(instrs: WaInstruction[]): number {
 
 /**
  * Removed dead code from the specified block
- * @param instrs Instruction sequence
+ * @param instrs WA instructions to optimize
  * @param depth Current depth;
  */
 function removeDeadCode(instrs: WaInstruction[], depth = 0): number {
@@ -299,80 +387,6 @@ function peelBlock(instrs: WaInstruction[]): number {
     }
     return false;
   });
-}
-
-/**
- * Visits the instruction tree recursively to execute an action until there
- * are any changes
- * @param instrs Instructions
- * @param action Action to carry out
- */
-function instructionsActionLoop(
-  instrs: WaInstruction[],
-  action: (insArr: WaInstruction[], index: number) => boolean
-): number {
-  let changeCount = 0;
-  let changed: boolean;
-  do {
-    changed = false;
-    for (let i = 0; i < instrs.length; i++) {
-      changed = action(instrs, i);
-      if (changed) {
-        changeCount++;
-        break;
-      }
-      const instr = instrs[i];
-      switch (instr.type) {
-        case "If":
-          changeCount += instructionsActionLoop(instr.consequtive, action);
-          if (instr.alternate) {
-            changeCount += instructionsActionLoop(instr.alternate, action);
-          }
-          break;
-        case "Block":
-        case "Loop":
-          changeCount += instructionsActionLoop(instr.body, action);
-          break;
-      }
-    }
-  } while (changed);
-  return changeCount;
-}
-
-/**
- * Tests if there is any instruction in the tree with a specific predicate
- * @param instrs Instrcutions to test recursively
- * @param predicate Predicate to test
- */
-function findInstruction(
-  instrs: WaInstruction[],
-  predicate: (instr: WaInstruction) => boolean
-): boolean {
-  for (let i = 0; i < instrs.length; i++) {
-    const instr = instrs[i];
-    switch (instr.type) {
-      case "If":
-        let found = findInstruction(instr.consequtive, predicate);
-        if (found) {
-          return true;
-        }
-        if (instr.alternate) {
-          found = findInstruction(instr.alternate, predicate);
-        }
-        if (found) {
-          return true;
-        }
-        break;
-      case "Block":
-      case "Loop":
-        return findInstruction(instr.body, predicate);
-      default:
-        if (predicate(instr)) {
-          return true;
-        }
-    }
-  }
-  return false;
 }
 
 /**

@@ -76,6 +76,9 @@ export class WatSharpParser {
   // --- Declarations parsed
   private readonly _declarations = new Map<string, Declaration>();
 
+  // --- Sequential function declaration ID
+  private _nextFuncId = 0;
+
   constructor(
     public readonly source: string,
     public readonly includeHandler?: (filename: string) => IncludeHandlerResult,
@@ -641,12 +644,14 @@ export class WatSharpParser {
     this.addDeclaration<FunctionDeclaration>(
       "FunctionDeclaration",
       {
+        funcId: this._nextFuncId++,
         name,
         resultType,
         params,
         isExport,
         isInline,
         body,
+        invocationCount: 0
       },
       start,
       start

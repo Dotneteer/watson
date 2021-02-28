@@ -3,10 +3,8 @@ import { ErrorCodes } from "../core/errors";
 import {
   Assignment,
   BinaryExpression,
-  BreakStatement,
   BuiltInFunctionInvocationExpression,
   ConditionalExpression,
-  ContinueStatement,
   DoStatement,
   Expression,
   FunctionInvocationExpression,
@@ -27,6 +25,8 @@ import {
   WhileStatement,
 } from "../compiler/source-tree";
 import {
+  LocalGet,
+  LocalSet,
   WaBitSpec,
   WaInstruction,
   WaParameter,
@@ -115,7 +115,18 @@ import {
   applyUnaryOperation,
   renderExpression,
 } from "./expression-resolver";
-import { optimizeWat } from "./wat-optimizer";
+import {
+  optimizeConstants,
+  optimizeLastInlineParam,
+  optimizeLocalUsage,
+  optimizeWat,
+} from "./wat-optimizer";
+import {
+  countInstructions,
+  findInstruction,
+  visitInstructions,
+} from "./wat-helpers";
+import { setFlagsFromString } from "v8";
 
 /**
  * This class is responsible for compiling a function body
@@ -154,6 +165,19 @@ export class FunctionCompiler {
   }
 
   /**
+   * Gets the builder of this function
+   */
+  get builder(): FunctionBuilder {
+    return this._builder;
+  }
+
+  /**
+   * Gets the body of the compiled function
+   */
+  getInstructionBody(): WaInstruction[] {
+    return this._builder.body;
+  }
+  /**
    * Adds a trace message
    * @param traceFactory Factory function to generate trace message
    */
@@ -165,11 +189,21 @@ export class FunctionCompiler {
    * Processes the body of the function
    */
   process(): void {
-    this.processHead();
+    // --- Prepare the function signature
+    this.processSignature();
+
+    // --- Compile the function body
     this.func.body.forEach((stmt) =>
-      this.processStatement(stmt, this._builder.body)
+      this.compileStatement(stmt, this._builder.body)
     );
+
+    // --- Optimize the emitted WA code of the function body
     optimizeWat(this._builder.body);
+
+    // --- Remove unused locals
+    optimizeLocalUsage(this._builder);
+
+    // --- Create trace information for test purposes
     this._builder.body.forEach((ins) => {
       if (ins.type !== "Comment") {
         const parts = this.wsCompiler.waTree
@@ -177,7 +211,7 @@ export class FunctionCompiler {
           .split("\n")
           .map((item) => item.trim());
         parts.forEach((p) => {
-          this.addTrace(() => ["inject", 0, p]);
+          this.addTrace(() => ["inject", this.func.funcId, p]);
         });
       }
     });
@@ -186,7 +220,7 @@ export class FunctionCompiler {
   /**
    * Processes the function parameters and result type
    */
-  private processHead(): void {
+  private processSignature(): void {
     // --- Map the result type
     this._resultType = mapFunctionParameterType(this.func.resultType);
 
@@ -199,9 +233,12 @@ export class FunctionCompiler {
         const paramType = mapFunctionParameterType(param.spec);
         const paramName = createParameterName(param.name);
         this.locals.set(param.name, {
+          fromParameter: true,
           name: paramName,
           type: param.spec,
           waType: paramType,
+          getCount: 0,
+          setCount: 0,
         });
         waPars.push({
           id: paramName,
@@ -211,7 +248,6 @@ export class FunctionCompiler {
     });
 
     // --- Create the function builder
-    this.wsCompiler.waTree.separatorLine();
     this._builder = this.wsCompiler.waTree.func(
       createGlobalName(this.func.name),
       waPars,
@@ -224,34 +260,34 @@ export class FunctionCompiler {
    * @param stmt Statement to process
    * @param body Body to put the statements in
    */
-  private processStatement(stmt: Statement, body: WaInstruction[]): void {
+  private compileStatement(stmt: Statement, body: WaInstruction[]): void {
     switch (stmt.type) {
       case "LocalVariable":
-        this.processLocalDeclaration(stmt, body);
+        this.compileLocalDeclaration(stmt, body);
         return;
       case "Assignment":
-        this.processAssignment(stmt, body);
+        this.compileAssignment(stmt, body);
         return;
       case "Break":
-        this.processBreak(body);
+        this.compileBreak(body);
         return;
       case "Continue":
-        this.processContinue(body);
+        this.compileContinue(body);
         return;
       case "Do":
-        this.processDoWhileLoop(stmt, body);
+        this.compileDoWhileLoop(stmt, body);
         return;
       case "If":
-        this.processIf(stmt, body);
+        this.compileIf(stmt, body);
         return;
       case "LocalFunctionInvocation":
-        this.processLocalFunctionInvocation(stmt, body);
+        this.compileLocalFunctionInvocation(stmt, body);
         return;
       case "Return":
-        this.processReturn(stmt, body);
+        this.compileReturn(stmt, body);
         return;
       case "While":
-        this.processWhileLoop(stmt, body);
+        this.compileWhileLoop(stmt, body);
         return;
     }
   }
@@ -260,7 +296,7 @@ export class FunctionCompiler {
    * Processes a local variable declaration
    * @param body Body to put the statements in
    */
-  private processLocalDeclaration(
+  private compileLocalDeclaration(
     localVar: LocalVariable,
     body: WaInstruction[]
   ): void {
@@ -281,6 +317,7 @@ export class FunctionCompiler {
             initExpr?.expr.value
           );
           this.inject(true, localSet(localName), body);
+          this.incrementSetReference(localVar.name);
         }
       }
       const paramType =
@@ -288,9 +325,12 @@ export class FunctionCompiler {
           ? WaType.i32
           : waTypeMappings[(localVar.spec as IntrinsicType).underlying];
       this.locals.set(localVar.name, {
+        fromParameter: false,
         name: localName,
         type: localVar.spec,
         waType: paramType,
+        getCount: 0,
+        setCount: 0,
       });
       const local = this._builder.addLocal(localName, paramType);
       this.addTrace(() => [
@@ -305,7 +345,7 @@ export class FunctionCompiler {
    * Processes the specified assignment
    * @param body Body to put the statements in
    */
-  private processAssignment(asgn: Assignment, body: WaInstruction[]): void {
+  private compileAssignment(asgn: Assignment, body: WaInstruction[]): void {
     // --- Check the left value type
     let leftSide: "local" | "global" | "var" = "var";
     let leftType: TypeSpec | undefined;
@@ -363,7 +403,10 @@ export class FunctionCompiler {
       if (!idAddress && asgn.asgn !== "=") {
         tmpAddrVar = this.createTempLocal(WaType.i32, "asgn");
         this.inject(true, localTee(tmpAddrVar), body);
+        this.incrementSetReference(tmpAddrVar);
         this.inject(true, localGet(tmpAddrVar), body);
+        this.incrementGetReference(tmpAddrVar);
+
         // --- At this point we have the variable acces on the top of the stack
       }
     }
@@ -377,6 +420,7 @@ export class FunctionCompiler {
           break;
         case "local":
           this.inject(true, localGet(createLocalName(varName)), body);
+          this.incrementGetReference(varName);
           break;
         case "var":
           this.compileIntrinsicVariableGet(leftIntrinsic, body);
@@ -513,6 +557,7 @@ export class FunctionCompiler {
         break;
       case "local":
         this.inject(true, localSet(createLocalName(varName)), body);
+        this.incrementSetReference(varName);
         break;
       case "var":
         this.compileIntrinsicVariableSet(leftIntrinsic, body);
@@ -524,7 +569,7 @@ export class FunctionCompiler {
    * Processes a break statement
    * @param body Body to put the statements in
    */
-  private processBreak(body: WaInstruction[]): void {
+  private compileBreak(body: WaInstruction[]): void {
     this.inject(true, branch(createBreakLabel(this._loopDepth)), body);
   }
 
@@ -532,7 +577,7 @@ export class FunctionCompiler {
    * Processes a continue statement
    * @param body Body to put the statements in
    */
-  private processContinue(body: WaInstruction[]): void {
+  private compileContinue(body: WaInstruction[]): void {
     this.inject(true, branch(createLoopLabel(this._loopDepth)), body);
   }
 
@@ -540,7 +585,7 @@ export class FunctionCompiler {
    * Processes a do..while loop
    * @param body Body to put the statements in
    */
-  private processDoWhileLoop(dLoop: DoStatement, body: WaInstruction[]): void {
+  private compileDoWhileLoop(dLoop: DoStatement, body: WaInstruction[]): void {
     const hasBreak = dLoop.loopBody.some((st) => this.hasBreak(st));
 
     // --- New loop depth
@@ -551,7 +596,7 @@ export class FunctionCompiler {
 
     // --- Compilet the main loop
     const loopLabel = createLoopLabel(this._loopDepth);
-    dLoop.loopBody.forEach((stmt) => this.processStatement(stmt, loopBody));
+    dLoop.loopBody.forEach((stmt) => this.compileStatement(stmt, loopBody));
 
     // --- Compile the test
     if (!this.compileExpression(dLoop.test, loopBody)) {
@@ -559,11 +604,8 @@ export class FunctionCompiler {
     }
 
     // --- Combine the test and the body into a loop
-    const loopToInject = loop(loopLabel, [
-      ...loopBody,
-      branchIf(loopLabel),
-    ]);
-    
+    const loopToInject = loop(loopLabel, [...loopBody, branchIf(loopLabel)]);
+
     if (hasBreak) {
       // --- Encapsulate the loop into a break block
       const breakBlock = block(createBreakLabel(this._loopDepth), [
@@ -583,7 +625,7 @@ export class FunctionCompiler {
    * Processes a while loop
    * @param body Body to put the statements in
    */
-  private processWhileLoop(wLoop: WhileStatement, body: WaInstruction[]): void {
+  private compileWhileLoop(wLoop: WhileStatement, body: WaInstruction[]): void {
     const hasBreak = wLoop.loopBody.some((st) => this.hasBreak(st));
 
     // --- New loop depth
@@ -600,7 +642,7 @@ export class FunctionCompiler {
     // --- Compile the loop body
     const loopMain: WaInstruction[] = [];
     const loopLabel = createLoopLabel(this._loopDepth);
-    wLoop.loopBody.forEach((stmt) => this.processStatement(stmt, loopMain));
+    wLoop.loopBody.forEach((stmt) => this.compileStatement(stmt, loopMain));
 
     // --- Combine the test and the body into a loop
     const loopToInject = loop(loopLabel, [
@@ -650,7 +692,7 @@ export class FunctionCompiler {
    * Processes an if statement
    * @param body Body to put the statements in
    */
-  private processIf(ifStmt: IfStatement, body: WaInstruction[]): void {
+  private compileIf(ifStmt: IfStatement, body: WaInstruction[]): void {
     // --- Test expression
     if (!this.compileExpression(ifStmt.test, body)) {
       return;
@@ -659,7 +701,7 @@ export class FunctionCompiler {
     // --- Consequent branch
     const consequentBody: WaInstruction[] = [];
     ifStmt.consequent.forEach((stmt) =>
-      this.processStatement(stmt, consequentBody)
+      this.compileStatement(stmt, consequentBody)
     );
 
     // --- Alternate branch
@@ -667,7 +709,7 @@ export class FunctionCompiler {
     if (ifStmt.alternate) {
       alternateBody = [];
       ifStmt.alternate.forEach((stmt) =>
-        this.processStatement(stmt, alternateBody)
+        this.compileStatement(stmt, alternateBody)
       );
     }
 
@@ -679,7 +721,7 @@ export class FunctionCompiler {
    * Processes a local function invocation
    * @param body Body to put the statements in
    */
-  private processLocalFunctionInvocation(
+  private compileLocalFunctionInvocation(
     invocation: LocalFunctionInvocation,
     body: WaInstruction[]
   ): void {
@@ -698,7 +740,7 @@ export class FunctionCompiler {
    * Processes a return statement
    * @param body Body to put the statements in
    */
-  private processReturn(retStmt: ReturnStatement, body: WaInstruction[]): void {
+  private compileReturn(retStmt: ReturnStatement, body: WaInstruction[]): void {
     // --- Check for return argument
     if (!this.func.resultType && retStmt.expr) {
       this.reportError("W156", retStmt);
@@ -1166,6 +1208,7 @@ export class FunctionCompiler {
     }
     if (resolvedId.local) {
       this.inject(emit, localGet(resolvedId.local.name), body);
+      this.incrementGetReference(resolvedId.local.name);
       return resolvedId.local.type;
     }
     if (resolvedId.global) {
@@ -1745,6 +1788,8 @@ export class FunctionCompiler {
             ],
             body
           );
+          this.incrementSetReference(local);
+          this.incrementGetReference(local, 2);
         } else if (argIns.startsWith("f")) {
           this.inject(emit, abs(waType), body);
         }
@@ -1867,6 +1912,14 @@ export class FunctionCompiler {
       return null;
     }
 
+    // --- Can we inline it?
+    let inlineIt = false;
+    let funcId = -1;
+    if (calledDecl.type === "FunctionDeclaration") {
+      inlineIt = calledDecl.canBeInlined;
+      funcId = calledDecl.funcId;
+    }
+
     // --- Prepare the function parameters
     const funcParams = calledDecl.params;
     const funcResult = calledDecl.resultType;
@@ -1893,8 +1946,14 @@ export class FunctionCompiler {
       return null;
     }
 
+    // --- We use this during inline optimization
+    let lastInlineParamName: string | undefined;
+    let startInstructionIndex = 0;
+    const builderBody = this._builder.body;
+
     // --- Match and convert parameter types one-by-one
     for (let i = 0; i < funcParams.length; i++) {
+      startInstructionIndex = builderBody.length;
       const par = funcParams[i];
       const waParType =
         par.spec.type === "Pointer"
@@ -1917,10 +1976,19 @@ export class FunctionCompiler {
 
       // --- Argument is OK, cast it to the parameter's type
       this.castForStorage(par.spec, argType, body);
+
+      // --- Handle parameters of an inline function
+      if (inlineIt) {
+        const inlineParamName = `$${funcId}${createParameterName(par.name)}`;
+        this.createCompileTimeLocal(inlineParamName, par.spec);
+        this.inject(emit, localSet(inlineParamName), body);
+        lastInlineParamName = inlineParamName;
+      }
     }
 
     // --- Call the function
     if (calledDecl.type === "TableDeclaration") {
+      // --- Non-inlined function call
       this.inject(emit, constVal(WaType.i32, calledDecl.entryIndex), body);
       const exprType = this.compileExpression(invoc.dispatcher, body, emit);
       if (exprType) {
@@ -1929,7 +1997,36 @@ export class FunctionCompiler {
         this.inject(emit, callIndirect(createTableName(invoc.name)), body);
       }
     } else {
-      this.inject(emit, call(createGlobalName(invoc.name)), body);
+      // --- We call the function, count the invocations
+      calledDecl.invocationCount++;
+
+      if (inlineIt) {
+        // --- Just copy the body of the inline function
+        this.wsCompiler
+          .getFunctionBodyInstructions(calledDecl.name)
+          .forEach((ins) => {
+            this.inject(emit, ins, body);
+          });
+
+        // --- Do optimization
+        optimizeConstants(builderBody);
+        optimizeLastInlineParam(
+          builderBody,
+          lastInlineParamName,
+          startInstructionIndex
+        );
+        optimizeConstants(builderBody);
+      } else {
+        this.inject(emit, call(createGlobalName(invoc.name)), body);
+      }
+      if (inlineIt) {
+        // --- Obtain the return value from the inline function
+        if (calledDecl.hasReturn) {
+          const resultName = `$${funcId}$res`;
+          this.createCompileTimeLocal(resultName, calledDecl.resultType);
+          this.inject(emit, localGet(resultName), body);
+        }
+      }
     }
 
     // --- Done
@@ -2313,16 +2410,107 @@ export class FunctionCompiler {
   }
 
   // ==========================================================================
-  // Temporary locals
+  // Inline function compilation
+
+  /**
+   * Prepares the current function for inlining after it was compiled
+   * The compiler calls this method only on functions explicitly marked
+   * for inlining
+   */
+  prepareForInlining(): void {
+    this.func.canBeInlined = false;
+
+    // --- No inlining for functions with more than two parameters
+    if (this.func.params.length > 2) {
+      return;
+    }
+
+    // --- No inlining over 32 instructions
+    if (countInstructions(this._builder.body) > 32) {
+      return;
+    }
+
+    // --- No inlining for functions that contain calls to other functions
+    if (
+      findInstruction(
+        this._builder.body,
+        (ins) => ins.type === "Call" || ins.type === "CallIndirect"
+      )
+    ) {
+      return;
+    }
+
+    // --- No inlining with multiple returns
+    let returnCount = 0;
+    visitInstructions(this._builder.body, (ins) => {
+      if (ins.type === "Return") {
+        returnCount++;
+      }
+    });
+    if (returnCount > 1) {
+      return;
+    }
+
+    // --- Return should be in the main branch of the function
+    let mainReturnIndex = -1;
+    this._builder.body.forEach((ins, index) => {
+      if (ins.type === "Return") {
+        mainReturnIndex = index;
+      }
+    });
+    if (returnCount > 0 && mainReturnIndex < 0) {
+      return;
+    }
+
+    // --- Ok, this function can be inlined, so let's carry out a few trnasforms
+    this.func.canBeInlined = true;
+
+    // --- Change the return statement to set_local to store function result
+    if (mainReturnIndex >= 0) {
+      this._builder.body[mainReturnIndex] = localSet(
+        `$${this.func.funcId}$res`
+      );
+      this.func.hasReturn = true;
+    }
+
+    // --- Transform all local names to include the function identifier
+    this._builder.locals.forEach((l) => {
+      l.id = `$${this.func.funcId}${l.id}`;
+    });
+    visitInstructions(this._builder.body, (ins) => {
+      if (
+        ins.type === "LocalGet" ||
+        ins.type === "LocalSet" ||
+        ins.type === "LocalTee"
+      ) {
+        ins.id = `$${this.func.funcId}${ins.id}`;
+      }
+    });
+  }
+
+  // ==========================================================================
+  // Helpers for locals
 
   /**
    * Creates a temporary local with the specified type
    * @param type
    */
   private createTempLocal(type: WaType, prefix: string = ""): string {
-    const tmpName = `$tloc$${prefix}${WaType[type].toString()}`;
+    const underlying = WaType[type].toString();
+    const tmpName = `$tloc$${prefix}${underlying}`;
     if (!this._tempLocals.has(type)) {
       const local = this._builder.addLocal(tmpName, type);
+      this.locals.set(tmpName, {
+        fromParameter: false,
+        name: tmpName,
+        waType: type,
+        type: <IntrinsicType>{
+          type: "Intrinsic",
+          underlying,
+        },
+        getCount: 0,
+        setCount: 0,
+      });
       this._tempLocals.add(type);
       this.addTrace(() => [
         "local",
@@ -2331,6 +2519,60 @@ export class FunctionCompiler {
       ]);
     }
     return tmpName;
+  }
+
+  /**
+   * Creates a compile-time local with the specified name and type
+   * @param name Local name
+   * @param spec Local type specification
+   */
+  private createCompileTimeLocal(name: string, spec: TypeSpec): void {
+    // --- Avoid declaring the same local
+    if (this.locals.has(name)) {
+      return;
+    }
+
+    // --- Add the new local
+    const localWaType =
+      spec.type === "Pointer"
+        ? WaType.i32
+        : waTypeMappings[(spec as IntrinsicType).underlying];
+    this._builder.addLocal(name, localWaType);
+    this.locals.set(name, {
+      fromParameter: false,
+      name,
+      waType: localWaType,
+      type: <IntrinsicType>{
+        type: "Intrinsic",
+        underlying: WaType[localWaType].toString(),
+      },
+      getCount: 0,
+      setCount: 0,
+    });
+  }
+
+  /**
+   * Increments the get reference counter for the specified local variable
+   * @param name Local name
+   * @param increment Increment value
+   */
+  private incrementGetReference(name: string, increment = 1): void {
+    const local = this.locals.get(name);
+    if (local) {
+      local.getCount += increment;
+    }
+  }
+
+  /**
+   * Increments the set reference counter for the specified local variable
+   * @param name Local name
+   * @param increment Increment value
+   */
+  private incrementSetReference(name: string, increment = 1): void {
+    const local = this.locals.get(name);
+    if (local) {
+      local.setCount += increment;
+    }
   }
 
   // ==========================================================================
@@ -2379,6 +2621,9 @@ interface LocalDeclaration {
   name: string;
   type: TypeSpec;
   waType: WaType;
+  fromParameter: boolean;
+  getCount: number;
+  setCount: number;
 }
 
 /**

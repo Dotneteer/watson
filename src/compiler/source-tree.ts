@@ -439,11 +439,15 @@ export interface ImportedFunctionDeclaration extends DeclarationBase {
  */
 export interface FunctionDeclaration extends DeclarationBase {
   type: "FunctionDeclaration";
+  funcId: number;
   resultType?: IntrinsicType | PointerType;
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;
   body: Statement[];
+  canBeInlined?: boolean;
+  hasReturn?: boolean;
+  invocationCount?: number;
 }
 
 /**
