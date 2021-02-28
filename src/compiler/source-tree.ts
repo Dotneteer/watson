@@ -419,7 +419,7 @@ export interface DataDeclaration extends DeclarationBase {
 export interface VariableDeclaration extends DeclarationBase {
   type: "VariableDeclaration";
   spec: TypeSpec;
-  addressExpr?: Expression;
+  addressAlias?: Identifier;
   address?: number;
 }
 
@@ -439,11 +439,15 @@ export interface ImportedFunctionDeclaration extends DeclarationBase {
  */
 export interface FunctionDeclaration extends DeclarationBase {
   type: "FunctionDeclaration";
+  funcId: number;
   resultType?: IntrinsicType | PointerType;
   params: FunctionParameter[];
   isExport?: boolean;
   isInline?: boolean;
   body: Statement[];
+  canBeInlined?: boolean;
+  hasReturn?: boolean;
+  invocationCount?: number;
 }
 
 /**

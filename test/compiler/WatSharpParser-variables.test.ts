@@ -80,7 +80,7 @@ describe("WatSharpParser - variable declarations", () => {
     it(`var decl ${c.src} #4`, () => {
       // --- Arrange
       const wParser = new WatSharpParser(`
-      ${c.src} myVar { 0x8000 };
+      ${c.src} myVar { b };
       `);
 
       // --- Act
@@ -92,7 +92,7 @@ describe("WatSharpParser - variable declarations", () => {
       expect(decl).toBeDefined();
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.spec.type).toBe("Intrinsic");
-      expect(varDecl.addressExpr.type).toBe("Literal");
+      expect(varDecl.addressAlias.name).toBe("b");
     });
   });
 
@@ -207,4 +207,28 @@ describe("WatSharpParser - variable declarations", () => {
       expect(varDecl.spec.type).toBe("Struct");
     });
   });
+
+  it("var with alias #1", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    type r16 = struct {
+      u8 l,
+      u8 h
+    };
+    r16 af;
+    u16 afR { af };
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+    const decl = wParser.declarations.get("afR");
+    expect(decl).toBeDefined();
+    const varDecl = decl as VariableDeclaration;
+    expect(varDecl.spec.type).toBe("Intrinsic");
+    expect(varDecl.addressAlias.name).toBe("af");
+  });
+
 });

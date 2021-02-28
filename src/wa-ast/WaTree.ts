@@ -80,6 +80,14 @@ export class WaTree {
   // Module emission methods
 
   /**
+   * Adds a function builder to this tree
+   * @param builder 
+   */
+  addFunc(builder: FunctionBuilder): void {
+    this._module.fields.push(builder);
+  }
+
+  /**
    * Injects a function import node into the tree
    * @param id Function identifier
    * @param name1 First import nametag
@@ -200,7 +208,6 @@ export class WaTree {
   ): FunctionBuilder {
     this.ensureFields();
     const newNode = new FunctionBuilder(id, params, resultType, locals, body);
-    this._module.fields.push(newNode);
     return newNode;
   }
 

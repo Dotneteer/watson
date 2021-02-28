@@ -67,7 +67,8 @@ describe("WatSharpCompiler - variable resolution", () => {
     it(`Intrinsic type with address ${c.src}`, () => {
       // --- Arrange
       const wComp = new WatSharpCompiler(`
-      ${c.src} a { 0x8000 };
+      i32 b;
+      ${c.src} a { b };
       `);
 
       // --- Act
@@ -81,7 +82,7 @@ describe("WatSharpCompiler - variable resolution", () => {
       expect(decl.resolved).toBe(true);
       const varDecl = decl as VariableDeclaration;
       expect(varDecl.resolved).toBe(true);
-      expect(varDecl.address).toBe(0x8000);
+      expect(varDecl.addressAlias.name).toBe("b");
     });
   });
 
@@ -240,7 +241,8 @@ describe("WatSharpCompiler - variable resolution", () => {
   it("Multiple variables #5", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
-    struct { u8 l, i16 h} [6] a {12};
+    i32 ref;
+    struct { u8 l, i16 h} [6] a {ref};
     u64[3] b;
     u64 c;
     `);
@@ -256,7 +258,7 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     let varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(12);
+    expect(varDecl.address).toBe(0);
 
     decl = wComp.declarations.get("b");
     expect(decl).toBeDefined();
@@ -264,7 +266,7 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(30);
+    expect(varDecl.address).toBe(18);
 
     decl = wComp.declarations.get("c");
     expect(decl).toBeDefined();
@@ -272,14 +274,15 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(54);
+    expect(varDecl.address).toBe(42);
   });
 
   it("Multiple variables #6", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`
-    struct { u8 l, i16 h} [6] a {12};
-    u64[3] b {12};
+    i32 ref;
+    struct { u8 l, i16 h} [6] a;
+    u64[3] b {a};
     u64 c;
     `);
 
@@ -294,7 +297,7 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     let varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(12);
+    expect(varDecl.address).toBe(4);
 
     decl = wComp.declarations.get("b");
     expect(decl).toBeDefined();
@@ -302,7 +305,7 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(12);
+    expect(varDecl.address).toBe(4);
 
     decl = wComp.declarations.get("c");
     expect(decl).toBeDefined();
@@ -310,7 +313,7 @@ describe("WatSharpCompiler - variable resolution", () => {
     expect(decl.resolved).toBe(true);
     varDecl = decl as VariableDeclaration;
     expect(varDecl.resolved).toBe(true);
-    expect(varDecl.address).toBe(36);
+    expect(varDecl.address).toBe(28);
   });
 
 });

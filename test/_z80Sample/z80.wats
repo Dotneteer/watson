@@ -3,59 +3,55 @@ import void trace "imports" "trace" (u32);
 // Global memory for all virtual machines
 u8[0x100_0000] globalMem;
 
-// --- CPU globals
-global u32 tacts;
-global u32 clock = 3_500_000;
-
 // Represents a 16-bit register pair
-type r16 = struct {
+type reg16 = struct {
   u8 l, // LSB register
   u8 h  // MSB register
 };
 
 // --- Z80 Registers
-r16 af;
-r16 bc;
-r16 de;
-r16 hl;
+reg16 af;
+u16 afR { af };
+reg16 bc;
+u16 bcR { bc };
+reg16 de;
+u16 deR { de };
+reg16 hl;
+u16 hlR { hl };
 u16 af_;
 u16 bc_;
 u16 de_;
 u16 hl_;
 
-table *i32 tableA(u8 b, f64 c) { ddd, ddd, ddd };
-table *i32 tableB(u8 b, f64 c) { ddd, ddd, ddd };
+// --- CPU globals
+global u32 tacts;
+global u32 clock = 3_500_000;
+global u8 val = 123;
 
 export void reset() {
   // TODO: Implement it
 }
 
-inline i32 setA(u8 value) {
-  af.h = value;
-  return 0;
+// --- Register access
+inline u8 getA() {
+  return af.h;
 }
 
-inline i32 setF(u8 value) {
-  af.l = value;
-  return 0;
+inline void setA(u8 val) {
+  af.h = 3 + val;
 }
 
-inline i32 called(u32 value) {
-  setA(value);
-  setF(value);
-  tableA(1, 1.1)[2];
-  tableB(2, 2.1)[value];
-  return 123;
+inline void setF(u8 val) {
+  af.l = val;
 }
 
-*i32 ddd(u8 a, f64 b) {
-  return 0;
+inline void setAF(u16 val) {
+  afR = val;
 }
 
-void test() {
-  local i32 a;
-  do {
-    a += 1;
-    break;
-  } while (a < 4);
+
+export void test() {
+  setA(getA());
+  setA(val);
+  setAF(123456);
 }

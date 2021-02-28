@@ -18,7 +18,8 @@ import {
 } from "./expression-resolver";
 import { FunctionCompiler } from "./FunctionCompiler";
 import { WaTree } from "../wa-ast/WaTree";
-import { WaParameter, WaType } from "../wa-ast/wa-nodes";
+import { WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
+import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
 
 /**
  * This class implements the WAT# compiler
@@ -39,6 +40,12 @@ export class WatSharpCompiler {
 
   // --- The number of table entries to emit
   private _tableEntries = 0;
+
+  // --- Bodies of the compiled functions
+  private _functionBodies = new Map<
+    string,
+    { builder: FunctionBuilder; func: FunctionDeclaration }
+  >();
 
   constructor(
     public readonly source: string,
@@ -131,6 +138,14 @@ export class WatSharpCompiler {
    */
   get traceMessages(): CompilerTraceMessage[] {
     return this._traceMessages;
+  }
+
+  /**
+   * Gets the instructions for the specified function
+   * @param name Function name
+   */
+  getFunctionBodyInstructions(name: string): WaInstruction[] | undefined {
+    return this._functionBodies.get(name).builder.body;
   }
 
   /**
@@ -241,11 +256,21 @@ export class WatSharpCompiler {
 
         case "VariableDeclaration":
           resolveTypeSpecification(decl.spec);
-          if (decl.addressExpr) {
-            resolveExpression(decl.addressExpr);
-            if (decl.addressExpr.value) {
-              decl.address = Number(decl.addressExpr.value);
+          if (decl.addressAlias) {
+            const aliasDecl = declarations.get(decl.addressAlias.name);
+            if (!aliasDecl) {
+              compiler.reportError("W101", decl.addressAlias);
+              break;
             }
+            if (aliasDecl.type !== "VariableDeclaration") {
+              compiler.reportError("W162", decl.addressAlias);
+              break;
+            }
+            if (aliasDecl.address === undefined) {
+              compiler.reportError("W163", decl.addressAlias);
+              break;
+            }
+            decl.address = aliasDecl.address;
           }
           if (decl.address === undefined) {
             decl.address = nextMemoryAddress;
@@ -544,7 +569,10 @@ export class WatSharpCompiler {
           }
       );
       this.waTree.typeDef(createTableName(table.name), params, resultType);
-      this.waTree.element(table.entryIndex, table.ids.map(id => createGlobalName(id)));
+      this.waTree.element(
+        table.entryIndex,
+        table.ids.map((id) => createGlobalName(id))
+      );
     }
     this.waTree.setTable(itemCount, "$tables$");
   }
@@ -665,11 +693,23 @@ export class WatSharpCompiler {
    * Processes the bodies of functions
    */
   private processFunctionBodies(): void {
+    // --- Filter for function declarations
+    const functionDeclarations: FunctionDeclaration[] = [];
     for (const decl of this.declarations.values()) {
       if (decl.type === "FunctionDeclaration") {
-        this.processFunctionBody(decl);
+        functionDeclarations.push(decl);
       }
     }
+
+    // --- Compile inline functions first
+    functionDeclarations
+      .filter((fd) => fd.isInline)
+      .forEach((f) => this.processFunctionBody(f));
+
+    // --- Carry on with no-inline functions
+    functionDeclarations
+      .filter((fd) => !fd.isInline)
+      .forEach((f) => this.processFunctionBody(f));
   }
 
   /**
@@ -679,12 +719,30 @@ export class WatSharpCompiler {
   private processFunctionBody(func: FunctionDeclaration): void {
     const fCompiler = new FunctionCompiler(this, func);
     fCompiler.process();
+    if (func.isInline) {
+      fCompiler.prepareForInlining();
+    }
+    this._functionBodies.set(func.name, {
+      builder: fCompiler.builder,
+      func,
+    });
   }
 
   // ==========================================================================
   // Complete code emission
 
   private completeCodeEmission(): void {
+    // --- Add used function declarations
+    for (const funcBody of this._functionBodies.values()) {
+      if (
+        funcBody.func.isExport ||
+        (!funcBody.func.canBeInlined && funcBody.func.invocationCount > 0)
+      ) {
+        this.waTree.separatorLine();
+        this.waTree.addFunc(funcBody.builder);
+      }
+    }
+
     // --- Calculate memory size
     let maxAddr = 0;
     for (const decl of this.declarations.values()) {
