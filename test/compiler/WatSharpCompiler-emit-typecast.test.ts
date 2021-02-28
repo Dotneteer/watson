@@ -22,6 +22,7 @@ describe("WatSharpCompiler - emit typecast", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
     expect(instrs[2].message).toBe("i32.const 255");
@@ -277,5 +278,4 @@ describe("WatSharpCompiler - emit typecast", () => {
     expect(instrs[5].message).toBe("f64.add");
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
-
 });
