@@ -113,7 +113,10 @@ export type ErrorCodes =
   | "W162"
   | "W163"
   | "W164"
-  | "W165";
+  | "W165"
+  | "W166"
+  | "W167"
+  | "W168";
 
 
 /**
@@ -212,4 +215,7 @@ export const errorMessages: ErrorText = {
   W163: "Variable {0} has not got an address yet, it cannot be an alias",
   W164: "Pointer operations allow only '+' and '-' operators",
   W165: "Pointer operations reguire an integer right operand",
+  W166: "Copy assignment needs works only with array and struct types",
+  W167: "Copy assignment requires an integer expression on its right side",
+  W168: "Copy assignment does not support copying more than 256 bytes",
 };

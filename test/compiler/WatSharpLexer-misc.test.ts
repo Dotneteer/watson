@@ -44,6 +44,7 @@ describe("WatSharpLexer - miscellaneous", () => {
     { src: "|=", exp: TokenType.OrAsgn },
     { src: "&", exp: TokenType.Ampersand },
     { src: "&=", exp: TokenType.AndAsgn },
+    { src: ":=", exp: TokenType.CopyAsgn },
     { src: ",", exp: TokenType.Comma },
     { src: "(", exp: TokenType.LParent },
     { src: ")", exp: TokenType.RParent },

@@ -214,7 +214,9 @@ export class WatSharpLexer {
               return completeToken(TokenType.RParent);
 
             case ":":
-              return completeToken(TokenType.Colon);
+              phase = LexerPhase.Colon;
+              tokenType = TokenType.Colon;
+              break;
 
             case "[":
               return completeToken(TokenType.LSquare);
@@ -369,6 +371,9 @@ export class WatSharpLexer {
 
         case LexerPhase.Ampersand:
           return ch === "=" ? completeToken(TokenType.AndAsgn) : makeToken();
+
+        case LexerPhase.Colon:
+          return ch === "=" ? completeToken(TokenType.CopyAsgn) : makeToken();
 
         case LexerPhase.Equal:
           return ch === "=" ? completeToken(TokenType.Equal) : makeToken();
@@ -692,6 +697,7 @@ enum LexerPhase {
   Xor,
   Or,
   Ampersand,
+  Colon,
   Equal,
   Exclamation,
   AngleLeft,

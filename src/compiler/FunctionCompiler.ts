@@ -27,6 +27,7 @@ import {
   WhileStatement,
 } from "../compiler/source-tree";
 import {
+  ConstVal,
   LocalGet,
   LocalSet,
   WaBitSpec,
@@ -379,7 +380,7 @@ export class FunctionCompiler {
         // --- Left side is a variable with a const address
         leftType = resolvedId.var.spec;
         this.inject(constVal(WaType.i32, resolvedId.var.address), body);
-        if (asgn.asgn !== "=") {
+        if (asgn.asgn !== "=" && asgn.asgn !== ":=") {
           // --- We need to put this address to the stack twice
           this.inject(constVal(WaType.i32, resolvedId.var.address), body);
         }
@@ -391,6 +392,12 @@ export class FunctionCompiler {
         return;
       }
       leftType = resolvedAddr.spec;
+    }
+
+    // --- Handle copy assignment separately
+    if (asgn.asgn === ":=") {
+      this.compileCopyAssignmentTail(asgn, leftType, body);
+      return;
     }
 
     // --- Now, we accept only intrinsic types and pointers as left values
@@ -573,6 +580,140 @@ export class FunctionCompiler {
       case "var":
         this.compileIntrinsicVariableSet(leftIntrinsic, body);
         break;
+    }
+  }
+
+  /**
+   * Compiles the tail of a copy assignment
+   * @param asgn Assignment to compile
+   * @param leftType Left value type
+   * @param body Body to put the statements in
+   */
+  private compileCopyAssignmentTail(
+    asgn: Assignment,
+    leftType: TypeSpec,
+    body: WaInstruction[]
+  ): void {
+    // --- The left value address is already on the stack
+    // --- Test the left value type
+    if (leftType.type !== "Array" && leftType.type !== "Struct") {
+      this.reportError("W166", asgn);
+      return;
+    }
+
+    // --- Check if the left side has a constand address
+    let leftAddrCons: ConstVal | undefined;
+    let leftTmpVar: string | undefined;
+    if (body.length > 0 && body[body.length - 1].type === "ConstVal") {
+      // --- Constant address
+      leftAddrCons = body[body.length - 1] as ConstVal;
+      body.splice(body.length - 1, 1);
+    } else {
+      // --- Compound address
+      leftTmpVar = this.createTempLocal(WaType.i32, "lcpy");
+      this.inject(localSet(leftTmpVar), body);
+    }
+
+    // --- Get the right side value
+    const rightType = this.compileExpression(asgn.expr, body);
+    if (!rightType) {
+      return;
+    }
+
+    // --- Check right side type
+    if (
+      rightType.type !== "Intrinsic" ||
+      rightType.underlying.startsWith("f")
+    ) {
+      this.reportError("W167", asgn);
+      return;
+    }
+
+    // --- Check if the left side has a constand address
+    let rightAddrCons: ConstVal | undefined;
+    let rightTmpVar: string | undefined;
+    if (body.length > 0 && body[body.length - 1].type === "ConstVal") {
+      // --- Constant address
+      rightAddrCons = body[body.length - 1] as ConstVal;
+      body.splice(body.length - 1, 1);
+    } else {
+      // --- Compound address
+      rightTmpVar = this.createTempLocal(WaType.i32, "rcpy");
+      this.inject(localSet(rightTmpVar), body);
+    }
+
+    // --- Compile the entiry structure, provided its length is less than 256 bytes
+    let copyLength = this.wsCompiler.getSizeof(leftType);
+    if (copyLength < 0 || copyLength > 256) {
+      this.reportError("W168", asgn);
+      return;
+    }
+
+    // --- Generate copy instructions
+    let offset = 0;
+    while (copyLength >= 8) {
+      if (leftAddrCons) {
+        this.inject(constVal(WaType.i32, leftAddrCons.value), body);
+      } else {
+        this.inject(localGet(leftTmpVar), body);
+      }
+      if (rightAddrCons) {
+        this.inject(constVal(WaType.i32, rightAddrCons.value), body);
+      } else {
+        this.inject(localGet(rightTmpVar), body);
+      }
+      this.inject(load(WaType.i64, undefined, offset), body);
+      this.inject(store(WaType.i64, undefined, offset), body);
+      offset += 8;
+      copyLength -= 8;
+    }
+    while (copyLength >= 4) {
+      if (leftAddrCons) {
+        this.inject(constVal(WaType.i32, leftAddrCons.value), body);
+      } else {
+        this.inject(localGet(leftTmpVar), body);
+      }
+      if (rightAddrCons) {
+        this.inject(constVal(WaType.i32, rightAddrCons.value), body);
+      } else {
+        this.inject(localGet(rightTmpVar), body);
+      }
+      this.inject(load(WaType.i32, undefined, offset), body);
+      this.inject(store(WaType.i32, undefined, offset), body);
+      offset += 4;
+      copyLength -= 4;
+    }
+    while (copyLength >= 2) {
+      if (leftAddrCons) {
+        this.inject(constVal(WaType.i32, leftAddrCons.value), body);
+      } else {
+        this.inject(localGet(leftTmpVar), body);
+      }
+      if (rightAddrCons) {
+        this.inject(constVal(WaType.i32, rightAddrCons.value), body);
+      } else {
+        this.inject(localGet(rightTmpVar), body);
+      }
+      this.inject(load(WaType.i32, WaBitSpec.Bit16, offset), body);
+      this.inject(store(WaType.i32, WaBitSpec.Bit16, offset), body);
+      offset += 2;
+      copyLength -= 2;
+    }
+    while (copyLength > 0) {
+      if (leftAddrCons) {
+        this.inject(constVal(WaType.i32, leftAddrCons.value), body);
+      } else {
+        this.inject(localGet(leftTmpVar), body);
+      }
+      if (rightAddrCons) {
+        this.inject(constVal(WaType.i32, rightAddrCons.value), body);
+      } else {
+        this.inject(localGet(rightTmpVar), body);
+      }
+      this.inject(load(WaType.i32, WaBitSpec.Bit8, offset), body);
+      this.inject(store(WaType.i32, WaBitSpec.Bit8, offset), body);
+      offset += 1;
+      copyLength -= 1;
     }
   }
 

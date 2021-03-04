@@ -72,6 +72,7 @@ tokenTraits.set(TokenType.BinaryNot, { expressionStart: true, unaryOp: true });
 
 tokenTraits.set(TokenType.Ceil, { expressionStart: true, builtInFunc: true });
 tokenTraits.set(TokenType.Clz, { expressionStart: true, builtInFunc: true });
+tokenTraits.set(TokenType.CopyAsgn, { assignmentOp: true });
 tokenTraits.set(TokenType.CopySign, {
   expressionStart: true,
   builtInFunc: true,

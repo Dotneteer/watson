@@ -42,6 +42,7 @@ export enum TokenType {
   OrAsgn,
   Ampersand,
   AndAsgn,
+  CopyAsgn,
 
   Semicolon,
   Comma,
