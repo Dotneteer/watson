@@ -5,6 +5,7 @@ import {
   constVal,
   FunctionBuilder,
   localTee,
+  sub,
 } from "../wa-ast/FunctionBuilder";
 import {
   Block,
@@ -38,6 +39,7 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += optimizeConstantOperations(instrs);
     changeCount += optimizeLocalAccessors(instrs);
     changeCount += optimizeLocalTees(instrs);
+    changeCount += optimizeConstantDuplication(instrs);
     changeCount += optimizeEmptyLoop(instrs);
     changeCount += optimizeEmptyBlock(instrs);
     changeCount += peelLoop(instrs);
@@ -274,6 +276,26 @@ function optimizeLocalTees(instrs: WaInstruction[]): number {
       });
       if (teeCount === 1) {
         ins.splice(index, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Changes "const", "local_tee", and "local_get" to two "const" instructions
+ * @param instrs Instructions to convert
+ */
+function optimizeConstantDuplication(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isConstant(ins, index) && isLocalTee(ins, index + 1) && isLocalGet(ins, index + 2)) {
+      const constantToDupl = ins[index] as ConstVal;
+      const localTee = ins[index + 1] as LocalTee;
+      const localGet = ins[index + 2] as LocalGet;
+      if (localTee.id === localGet.id) {
+        ins[index + 1] = constVal(constantToDupl.valueType, constantToDupl.value);
+        ins.splice(index + 2, 1);
         return true;
       }
     }
@@ -526,17 +548,27 @@ function reduceCascadedBinary(instrs: WaInstruction[], index: number): boolean {
   const right = (instrs[index + 2] as ConstVal).value;
   const opsType = instrs[index + 1].type + instrs[index + 3].type;
   let value: number | bigint | null = null;
+  let updatedOp: WaInstruction;
   switch (opsType) {
     case "AddAdd":
       value =
         typeof left === "number" && typeof right === "number"
           ? left + right
           : BigInt(left) + BigInt(right);
+      updatedOp = add(waType);
+      break;
+
+    case "SubSub":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left + right
+          : BigInt(left) + BigInt(right);
+      updatedOp = sub(waType);
       break;
   }
   if (value !== null) {
     instrs[index] = constVal(waType, value);
-    instrs[index + 1] = add(waType);
+    instrs[index + 1] = updatedOp;
     instrs.splice(index + 2, 2);
     return true;
   }
@@ -729,7 +761,7 @@ const instructionTraits: InstructionTraits = {
   Shr: InstructionType.Binary,
   Sqrt: InstructionType.None,
   Store: InstructionType.None,
-  Sub: InstructionType.None,
+  Sub: InstructionType.Binary,
   Trunc: InstructionType.None,
   Trunc32: InstructionType.None,
   Trunc64: InstructionType.None,

@@ -608,10 +608,11 @@ it("var/u16 #1", () => {
       expect(wComp.hasErrors).toBe(false);
       const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
       expect(instrs[0].message).toBe("i32.const 4");
-      expect(instrs[1].message).toBe("i32.load");
-      expect(instrs[2].message).toBe("i32.const 326");
-      expect(instrs[3].message).toBe(c.instr);
-      expect(instrs[4].message).toBe("i32.store");
+      expect(instrs[1].message).toBe("i32.const 4");
+      expect(instrs[2].message).toBe("i32.load");
+      expect(instrs[3].message).toBe("i32.const 326");
+      expect(instrs[4].message).toBe(c.instr);
+      expect(instrs[5].message).toBe("i32.store");
     });
   });
 
