@@ -491,7 +491,8 @@ export type AssignmentSymbols =
   | ">>>="
   | "&="
   | "|="
-  | "^=";
+  | "^="
+  | ":=";
 
 /**
  * Base class of statement nodes
