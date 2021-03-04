@@ -433,14 +433,14 @@ function sqrtBigInt(arg: bigint): bigint {
   }
 
   function newtonIteration(n: bigint, x0: bigint): bigint {
-    const x1 = (n / x0 + x0) >> 1n;
-    if (x0 === x1 || x0 === x1 - 1n) {
+    const x1 = (n / x0 + x0) >> BigInt(1);
+    if (x0 === x1 || x0 === x1 - BigInt(1)) {
       return x0;
     }
     return newtonIteration(n, x1);
   }
 
-  return newtonIteration(arg, 1n);
+  return newtonIteration(arg, BigInt(1));
 }
 
 /**

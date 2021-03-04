@@ -1,19 +1,11 @@
 {
+  "extends": "./tsconfig.build.json",
+
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "module": "commonjs",
-    "target": "es2020",
-    "noImplicitAny": true,
-    "noImplicitThis": true,
-    "strictNullChecks": false,
-    "sourceMap": true,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "baseUrl": "./",
     "paths": {
-      "*": ["node_modules/*"]
+      "@dotneteer/*": ["packages/*/src", "tools/*/src"]
     }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  }
 }
