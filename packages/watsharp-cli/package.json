@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build:prod": "npm run build -- --sourceMap false",
     "clean": "rimraf dist/",
     "link": "npm link --only=production",
     "pack": "npm pack",

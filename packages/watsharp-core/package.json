@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npm run clean && webpack && npm run clean:dts",
+    "build:prod": "npm run build -- --mode=production --devtool=\"(none)\"",
     "clean": "rimraf ./index.*",
     "clean:dts": "rimraf ./src/**/*.d.ts",
     "test": "ts-mocha -p ./tsconfig.json ./test/**/*.test.ts",

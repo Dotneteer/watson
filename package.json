@@ -6,6 +6,7 @@
   "scripts": {
     "bootstrap": "npm install && lerna bootstrap",
     "build": "lerna run build",
+    "build:prod": "lerna run build:prod",
     "clean": "lerna run clean",
     "link": "lerna run link",
     "bump": "lerna version --no-push --no-git-tag-version",
