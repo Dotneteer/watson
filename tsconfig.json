@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.build.json",
+
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "baseUrl": "./",
+    "paths": {
+      "@dotneteer/*": ["packages/*/src", "tools/*/src"]
+    }
+  }
+}

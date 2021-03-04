@@ -7,7 +7,6 @@
     "strictNullChecks": false,
     "moduleResolution": "node",
     "downlevelIteration": true,
-    "noImplicitAny": true,
     "suppressImplicitAnyIndexErrors": false,
     "experimentalDecorators": true
   },

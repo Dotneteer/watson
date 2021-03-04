@@ -1,0 +1,1 @@
+This package depends on several third-party open source packages. You can find their respective licenses in the node_modules directory tree, created after installation.

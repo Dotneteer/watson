@@ -1,0 +1,41 @@
+{
+  "name": "@dotneteer/watsharp-cli",
+  "version": "0.1.0",
+  "description": "WAT# compiler CLI package",
+  "bin": {
+    "watsc": "./bin/watsc.js"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "clean": "rimraf dist/",
+    "link": "npm link --only=production",
+    "pack": "npm pack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "WebAssembly",
+    "WAT#"
+  ],
+  "author": "Istvan Novak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Dotneteer/watsharp/issues"
+  },
+  "homepage": "https://github.com/Dotneteer/watsharp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dotneteer/watsharp.git"
+  },
+  "dependencies": {
+    "import-local": "^3.0.2"
+  },
+  "peerDependencies": {
+    "@dotneteer/watsharp-core": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@dotneteer/watsharp-core": ">=0.1.0",
+    "@types/node": "^14.14.31",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.2.2"
+  }
+}

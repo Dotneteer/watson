@@ -7,6 +7,7 @@
     "bootstrap": "npm install && lerna bootstrap",
     "build": "lerna run build",
     "clean": "lerna run clean",
+    "link": "lerna run link",
     "bump": "lerna version --no-push --no-git-tag-version",
     "test": "lerna run test"
   },
@@ -26,5 +27,8 @@
   "homepage": "https://github.com/Dotneteer/watsharp#readme",
   "devDependencies": {
     "lerna": "^4.0.0"
+  },
+  "dependencies": {
+    "import-local": "^3.0.2"
   }
 }

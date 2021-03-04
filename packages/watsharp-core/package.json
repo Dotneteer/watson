@@ -1,7 +1,7 @@
 {
-  "name": "watsharp",
+  "name": "@dotneteer/watsharp-core",
   "version": "0.1.0",
-  "description": "This utility is a prototype design and implementation of the WA# programming language. WA# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.",
+  "description": "WAT# compiler core package",
   "main": "index.js",
   "scripts": {
     "build": "npm run clean && webpack && npm run clean:dts",
@@ -17,7 +17,8 @@
     "url": "git+https://github.com/Dotneteer/watsharp.git"
   },
   "keywords": [
-    "WebAssembly"
+    "WebAssembly",
+    "WAT#"
   ],
   "author": "Istvan Novak",
   "license": "MIT",
@@ -26,6 +27,7 @@
   },
   "homepage": "https://github.com/Dotneteer/watsharp#readme",
   "devDependencies": {
+    "@dotneteer/watsharp-public-dts-bundle-webpack-plugin": "^0.1.0",
     "@types/expect": "^24.3.0",
     "@types/mocha": "^8.2.0",
     "@types/node": "^14.14.20",
