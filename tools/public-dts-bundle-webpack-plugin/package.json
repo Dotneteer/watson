@@ -9,7 +9,6 @@
     "build": "npm run clean && tsc -p tsconfig.build.json",
     "build:prod": "npm run build -- --sourceMap false",
     "clean": "rimraf dist/",
-    "test": "ts-mocha -p ./test/tsconfig.json ./test/**/*.test.ts",
     "lint": "eslint . --ext .js,.ts"
   },
   "author": "Istvan Novak",
