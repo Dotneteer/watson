@@ -3,6 +3,7 @@ import { ErrorCodes } from "../core/errors";
 import {
   Assignment,
   BinaryExpression,
+  BinaryOpSymbols,
   BuiltInFunctionInvocationExpression,
   ConditionalExpression,
   DoStatement,
@@ -17,6 +18,7 @@ import {
   LocalFunctionInvocation,
   LocalVariable,
   Node,
+  PointerType,
   ReturnStatement,
   TypeCastExpression,
   UnaryExpression,
@@ -126,6 +128,7 @@ import {
   findInstruction,
   visitInstructions,
 } from "./wat-helpers";
+import { types } from "util";
 
 /**
  * This class is responsible for compiling a function body
@@ -239,8 +242,6 @@ export class FunctionCompiler {
           name: paramName,
           type: param.spec,
           waType: paramType,
-          getCount: 0,
-          setCount: 0,
         });
         waPars.push({
           id: paramName,
@@ -318,7 +319,6 @@ export class FunctionCompiler {
             initExpr?.expr.value
           );
           this.inject(localSet(localName), body);
-          this.incrementSetReference(localVar.name);
         }
       }
       const paramType =
@@ -330,8 +330,6 @@ export class FunctionCompiler {
         name: localName,
         type: localVar.spec,
         waType: paramType,
-        getCount: 0,
-        setCount: 0,
       });
       const local = this._builder.addLocal(localName, paramType);
       this.addTrace(() => [
@@ -381,6 +379,10 @@ export class FunctionCompiler {
         // --- Left side is a variable with a const address
         leftType = resolvedId.var.spec;
         this.inject(constVal(WaType.i32, resolvedId.var.address), body);
+        if (asgn.asgn !== "=") {
+          // --- We need to put this address to the stack twice
+          this.inject(constVal(WaType.i32, resolvedId.var.address), body);
+        }
       }
     } else {
       // --- Left side is a compound left value expression
@@ -404,11 +406,9 @@ export class FunctionCompiler {
       if (!idAddress && asgn.asgn !== "=") {
         tmpAddrVar = this.createTempLocal(WaType.i32, "asgn");
         this.inject(localTee(tmpAddrVar), body);
-        this.incrementSetReference(tmpAddrVar);
         this.inject(localGet(tmpAddrVar), body);
-        this.incrementGetReference(tmpAddrVar);
 
-        // --- At this point we have the variable acces on the top of the stack
+        // --- At this point we have the variable access on the top of the stack
       }
     }
 
@@ -421,7 +421,6 @@ export class FunctionCompiler {
           break;
         case "local":
           this.inject(localGet(createLocalName(varName)), body);
-          this.incrementGetReference(varName);
           break;
         case "var":
           this.compileIntrinsicVariableGet(leftIntrinsic, body);
@@ -484,10 +483,22 @@ export class FunctionCompiler {
       // --- Compile the assignment operation
       switch (asgn.asgn) {
         case "+=":
-          this.inject(add(waType), body);
-          break;
         case "-=":
-          this.inject(sub(waType), body);
+          if (leftType.type === "Pointer" && rightType.type === "Intrinsic") {
+            // --- Pointer arithmetic, use the size of the target type
+            this.inject(
+              constVal(WaType.i32, this.wsCompiler.getSizeof(leftType.spec)),
+              body
+            );
+
+            // --- Calculate the result
+            this.inject(mul(WaType.i32), body);
+          }
+          if (asgn.asgn === "+=") {
+            this.inject(add(waType), body);
+          } else {
+            this.inject(sub(waType), body);
+          }
           break;
         case "*=":
           this.inject(mul(waType), body);
@@ -558,7 +569,6 @@ export class FunctionCompiler {
         break;
       case "local":
         this.inject(localSet(createLocalName(varName)), body);
-        this.incrementSetReference(varName);
         break;
       case "var":
         this.compileIntrinsicVariableSet(leftIntrinsic, body);
@@ -1212,7 +1222,6 @@ export class FunctionCompiler {
     }
     if (resolvedId.local) {
       this.inject(localGet(resolvedId.local.name), body);
-      this.incrementGetReference(resolvedId.local.name);
       return resolvedId.local.type;
     }
     if (resolvedId.global) {
@@ -1224,12 +1233,15 @@ export class FunctionCompiler {
     }
     if (resolvedId.var) {
       const typeSpec = resolvedId.var.spec;
-      if (typeSpec.type !== "Intrinsic") {
+      if (typeSpec.type !== "Intrinsic" && typeSpec.type !== "Pointer") {
         this.reportError("W143", id);
         return null;
       }
       this.inject(constVal(WaType.i32, resolvedId.var.address), body);
-      this.compileIntrinsicVariableGet(typeSpec, body);
+      this.compileIntrinsicVariableGet(
+        typeSpec.type === "Intrinsic" ? typeSpec : i32Desc,
+        body
+      );
       return typeSpec;
     }
   }
@@ -1458,6 +1470,18 @@ export class FunctionCompiler {
       return null;
     }
 
+    // --- Special case: pointer arithmetic
+    if (left.type === "Pointer" && right.type === "Intrinsic") {
+      return this.compilePointerBinaryExpression(
+        binary.left,
+        left,
+        binary.right,
+        right,
+        binary.operator,
+        body
+      );
+    }
+
     // --- Make sure both operands are intrinsic
     if (left.type !== "Intrinsic" || right.type !== "Intrinsic") {
       this.reportError("W144", binary, `binary ${binary.operator}`);
@@ -1584,6 +1608,51 @@ export class FunctionCompiler {
         break;
     }
     return resultType;
+  }
+
+  /**
+   * Compiles a pointer binary operation
+   * @param left Left operand
+   * @param leftType Left operand type
+   * @param right Right operand
+   * @param rightType Right operand type
+   * @param op Operation
+   * @param body
+   */
+  private compilePointerBinaryExpression(
+    left: Expression,
+    leftType: PointerType,
+    right: Expression,
+    rightType: IntrinsicType,
+    op: BinaryOpSymbols,
+    body: WaInstruction[]
+  ): TypeSpec | null {
+    if (op !== "+" && op !== "-") {
+      this.reportError("W164", left);
+      return null;
+    }
+    if (rightType.underlying.startsWith("f")) {
+      this.reportError("W165", right);
+      return null;
+    }
+
+    // --- Get the pointer value
+    this.compileExpression(left, body);
+
+    // --- Get the increment value
+    this.compileExpression(right, body);
+    this.castIntrinsicToIntrinsic(i32Desc, rightType, body);
+
+    // --- Get the multiplier value
+    this.inject(
+      constVal(WaType.i32, this.wsCompiler.getSizeof(leftType.spec)),
+      body
+    );
+
+    // --- Calculate the result
+    this.inject(mul(WaType.i32), body);
+    this.inject(op === "+" ? add(WaType.i32) : sub(WaType.i32), body);
+    return leftType;
   }
 
   /**
@@ -1764,8 +1833,6 @@ export class FunctionCompiler {
             ],
             body
           );
-          this.incrementSetReference(local);
-          this.incrementGetReference(local, 2);
         } else if (argIns.startsWith("f")) {
           this.inject(abs(waType), body);
         }
@@ -1864,7 +1931,7 @@ export class FunctionCompiler {
    */
   private compileFunctionInvocation(
     invoc: FunctionInvocationExpression,
-    body: WaInstruction[],
+    body: WaInstruction[]
   ): TypeSpec | null {
     // --- Check if the invoked function exists
     const calledDecl = this.wsCompiler.declarations.get(invoc.name);
@@ -2262,7 +2329,7 @@ export class FunctionCompiler {
    */
   private calculateAddressOf(
     expr: Expression,
-    body: WaInstruction[],
+    body: WaInstruction[]
   ): ResolvedAddress | null {
     switch (expr.type) {
       case "Identifier": {
@@ -2472,8 +2539,6 @@ export class FunctionCompiler {
           type: "Intrinsic",
           underlying,
         },
-        getCount: 0,
-        setCount: 0,
       });
       this._tempLocals.add(type);
       this.addTrace(() => [
@@ -2510,33 +2575,7 @@ export class FunctionCompiler {
         type: "Intrinsic",
         underlying: WaType[localWaType].toString(),
       },
-      getCount: 0,
-      setCount: 0,
     });
-  }
-
-  /**
-   * Increments the get reference counter for the specified local variable
-   * @param name Local name
-   * @param increment Increment value
-   */
-  private incrementGetReference(name: string, increment = 1): void {
-    const local = this.locals.get(name);
-    if (local) {
-      local.getCount += increment;
-    }
-  }
-
-  /**
-   * Increments the set reference counter for the specified local variable
-   * @param name Local name
-   * @param increment Increment value
-   */
-  private incrementSetReference(name: string, increment = 1): void {
-    const local = this.locals.get(name);
-    if (local) {
-      local.setCount += increment;
-    }
   }
 
   // ==========================================================================
@@ -2585,8 +2624,6 @@ interface LocalDeclaration {
   type: TypeSpec;
   waType: WaType;
   fromParameter: boolean;
-  getCount: number;
-  setCount: number;
 }
 
 /**

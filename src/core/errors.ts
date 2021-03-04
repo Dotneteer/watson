@@ -111,7 +111,10 @@ export type ErrorCodes =
   | "W160"
   | "W161"
   | "W162"
-  | "W163";
+  | "W163"
+  | "W164"
+  | "W165";
+
 
 /**
  * Error message type description
@@ -186,7 +189,7 @@ export const errorMessages: ErrorText = {
   W140: "Local parameter/variable '{0}' has already been declared",
   W141: "Cannot cast the right side of the assignment to the target type",
   W142: "Cannot resolve name '{0}' to a local or a global variable declaration",
-  W143: "Only variables with intrinsic types can be used",
+  W143: "Only variables with intrinsic and pointer types can be used",
   W144: "The {0} operator works only with instrinsic types",
   W145: "The {0} operator works only with integer types",
   W146: "Only variables have addresses, globals and locals do not",
@@ -207,4 +210,6 @@ export const errorMessages: ErrorText = {
   W161: "Left values can be only intrinsic types or pointers",
   W162: "You can use only variable names for aliases",
   W163: "Variable {0} has not got an address yet, it cannot be an alias",
+  W164: "Pointer operations allow only '+' and '-' operators",
+  W165: "Pointer operations reguire an integer right operand",
 };

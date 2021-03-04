@@ -63,7 +63,7 @@ describe("WatSharpCompiler - emit unary", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(true);
     expect(wComp.errors.length).toBe(1);
-    expect(wComp.errors[0].code).toBe("W143");
+    expect(wComp.errors[0].code).toBe("W144");
   });
 
   it("unary - #1", () => {
@@ -127,7 +127,7 @@ describe("WatSharpCompiler - emit unary", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(true);
     expect(wComp.errors.length).toBe(1);
-    expect(wComp.errors[0].code).toBe("W143");
+    expect(wComp.errors[0].code).toBe("W144");
   });
 
   it("logical NOT - #1", () => {
@@ -234,7 +234,7 @@ describe("WatSharpCompiler - emit unary", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(true);
     expect(wComp.errors.length).toBe(1);
-    expect(wComp.errors[0].code).toBe("W143");
+    expect(wComp.errors[0].code).toBe("W145");
   });
 
   it("logical NOT #6", () => {
@@ -504,7 +504,7 @@ describe("WatSharpCompiler - emit unary", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(true);
     expect(wComp.errors.length).toBe(1);
-    expect(wComp.errors[0].code).toBe("W143");
+    expect(wComp.errors[0].code).toBe("W145");
   });
 
   it("bitwise NOT #11", () => {
