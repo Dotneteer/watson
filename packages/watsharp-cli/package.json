@@ -10,8 +10,7 @@
     "build:prod": "npm run build -- --sourceMap false",
     "clean": "rimraf dist/",
     "link": "npm link --only=production",
-    "pack": "npm pack",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pack": "npm pack"
   },
   "keywords": [
     "WebAssembly",
