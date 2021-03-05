@@ -1,0 +1,54 @@
+{
+  "scopeName": "source.watsharp",
+  "patterns": [
+    { "name": "comment.line.watsharp", "match": "(//).*$" },
+    { "name": "comment.block.watsharp", "begin": "/\\*", "end": "\\*/" },
+    {
+      "name": "entity.name.tag.watsharp",
+      "match": "(#define|#undef|#if|#else|#elseif|#endif|#include)\\b"
+    },
+    {
+      "name": "keyword.control.klive",
+      "match": "(global|local|type|struct|const|table|data|import|export|inline|if|while|do|break|continue|return)\\b"
+    },
+    {
+      "name": "variable.language.type.watsharp",
+      "match": "(void|byte|u8|sbyte|i8|short|i16|ushort|u16|int|i32|uint|u32|long|i64|ulong|u64|float|f32|double|f64)\\b"
+    },
+    {
+      "name": "variable.language.builtin.watsharp",
+      "match": "(sizeof|clz|ctz|popctn|abs|ceil|floor|trunc|nearest|sqrt|min|max|neg|copysign)\\b"
+    },
+    {
+      "name": "constant.numeric.real.whatsharp",
+      "match": "([0-9](_*))+\\.?([0-9](_*))+([eE][+-]?[0-9]+)?"
+    },
+    {
+      "name": "constant.numeric.hexadecimal.watsharp",
+      "match": "0x([0-9A-Fa-f](_*))+\\b"
+    },
+    {
+      "name": "constant.numeric.binary.watsharp",
+      "match": "0b([01](_*))+\\b"
+    },
+    {
+      "begin": "\"",
+      "end": "\"|$",
+      "name": "string.quoted.double.watsharp",
+      "patterns": [
+        {
+          "match": "\\\\([bfnrtv0'\"]|\\\\|x[0-9A-Fa-f]{2})",
+          "name": "constant.character.escape"
+        }
+      ]
+    },
+    {
+      "match": "'\\\\([ipfbIoatPC'\"0]|\\\\|x[0-9A-Fa-f]{2})'",
+      "name": "constant.character.escape.klive"
+    },
+    {
+      "name": "support.function.watsharp",
+      "match": "[_$a-zA-Z][_$0-9A-Za-z]*"
+    }
+  ]
+}
