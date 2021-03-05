@@ -1,0 +1,61 @@
+{
+  "name": "watsharp-vscode",
+  "version": "0.1.0",
+  "description": "WAT# Compiler for VS Code",
+  "engines": {
+    "vscode": "^1.46.0"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dotneteer/watsharp.git"
+  },
+  "keywords": [
+    "WebAssembly",
+    "WAT#"
+  ],
+  "publisher": "dotneteer-klive",
+  "author": "Istvan Novak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Dotneteer/watsharp/issues"
+  },
+  "homepage": "https://github.com/Dotneteer/watsharp#readme",
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "workspaceContains: **/*.wats"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "watsharp",
+        "extensions": [
+          ".wats"
+        ],
+        "aliases": [
+          "WAT# Language"
+        ],
+        "configuration": "./watsharp-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "watsharp",
+        "scopeName": "source.watsharp",
+        "path": "./watsharp.tmGrammar.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.46.0",
+    "typescript": "^4.2.3",
+    "vscode-debugadapter-testsupport": "^1.45.0",
+    "vscode-test": "^1.5.1"
+  }
+}
