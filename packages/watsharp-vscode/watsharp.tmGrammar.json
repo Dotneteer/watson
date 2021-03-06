@@ -21,7 +21,7 @@
     },
     {
       "name": "constant.numeric.real.whatsharp",
-      "match": "([0-9](_*))+\\.?([0-9](_*))+([eE][+-]?[0-9]+)?"
+      "match": "([0-9](_*))+\\.?([0-9](_*))*([eE][+-]?[0-9]+)?"
     },
     {
       "name": "constant.numeric.hexadecimal.watsharp",

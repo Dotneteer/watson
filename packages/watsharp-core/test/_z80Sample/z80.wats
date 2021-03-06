@@ -3,6 +3,8 @@ import void trace "imports" "trace" (u32);
 // Global memory for all virtual machines
 u8[0x100_0000] globalMem;
 
+data u8 myData [1, 2, 3, 4];
+
 // Represents a 16-bit register pair
 type reg16 = struct {
   u8 l, // LSB register
@@ -29,7 +31,7 @@ global u32 clock = 3_500_000;
 global u8 val = 123;
 
 export void reset() {
-  // TODO: Implement it
+  local *u8 dataPtr = &myData + 4;
 }
 
 // --- Register access

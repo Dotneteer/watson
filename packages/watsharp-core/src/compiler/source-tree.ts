@@ -409,6 +409,7 @@ export interface TableDeclaration extends DeclarationBase {
  */
 export interface DataDeclaration extends DeclarationBase {
   type: "DataDeclaration";
+  address?: number;
   underlyingType?: Intrinsics;
   exprs: Expression[];
 }

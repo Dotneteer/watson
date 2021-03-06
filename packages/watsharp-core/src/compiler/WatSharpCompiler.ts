@@ -4,7 +4,7 @@ import {
   Declaration,
   Expression,
   FunctionDeclaration,
-  instrisicSizes as intrisicSizes,
+  instrisicSizes as intrinsicSizes,
   Intrinsics,
   TableDeclaration,
   TypeSpec,
@@ -238,6 +238,8 @@ export class WatSharpCompiler {
 
         case "DataDeclaration":
           decl.exprs.forEach((expr) => resolveExpression(expr));
+          decl.address = nextMemoryAddress;
+          nextMemoryAddress = decl.exprs.length * intrinsicSizes[decl.underlyingType];
           break;
 
         case "GlobalDeclaration":
@@ -300,7 +302,7 @@ export class WatSharpCompiler {
 
       switch (spec.type) {
         case "Intrinsic":
-          spec.sizeof = intrisicSizes[spec.underlying];
+          spec.sizeof = intrinsicSizes[spec.underlying];
           break;
 
         case "Pointer":
@@ -603,6 +605,7 @@ export class WatSharpCompiler {
     this.emitExports();
     this.emitGlobals();
     this.emitVariableMap();
+    this.emitData();
     this.emitTables();
   }
 
@@ -682,6 +685,25 @@ export class WatSharpCompiler {
             .toString(10)
             .padStart(10, " ")}]: ${decl.name}`
         );
+      }
+    }
+  }
+
+  private emitData(): void {
+    this._waTree.separatorLine();
+    this._waTree.comment("Data declarations");
+    for (const decl of this.declarations.values()) {
+      if (decl.type === "DataDeclaration") {
+        const bytes: number[] = [];
+        const size = intrinsicSizes[decl.underlyingType];
+        for (const expr of decl.exprs) {
+          let value = BigInt(expr.value);
+          for (let i = 0; i < size; i++) {
+            bytes.push(Number(value & BigInt(0xff)));
+            value >>= BigInt(8);
+          }
+        }
+        this._waTree.data(decl.address, bytes);
       }
     }
   }
