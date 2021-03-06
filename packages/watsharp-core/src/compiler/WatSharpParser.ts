@@ -412,7 +412,7 @@ export class WatSharpParser {
   private parseDataDeclaration(): void {
     const keyword = this._lexer.get();
     const { start, traits } = this.getParsePoint();
-    let underlyingType: string | undefined;
+    let underlyingType = "u8";
     if (traits.intrinsicType) {
       // --- Intrinsic type definition found
       if (start.type === TokenType.F32 || start.type === TokenType.F64) {

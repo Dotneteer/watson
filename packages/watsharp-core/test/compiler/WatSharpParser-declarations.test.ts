@@ -440,7 +440,7 @@ describe("WatSharpParser - declarations", () => {
     const decl = wParser.declarations.get("myData");
     expect(decl).toBeDefined();
     const dataDecl = decl as DataDeclaration;
-    expect(dataDecl.underlyingType).toBeUndefined();
+    expect(dataDecl.underlyingType).toBe("u8");
     expect(dataDecl.exprs.length).toBe(1);
   });
 
@@ -458,7 +458,7 @@ describe("WatSharpParser - declarations", () => {
     const decl = wParser.declarations.get("myData");
     expect(decl).toBeDefined();
     const dataDecl = decl as DataDeclaration;
-    expect(dataDecl.underlyingType).toBeUndefined();
+    expect(dataDecl.underlyingType).toBe("u8");
     expect(dataDecl.exprs.length).toBe(2);
   });
 

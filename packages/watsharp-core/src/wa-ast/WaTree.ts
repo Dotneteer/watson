@@ -17,6 +17,7 @@ import {
   FuncExport,
   SeparatorLine,
   WaImportNode,
+  Data,
 } from "./wa-nodes";
 
 /**
@@ -81,7 +82,7 @@ export class WaTree {
 
   /**
    * Adds a function builder to this tree
-   * @param builder 
+   * @param builder
    */
   addFunc(builder: FunctionBuilder): void {
     this._module.fields.push(builder);
@@ -187,6 +188,22 @@ export class WaTree {
       type: "Element",
       index,
       ids,
+    };
+    this._module.fields.push(newNode);
+    return newNode;
+  }
+
+  /**
+   * Injects a data tag into the tree
+   * @param index Element index
+   * @param ids Element IDs
+   */
+   data(address: number, bytes: number[]): Data {
+    this.ensureFields();
+    const newNode = <Data>{
+      type: "Data",
+      address,
+      bytes,
     };
     this._module.fields.push(newNode);
     return newNode;
@@ -397,6 +414,13 @@ export class WaTree {
         return `${indentation}(elem (i32.const ${field.index})\n${field.ids
           .map((id) => indentation + gap + id)
           .join("\n")}\n${indentation})`;
+
+      case "Data":
+        return `${indentation}(data (i32.const ${
+          field.address
+        }) "${field.bytes
+          .map((b) => "\\" + (b & 0xff).toString(16).padStart(2, "0"))
+          .join("")}")`;
 
       case "Func":
         return this.renderFunctionNode(field, indent);

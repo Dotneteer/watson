@@ -8,6 +8,7 @@ export type WaModuleField =
   | WaImportNode
   | Table
   | Element
+  | Data
   | Global
   | TypeDef
   | Func
@@ -187,6 +188,15 @@ export interface Element extends WaNodeBase {
   readonly type: "Element";
   readonly index: number;
   readonly ids: string[];
+}
+
+/**
+ * Webassembly Data
+ */
+ export interface Data extends WaNodeBase {
+  readonly type: "Data";
+  readonly address: number;
+  readonly bytes: number[];
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   BinaryOpSymbols,
   BuiltInFunctionInvocationExpression,
   ConditionalExpression,
+  DataDeclaration,
   DoStatement,
   Expression,
   FunctionInvocationExpression,
@@ -28,8 +29,6 @@ import {
 } from "../compiler/source-tree";
 import {
   ConstVal,
-  LocalGet,
-  LocalSet,
   WaBitSpec,
   WaInstruction,
   WaParameter,
@@ -376,6 +375,17 @@ export class FunctionCompiler {
               ? resolvedId.local.type.underlying
               : "i32",
         };
+      } else if (resolvedId.data) {
+        // --- Left side is a data variable with a const address
+        leftType = <IntrinsicType>{
+          type: "Intrinsic",
+          underlying: resolvedId.data.underlyingType,
+        };
+        this.inject(constVal(WaType.i32, resolvedId.data.address), body);
+        if (asgn.asgn !== "=" && asgn.asgn !== ":=") {
+          // --- We need to put this address to the stack twice
+          this.inject(constVal(WaType.i32, resolvedId.var.address), body);
+        }
       } else {
         // --- Left side is a variable with a const address
         leftType = resolvedId.var.spec;
@@ -1383,6 +1393,15 @@ export class FunctionCompiler {
         typeSpec.type === "Intrinsic" ? typeSpec : i32Desc,
         body
       );
+      return typeSpec;
+    }
+    if (resolvedId.data) {
+      const typeSpec = <IntrinsicType>{
+        type: "Intrinsic",
+        underlying: resolvedId.data.underlyingType,
+      };
+      this.inject(constVal(WaType.i32, resolvedId.data.address), body);
+      this.compileIntrinsicVariableGet(typeSpec, body);
       return typeSpec;
     }
   }
@@ -2459,6 +2478,11 @@ export class FunctionCompiler {
         var: decl,
       };
     }
+    if (decl.type === "DataDeclaration") {
+      return {
+        data: decl,
+      };
+    }
     this.reportError("W142", id, id.name);
     return null;
   }
@@ -2476,18 +2500,27 @@ export class FunctionCompiler {
       case "Identifier": {
         // --- Only variables have an address
         const resolvedId = this.resolveIdentifier(expr);
-        if (resolvedId === null || !resolvedId.var) {
+        if (resolvedId === null || (!resolvedId.var && !resolvedId.data)) {
           this.reportError("W146", expr);
           return null;
         }
 
+        const address = resolvedId.var
+          ? resolvedId.var.address
+          : resolvedId.data.address;
+        const spec = resolvedId.var
+          ? resolvedId.var.spec
+          : <IntrinsicType>{
+              type: "Intrinsic",
+              underlying: resolvedId.data.underlyingType,
+            };
         // --- Inject variable address if requested
-        this.inject(constVal(WaType.i32, resolvedId.var.address), body);
+        this.inject(constVal(WaType.i32, address), body);
 
         // --- Retrieve address/type information
         return {
-          address: resolvedId.var.address,
-          spec: resolvedId.var.spec,
+          address,
+          spec,
         };
       }
 
@@ -2782,6 +2815,7 @@ interface ResolvedDeclaration {
   local?: LocalDeclaration;
   global?: GlobalDeclaration;
   var?: VariableDeclaration;
+  data?: DataDeclaration;
 }
 
 /**

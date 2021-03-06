@@ -414,8 +414,6 @@ end`);
 end`);
   });
 
-
-
   it("Comment #1", () => {
     // --- Arrange
     const tree = new WaTree();
@@ -443,6 +441,21 @@ end`);
     expect(text).toBe(`(module
   (memory (export "memory") 10)
   (; This is a comment ;)
+)`);
+  });
+
+  it("Data #1", () => {
+    // --- Arrange
+    const tree = new WaTree();
+
+    // --- Act
+    tree.data(123, [1, 2, 3, 20, 12345]);
+    const text = tree.render();
+
+    // --- Assert
+    expect(text).toBe(`(module
+  (memory (export "memory") 10)
+  (data (i32.const 123) "\\01\\02\\03\\14\\39")
 )`);
   });
 
