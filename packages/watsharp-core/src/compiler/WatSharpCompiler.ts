@@ -18,7 +18,7 @@ import {
 } from "./expression-resolver";
 import { FunctionCompiler } from "./FunctionCompiler";
 import { WaTree } from "../wa-ast/WaTree";
-import { WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
+import { Local, WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
 import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
 
 /**
@@ -146,6 +146,14 @@ export class WatSharpCompiler {
    */
   getFunctionBodyInstructions(name: string): WaInstruction[] | undefined {
     return this._functionBodies.get(name).builder.body;
+  }
+
+  /**
+   * Gets the locals of the specified function
+   * @param name Function name
+   */
+   getFunctionLocals(name: string): Local[] | undefined {
+    return this._functionBodies.get(name).builder.locals;
   }
 
   /**
@@ -434,6 +442,8 @@ export class WatSharpCompiler {
         if (!matchSignature(decl, table)) {
           return;
         }
+        // --- Sign the usage of this function
+        decl.invocationCount++;
         compiler._tableEntries++;
       });
       table.resolved = true;

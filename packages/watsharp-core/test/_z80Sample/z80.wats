@@ -1,59 +1,27 @@
 import void trace "imports" "trace" (u32);
 
-// Global memory for all virtual machines
-u8[0x100_0000] globalMem;
+// 16 MB memory reserved for virtual machines
+u8[0x100_0000] vmMemory;
 
-data u8 myData [1, 2, 3, 4];
-
-// Represents a 16-bit register pair
-type reg16 = struct {
-  u8 l, // LSB register
-  u8 h  // MSB register
+// Lookup structure for a 8K memory page
+type blockLookup = struct {
+  u32 readPtr,
+  u32 writePtr,
+  u8 flags,
+  u8[7] reserved
 };
 
-// --- Z80 Registers
-reg16 af;
-u16 afR { af };
-reg16 bc;
-u16 bcR { bc };
-reg16 de;
-u16 deR { de };
-reg16 hl;
-u16 hlR { hl };
-u16 af_;
-u16 bc_;
-u16 de_;
-u16 hl_;
+// Memory page lookup table
+blockLookup[8] blockLookupTable;
 
-// --- CPU globals
-global u32 tacts;
-global u32 clock = 3_500_000;
-global u8 val = 123;
-
-export void reset() {
-  local *u8 dataPtr = &myData + 4;
+inline u8 readMemory(u16 addr) {
+  local u32 page = addr >> 13;
+  local u32 offset = addr & 0b0001_1111_1111_1111;
+  return vmMemory[blockLookupTable[page].readPtr + offset];
 }
 
-// --- Register access
-inline u8 getA() {
-  return af.h;
-}
-
-inline void setA(u8 val) {
-  af.h = 3 + val;
-}
-
-inline void setF(u8 val) {
-  af.l = val;
-}
-
-inline void setAF(u16 val) {
-  afR = val;
-}
-
+u16 hl;
 
 export void test() {
-  setA(getA());
-  setA(val);
-  setAF(123456);
+  local u8 a = readMemory(hl);
 }
