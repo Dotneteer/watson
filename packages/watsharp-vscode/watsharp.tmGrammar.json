@@ -20,16 +20,16 @@
       "match": "(sizeof|clz|ctz|popctn|abs|ceil|floor|trunc|nearest|sqrt|min|max|neg|copysign)\\b"
     },
     {
-      "name": "constant.numeric.real.whatsharp",
-      "match": "([0-9](_*))+\\.?([0-9](_*))*([eE][+-]?[0-9]+)?"
-    },
-    {
       "name": "constant.numeric.hexadecimal.watsharp",
       "match": "0x([0-9A-Fa-f](_*))+\\b"
     },
     {
       "name": "constant.numeric.binary.watsharp",
       "match": "0b([01](_*))+\\b"
+    },
+    {
+      "name": "constant.numeric.real.whatsharp",
+      "match": "([0-9](_*))+\\.?([0-9](_*))*([eE][+-]?[0-9]+)?"
     },
     {
       "begin": "\"",

@@ -144,12 +144,12 @@ function optimizeConstantOperations(instrs: WaInstruction[]): number {
       } else if (isConstant(ins, index + 1) && isBinary(ins, index + 2)) {
         // --- We can reduce a binary operation
         changed = reduceBinary(ins, index);
-      } else if (
-        isBinary(ins, index + 1) &&
-        isConstant(ins, index + 2) &&
-        isBinary(ins, index + 3)
-      ) {
-        changed = reduceCascadedBinary(ins, index);
+      } else if (isBinary(ins, index + 1)) {
+        if (isConstant(ins, index + 2) && isBinary(ins, index + 3)) {
+          changed = reduceCascadedBinary(ins, index);
+        } else {
+          changed = reduceSecondConstOfBinary(ins, index);
+        }
       }
     }
     return changed;
@@ -289,12 +289,19 @@ function optimizeLocalTees(instrs: WaInstruction[]): number {
  */
 function optimizeConstantDuplication(instrs: WaInstruction[]): number {
   return instructionsActionLoop(instrs, (ins, index) => {
-    if (isConstant(ins, index) && isLocalTee(ins, index + 1) && isLocalGet(ins, index + 2)) {
+    if (
+      isConstant(ins, index) &&
+      isLocalTee(ins, index + 1) &&
+      isLocalGet(ins, index + 2)
+    ) {
       const constantToDupl = ins[index] as ConstVal;
       const localTee = ins[index + 1] as LocalTee;
       const localGet = ins[index + 2] as LocalGet;
       if (localTee.id === localGet.id) {
-        ins[index + 1] = constVal(constantToDupl.valueType, constantToDupl.value);
+        ins[index + 1] = constVal(
+          constantToDupl.valueType,
+          constantToDupl.value
+        );
         ins.splice(index + 2, 1);
         return true;
       }
@@ -571,6 +578,34 @@ function reduceCascadedBinary(instrs: WaInstruction[], index: number): boolean {
     instrs[index + 1] = updatedOp;
     instrs.splice(index + 2, 2);
     return true;
+  }
+  return false;
+}
+
+/**
+ * Reduces the second constant of a binary operation
+ * @param instrs Instructions
+ * @param index Constant value index (const, binary)
+ * @returns true, if the operation has been reduced
+ */
+function reduceSecondConstOfBinary(instrs: WaInstruction[], index: number): boolean {
+  const operand = instrs[index] as ConstVal;
+  const opType = instrs[index + 1].type;
+  switch (opType) {
+    case "Add":
+    case "Sub":
+      if (operand.value === 0) {
+        instrs.splice(index, 2);
+        return true;
+      }
+      break;
+    case "Mul":
+    case "Div":
+      if (operand.value === 1) {
+        instrs.splice(index, 2);
+        return true;
+      }
+      break;
   }
   return false;
 }

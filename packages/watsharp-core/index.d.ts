@@ -299,6 +299,7 @@ export interface TableDeclaration extends DeclarationBase {
  */
 export interface DataDeclaration extends DeclarationBase {
   type: "DataDeclaration";
+  address?: number;
   underlyingType?: Intrinsics;
   exprs: Expression[];
 }
@@ -462,7 +463,7 @@ export interface TokenLocation {
  * Discriminated union of available WebAssembly node types
  */
 export declare type WaNode = Module | WaModuleField | WaFunctionBody;
-export declare type WaModuleField = WaExportNode | WaImportNode | Table | Element | Global | TypeDef | Func | Comment | SeparatorLine;
+export declare type WaModuleField = WaExportNode | WaImportNode | Table | Element | Data | Global | TypeDef | Func | Comment | SeparatorLine;
 export declare type WaFunctionBody = Local | WaInstruction;
 export declare type WaInstruction = ConstVal | Unreachable | Nop | Branch | BranchIf | BranchTable | Return | Call | CallIndirect | Drop | Select | LocalGet | LocalSet | LocalTee | GlobalGet | GlobalSet | Load | Store | MemorySize | MemoryGrow | Clz | Ctz | PopCnt | Add | Sub | Mul | Div | Rem | And | Xor | Or | Shl | Shr | Rotl | Rotr | Eqz | Eq | Ne | Le | Lt | Ge | Gt | Wrap64 | Extend32 | Trunc32 | Trunc64 | Convert32 | Convert64 | Demote64 | Promote32 | ReinterpretF32 | ReinterpretF64 | ReinterpretI32 | ReinterpretI64 | Abs | Neg | Ceil | Floor | Trunc | Nearest | Sqrt | Min | Max | CopySign | Block | Loop | If | Comment | SeparatorLine;
 export declare type WaImportNode = FuncImport;
@@ -541,6 +542,14 @@ export interface Element extends WaNodeBase {
   readonly type: "Element";
   readonly index: number;
   readonly ids: string[];
+}
+/**
+ * Webassembly Data
+ */
+export interface Data extends WaNodeBase {
+  readonly type: "Data";
+  readonly address: number;
+  readonly bytes: number[];
 }
 /**
  * Mutable global declaration
@@ -1182,6 +1191,12 @@ declare class WaTree {
    */
   element(index: number, ids: string[]): Element;
   /**
+   * Injects a data tag into the tree
+   * @param index Element index
+   * @param ids Element IDs
+   */
+  data(address: number, bytes: number[]): Data;
+  /**
    * Injects a function into the tree
    * @param id Function identifier
    * @param params Function parameters
@@ -1276,6 +1291,11 @@ export declare class WatSharpCompiler {
    * @param name Function name
    */
   getFunctionBodyInstructions(name: string): WaInstruction[] | undefined;
+  /**
+   * Gets the locals of the specified function
+   * @param name Function name
+   */
+  getFunctionLocals(name: string): Local[] | undefined;
   /**
    * Adds a trace message
    * @param traceFactory Factory function to generate trace message

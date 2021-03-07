@@ -2198,7 +2198,12 @@ export class FunctionCompiler {
       calledDecl.invocationCount++;
 
       if (inlineIt) {
-        // --- Just copy the body of the inline function
+        // --- Just copy the locals and the body of the inline function
+        this.wsCompiler
+          .getFunctionLocals(calledDecl.name)
+          .forEach((loc) => {
+            this._builder.locals.push(loc);
+          });
         this.wsCompiler
           .getFunctionBodyInstructions(calledDecl.name)
           .forEach((ins) => {
