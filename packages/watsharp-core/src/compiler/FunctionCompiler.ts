@@ -1244,21 +1244,21 @@ export class FunctionCompiler {
       switch (binop2) {
         case "+":
           if (binop1 === "+") {
-            return foldLiterlIntoBinary(expr.left, add(literal2, literal1));
+            return foldLiteralIntoBinary(expr.left, add(literal2, literal1));
           } else if (binop1 === "-") {
-            return foldLiterlIntoBinary(expr.left, add(literal2, -literal1));
+            return foldLiteralIntoBinary(expr.left, add(literal2, -literal1));
           }
         case "-":
           if (binop1 === "+") {
-            return foldLiterlIntoBinary(expr.left, add(literal2, -literal1));
+            return foldLiteralIntoBinary(expr.left, add(literal2, -literal1));
           } else if (binop1 === "-") {
-            return foldLiterlIntoBinary(expr.left, add(literal2, literal1));
+            return foldLiteralIntoBinary(expr.left, add(literal2, literal1));
           }
       }
       return expr;
     }
 
-    function foldLiterlIntoBinary(
+    function foldLiteralIntoBinary(
       binExpr: BinaryExpression,
       value: number | bigint
     ): BinaryExpression {
@@ -1490,6 +1490,7 @@ export class FunctionCompiler {
       case "f64":
         this.inject(store(waType), body);
         break;
+      case "bool":
       case "i8":
       case "u8":
         this.inject(store(waType, WaBitSpec.Bit8), body);
@@ -2199,11 +2200,9 @@ export class FunctionCompiler {
 
       if (inlineIt) {
         // --- Just copy the locals and the body of the inline function
-        this.wsCompiler
-          .getFunctionLocals(calledDecl.name)
-          .forEach((loc) => {
-            this._builder.locals.push(loc);
-          });
+        this.wsCompiler.getFunctionLocals(calledDecl.name).forEach((loc) => {
+          this._builder.locals.push(loc);
+        });
         this.wsCompiler
           .getFunctionBodyInstructions(calledDecl.name)
           .forEach((ins) => {
@@ -2329,6 +2328,10 @@ export class FunctionCompiler {
             this.inject(wrap64(), body);
             tighten(0xff, 24, left.underlying, body, value);
             return;
+          case "bool":
+            this.inject(eqz(WaType.i64), body);
+            this.inject(eqz(WaType.i64), body);
+            return;
         }
         break;
 
@@ -2358,6 +2361,10 @@ export class FunctionCompiler {
           case "i8":
           case "u8":
             tighten(0xff, 24, left.underlying, body, value);
+            return;
+          case "bool":
+            this.inject(eqz(WaType.i32), body);
+            this.inject(eqz(WaType.i32), body);
             return;
         }
         break;
@@ -2389,6 +2396,11 @@ export class FunctionCompiler {
             this.inject(trunc32(WaType.f64, false), body);
             tighten(0xff, 24, left.underlying, body, value);
             return;
+          case "bool":
+            this.inject(trunc64(WaType.f64, true), body);
+            this.inject(eqz(WaType.i64), body);
+            this.inject(eqz(WaType.i64), body);
+            return;
         }
         break;
 
@@ -2419,7 +2431,12 @@ export class FunctionCompiler {
             this.inject(trunc32(WaType.f32, false), body);
             tighten(0xff, 24, left.underlying, body, value);
             return;
-        }
+          case "bool":
+            this.inject(trunc32(WaType.f32, true), body);
+            this.inject(eqz(WaType.i32), body);
+            this.inject(eqz(WaType.i32), body);
+            return;
+          }
         break;
     }
 

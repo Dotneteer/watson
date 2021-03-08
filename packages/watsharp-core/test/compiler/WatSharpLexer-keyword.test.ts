@@ -30,6 +30,7 @@ describe("WatSharpLexer - keywords", () => {
     { src: "void", exp: TokenType.Void },
     { src: "Infinity", exp: TokenType.Infinity },
     { src: "NaN", exp: TokenType.NaN },
+    { src: "bool", exp: TokenType.Bool },
 
     { src: "clz", exp: TokenType.Clz },
     { src: "ctz", exp: TokenType.Ctz },

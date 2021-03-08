@@ -18,6 +18,26 @@ import {
 } from "../../src/compiler/source-tree";
 
 describe("WatSharpParser - expressions", () => {
+  const boolCases = [
+    { src: "true", exp: 1 },
+    { src: "false", exp: 0 },
+  ];
+  boolCases.forEach((c) => {
+    it(`Boolean literal: ${c.src}`, () => {
+      // --- Arrange
+      const wParser = new WatSharpParser(c.src);
+
+      // --- Act
+      const expr = wParser.parseExpr();
+
+      // --- Assert
+      expect(expr.type).toBe("Literal");
+      expect(expr.value).toBe(c.exp);
+      const literal = expr as Literal;
+      expect(literal.source).toBe(LiteralSource.Int);
+    });
+  });
+
   const binaryCases = [
     { src: "0b0", exp: 0 },
     { src: "0b0_0", exp: 0 },

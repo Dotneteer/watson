@@ -169,6 +169,8 @@ export function applyTypeCast(
   value: number | bigint
 ): number | bigint {
   switch (typeName) {
+    case "bool":
+      return value === 0 ? 0 : 1;
     case "i8":
       return Number(
         BigInt.asIntN(

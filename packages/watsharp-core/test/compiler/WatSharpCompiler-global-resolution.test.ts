@@ -2,7 +2,7 @@ import "mocha";
 import * as expect from "expect";
 
 import { WatSharpCompiler } from "../../src/compiler/WatSharpCompiler";
-import { ConstDeclaration, GlobalDeclaration, TypeDeclaration } from "../../src/compiler/source-tree";
+import { GlobalDeclaration } from "../../src/compiler/source-tree";
 
 describe("WatSharpCompiler - global resolution", () => {
   it("NaN/f64", () => {
@@ -162,6 +162,8 @@ describe("WatSharpCompiler - global resolution", () => {
     { src: "float", val: 123.45678912345e-3, exp: 0.12345679104328156 },
     { src: "f64", val: 123.45678912345e-23, exp: 1.2345678912345e-21 },
     { src: "double", val: 123.45678912345e-23, exp: 1.2345678912345e-21 },
+    { src: "bool", val: 0, exp: 0 },
+    { src: "bool", val: 112, exp: 1 },
   ];
   instrinsicCases.forEach((c) => {
     it(`Intrinsic type ${c.src}`, () => {

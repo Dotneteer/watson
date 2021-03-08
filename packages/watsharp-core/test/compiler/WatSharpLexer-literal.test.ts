@@ -71,6 +71,9 @@ describe("WatSharpLexer - literal", () => {
     { src: ".456e13", exp: TokenType.RealLiteral },
     { src: ".45_6e+13", exp: TokenType.RealLiteral },
     { src: ".4_56e-13", exp: TokenType.RealLiteral },
+
+    { src: "true", exp: TokenType.True },
+    { src: "false", exp: TokenType.False },
   ];
   literalCases.forEach((c) => {
     it(`Token ${c.src} #1`, () => {

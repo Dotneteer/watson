@@ -150,6 +150,11 @@ function optimizeConstantOperations(instrs: WaInstruction[]): number {
         } else {
           changed = reduceSecondConstOfBinary(ins, index);
         }
+      } else if (isEqz(ins, index + 1) && isEqz(ins, index + 2)) {
+        const value = ins[index] as ConstVal;
+        ins[index] = constVal(value.valueType, value.value ? 1 : 0);
+        ins.splice(index + 1, 2);
+        changed = true;
       }
     }
     return changed;
@@ -647,6 +652,18 @@ function isBinary(instrs: WaInstruction[], index: number): boolean {
 }
 
 /**
+ * Tests if the specified instruction is "eqz"
+ * @param index Instruction index in the function body
+ */
+ function isEqz(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 &&
+    index < instrs.length &&
+    instrs[index].type === "Eqz"
+  );
+}
+
+/**
  * Tests if the specified instruction is an "if" operation
  * @param index Instruction index in the function body
  */
@@ -755,7 +772,7 @@ const instructionTraits: InstructionTraits = {
   Div: InstructionType.Binary,
   Drop: InstructionType.None,
   Eq: InstructionType.Binary,
-  Eqz: InstructionType.Unary,
+  Eqz: InstructionType.None,
   Extend32: InstructionType.Unary,
   Floor: InstructionType.None,
   Ge: InstructionType.Binary,
