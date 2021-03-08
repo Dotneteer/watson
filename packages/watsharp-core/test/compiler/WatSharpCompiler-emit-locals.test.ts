@@ -4,6 +4,27 @@ import * as expect from "expect";
 import { WatSharpCompiler } from "../../src/compiler/WatSharpCompiler";
 
 describe("WatSharpCompiler - emit locals", () => {
+  it("local i32-->bool #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void test() {
+        local bool a = 12345;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const locals = wComp.traceMessages.filter((t) => t.source === "local");
+    expect(locals[0].message).toBe("(local $loc$a i32)")
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 1")
+    expect(instrs[1].message).toBe("set_local $loc$a")
+  });
+
   it("local i64-->f32 #1", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`

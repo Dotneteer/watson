@@ -68,6 +68,7 @@ export type TypeSpec =
  * Type identifiers for intrinsic types
  */
 export type Intrinsics =
+  | "bool"
   | "i8"
   | "u8"
   | "i16"
@@ -582,6 +583,7 @@ export interface ReturnStatement extends StatementBase {
  * Hash object for the size of intrinsic types
  */
 export const instrisicSizes: Record<Intrinsics, number> = {
+  bool: 1,
   i8: 1,
   u8: 1,
   i16: 2,

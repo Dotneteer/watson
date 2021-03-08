@@ -67,7 +67,7 @@ export declare type TypeSpec = VoidType | IntrinsicType | PointerType | ArrayTyp
 /**
  * Type identifiers for intrinsic types
  */
-export declare type Intrinsics = "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64";
+export declare type Intrinsics = "bool" | "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64";
 export interface TypeSpecBase extends BaseNode {
   resolved?: boolean;
   flattened?: boolean;

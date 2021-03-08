@@ -871,6 +871,7 @@ export interface CompilerTraceMessage {
  * Mappings from intrinsic types to WA types
  */
 export const waTypeMappings: Record<Intrinsics, WaType> = {
+  bool: WaType.i32,
   i8: WaType.i32,
   u8: WaType.i32,
   i16: WaType.i32,
@@ -887,6 +888,7 @@ export const waTypeMappings: Record<Intrinsics, WaType> = {
  * Mask constants for the bitwise NOT operation
  */
 export const bitwiseNotMasks: Record<Intrinsics, number | bigint> = {
+  bool: 0xff,
   i8: 0xff,
   u8: 0xff,
   i16: 0xffff,

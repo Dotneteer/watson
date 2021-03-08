@@ -70,6 +70,7 @@ export enum TokenType {
   Dot,
   Sizeof,
 
+  Bool,
   I8,
   U8,
   I16,
@@ -89,6 +90,8 @@ export enum TokenType {
   StringLiteral,
   Infinity,
   NaN,
+  True,
+  False,
 
   Inline,
   Export, 

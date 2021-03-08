@@ -66,6 +66,11 @@ tokenTraits.set(TokenType.Asterisk, {
 
 tokenTraits.set(TokenType.BinaryLiteral, { expressionStart: true });
 tokenTraits.set(TokenType.BinaryNot, { expressionStart: true, unaryOp: true });
+tokenTraits.set(TokenType.Bool, {
+  intrinsicType: true,
+  expressionStart: true,
+  typeStart: true,
+});
 
 // ----------------------------------------------------------------------------
 // C
@@ -98,6 +103,7 @@ tokenTraits.set(TokenType.F64, {
   expressionStart: true,
   typeStart: true,
 });
+tokenTraits.set(TokenType.False, { expressionStart: true });
 tokenTraits.set(TokenType.Floor, {
   expressionStart: true,
   builtInFunc: true,
@@ -193,6 +199,7 @@ tokenTraits.set(TokenType.SubtractAsgn, { assignmentOp: true });
 // ----------------------------------------------------------------------------
 // T
 
+tokenTraits.set(TokenType.True, { expressionStart: true });
 tokenTraits.set(TokenType.Trunc, { expressionStart: true, builtInFunc: true });
 
 // ----------------------------------------------------------------------------

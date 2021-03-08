@@ -1744,6 +1744,14 @@ export class WatSharpParser {
           idToken
         );
 
+      case TokenType.False:
+      case TokenType.True:
+          this._lexer.get();
+        return this.createExpressionNode<Literal>("Literal", {
+          value: start.type === TokenType.True ? 1 : 0,
+          source: LiteralSource.Int
+        }, start, start);
+
       case TokenType.BinaryLiteral:
         this._lexer.get();
         return this.parseBinaryLiteral(start);

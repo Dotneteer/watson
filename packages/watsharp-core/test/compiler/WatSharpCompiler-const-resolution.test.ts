@@ -128,6 +128,7 @@ describe("WatSharpCompiler - const resolution", () => {
     { src: "int", val: BigInt("12345678123456781234567"), exp: -258854521 },
     { src: "u32", val: BigInt("123456781234567812345678"), exp: 1706422094 },
     { src: "uint", val: BigInt("12345678123456781234567"), exp: 4036112775 },
+    { src: "bool", val: 0, exp: 0 },
     {
       src: "i64",
       val: BigInt("123456781234567812345678"),

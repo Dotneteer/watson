@@ -4,6 +4,72 @@ import * as expect from "expect";
 import { WatSharpCompiler } from "../../src/compiler/WatSharpCompiler";
 
 describe("WatSharpCompiler - emit var assignment", () => {
+  it("var/bool #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 dummy;
+      bool a;
+      void test() {
+        a = 326;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[1].message).toBe("i32.const 1");
+    expect(instrs[2].message).toBe("i32.store8");
+  });
+
+  it("var/bool #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 dummy;
+      bool a;
+      void test() {
+        a = -42;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[1].message).toBe("i32.const 1");
+    expect(instrs[2].message).toBe("i32.store8");
+  });
+
+  it("var/bool #3", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      i32 dummy;
+      bool a;
+      void test() {
+        a = 0;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[1].message).toBe("i32.const 0");
+    expect(instrs[2].message).toBe("i32.store8");
+  });
+
   it("var/i8 #1", () => {
     // --- Arrange
     const wComp = new WatSharpCompiler(`

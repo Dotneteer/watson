@@ -13,7 +13,7 @@
     },
     {
       "name": "variable.language.type.watsharp",
-      "match": "(void|byte|u8|sbyte|i8|short|i16|ushort|u16|int|i32|uint|u32|long|i64|ulong|u64|float|f32|double|f64)\\b"
+      "match": "(bool|void|byte|u8|sbyte|i8|short|i16|ushort|u16|int|i32|uint|u32|long|i64|ulong|u64|float|f32|double|f64|true|false)\\b"
     },
     {
       "name": "variable.language.builtin.watsharp",
