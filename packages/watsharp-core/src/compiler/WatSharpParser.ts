@@ -81,7 +81,7 @@ export class WatSharpParser {
 
   constructor(
     public readonly source: string,
-    public readonly includeHandler?: (filename: string) => IncludeHandlerResult,
+    public readonly includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult,
     preprocessorSymbols?: string[],
     preprocess = true
   ) {
@@ -1025,7 +1025,7 @@ export class WatSharpParser {
   private parseIfStatement(body: Statement[], loopDepth: number): void {
     const start = this._lexer.get();
     this.expectToken(TokenType.LParent, "W016");
-    const test = this.parseEquExpr();
+    const test = this.parseExpr();
     if (test === null) {
       this.reportError("W002");
       return;
@@ -1874,14 +1874,14 @@ export class WatSharpParser {
    */
   private parseBinaryLiteral(token: Token): Literal {
     let value: number | bigint;
-    const bigValue = BigInt(token.text.replace(/_/g, ""));
+    const bigValue = BigInt(token.text.replace(/[_']/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
       bigValue > Number.MAX_SAFE_INTEGER
     ) {
       value = bigValue;
     } else {
-      value = parseInt(token.text.substr(2).replace(/_/g, ""), 2);
+      value = parseInt(token.text.substr(2).replace(/[_']/g, ""), 2);
     }
     return this.createExpressionNode<Literal>(
       "Literal",
@@ -1901,14 +1901,14 @@ export class WatSharpParser {
    */
   private parseDecimalLiteral(token: Token): Literal {
     let value: number | bigint;
-    const bigValue = BigInt(token.text.replace(/_/g, ""));
+    const bigValue = BigInt(token.text.replace(/[_']/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
       bigValue > Number.MAX_SAFE_INTEGER
     ) {
       value = bigValue;
     } else {
-      value = parseInt(token.text.replace(/_/g, ""), 10);
+      value = parseInt(token.text.replace(/[_']/g, ""), 10);
     }
     return this.createExpressionNode<Literal>(
       "Literal",
@@ -1932,14 +1932,14 @@ export class WatSharpParser {
    */
   private parseHexadecimalLiteral(token: Token): Literal {
     let value: number | bigint;
-    const bigValue = BigInt(token.text.replace(/_/g, ""));
+    const bigValue = BigInt(token.text.replace(/[_']/g, ""));
     if (
       bigValue < Number.MIN_SAFE_INTEGER ||
       bigValue > Number.MAX_SAFE_INTEGER
     ) {
       value = bigValue;
     } else {
-      value = parseInt(token.text.substr(2).replace(/_/g, ""), 16);
+      value = parseInt(token.text.substr(2).replace(/[_']/g, ""), 16);
     }
     return this.createExpressionNode<Literal>(
       "Literal",
@@ -1958,7 +1958,7 @@ export class WatSharpParser {
    * @param token Literal token
    */
   private parseRealLiteral(token: Token): Literal {
-    let value = parseFloat(token.text.replace(/_/g, ""));
+    let value = parseFloat(token.text.replace(/[_']/g, ""));
     return this.createExpressionNode<Literal>(
       "Literal",
       {
@@ -2149,7 +2149,7 @@ export class WatSharpParser {
    * This method handles the include files with the preprocessor
    * @param filename
    */
-  private handleIncludeFiles(filename: string): IncludeHandlerResult {
+  private handleIncludeFiles(baseFileIndex: number, filename: string): IncludeHandlerResult {
     return <IncludeHandlerResult>{
       fileIndex: 0,
       source: "",

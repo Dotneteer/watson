@@ -7,6 +7,9 @@ import {
   IncludeHandlerResult,
 } from "@dotneteer/watsharp-core";
 
+// The files used in this compilation
+const filesIncluded: Record<number, string> = {};
+
 /**
  * Runs the watsc command line tool
  */
@@ -22,7 +25,6 @@ export function run(): void {
     process.exit(1);
   }
 
-  const inputDir = path.dirname(path.resolve(inFile));
   let fileIndex = 0;
 
   let source: string | undefined;
@@ -41,7 +43,8 @@ export function run(): void {
     process.exit(1);
   }
 
-  // --- Do the comilation
+  // --- Do the compilation
+  filesIncluded[0] = inFile;
   console.log(`Compiling ${inFile} from WAT# to WAT...`);
   const compiler = new WatSharpCompiler(source, includeHandler);
   const outputWat = compiler.compile();
@@ -68,7 +71,8 @@ export function run(): void {
     process.exit(1);
   }
 
-  function includeHandler(fileName: string): IncludeHandlerResult {
+  function includeHandler(baseFileIndex: number, fileName: string): IncludeHandlerResult {
+    const inputDir = path.dirname(path.resolve(filesIncluded[baseFileIndex]));
     fileName = path.isAbsolute(fileName) ? fileName : path.join(inputDir, fileName);
     let source: string | undefined;
     try {
@@ -78,6 +82,7 @@ export function run(): void {
       process.exit(1);
     }
     fileIndex++;
+    filesIncluded[fileIndex] = fileName;
     return {
       fileIndex,
       source,

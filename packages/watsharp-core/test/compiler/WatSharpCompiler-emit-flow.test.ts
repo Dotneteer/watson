@@ -283,8 +283,8 @@ describe("WatSharpCompiler - emit control flow", () => {
     expect(instrs[6].message).toBe("i32.const 1");
     expect(instrs[7].message).toBe("i32.add");
     expect(instrs[8].message).toBe("set_local $loc$a");
-    expect(instrs[9].message).toBe("end");
-    expect(instrs[10].message).toBe("br $loop$1");
+    expect(instrs[9].message).toBe("br $loop$1");
+    expect(instrs[10].message).toBe("end");
     expect(instrs[11].message).toBe("end");
   });
 
@@ -307,16 +307,12 @@ describe("WatSharpCompiler - emit control flow", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("block $break$1");
-    expect(instrs[1].message).toBe("loop $loop$1");
-    expect(instrs[2].message).toBe("get_local $loc$a");
-    expect(instrs[3].message).toBe("i32.const 3");
-    expect(instrs[4].message).toBe("i32.lt_s");
-    expect(instrs[5].message).toBe("br_if $break$1");
-    expect(instrs[6].message).toBe("br $loop$1");
-    expect(instrs[7].message).toBe("end");
-    expect(instrs[8].message).toBe("end");
+    expect(instrs[1].message).toBe("get_local $loc$a");
+    expect(instrs[2].message).toBe("i32.const 3");
+    expect(instrs[3].message).toBe("i32.lt_s");
+    expect(instrs[4].message).toBe("br_if $break$1");
+    expect(instrs[5].message).toBe("end");
   });
 
   it("while #3", () => {
@@ -339,20 +335,17 @@ describe("WatSharpCompiler - emit control flow", () => {
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("block $break$1");
-    expect(instrs[1].message).toBe("loop $loop$1");
-    expect(instrs[2].message).toBe("get_local $loc$a");
-    expect(instrs[3].message).toBe("i32.const 3");
-    expect(instrs[4].message).toBe("i32.lt_s");
-    expect(instrs[5].message).toBe("if");
-    expect(instrs[6].message).toBe("get_local $loc$a");
-    expect(instrs[7].message).toBe("i32.const 1");
-    expect(instrs[8].message).toBe("i32.add");
-    expect(instrs[9].message).toBe("set_local $loc$a");
-    expect(instrs[10].message).toBe("br $break$1");
+    expect(instrs[1].message).toBe("get_local $loc$a");
+    expect(instrs[2].message).toBe("i32.const 3");
+    expect(instrs[3].message).toBe("i32.lt_s");
+    expect(instrs[4].message).toBe("if");
+    expect(instrs[5].message).toBe("get_local $loc$a");
+    expect(instrs[6].message).toBe("i32.const 1");
+    expect(instrs[7].message).toBe("i32.add");
+    expect(instrs[8].message).toBe("set_local $loc$a");
+    expect(instrs[9].message).toBe("br $break$1");
+    expect(instrs[10].message).toBe("end");
     expect(instrs[11].message).toBe("end");
-    expect(instrs[12].message).toBe("br $loop$1");
-    expect(instrs[13].message).toBe("end");
-    expect(instrs[14].message).toBe("end");
   });
 
   it("while #4", () => {
@@ -374,11 +367,12 @@ describe("WatSharpCompiler - emit control flow", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("loop $loop$1");
     expect(instrs[1].message).toBe("get_local $loc$a");
     expect(instrs[2].message).toBe("i32.const 3");
     expect(instrs[3].message).toBe("i32.lt_s");
-    expect(instrs[4].message).toBe("br $loop$1");
+    expect(instrs[4].message).toBe("br_if $loop$1");
     expect(instrs[5].message).toBe("end");
   });
 

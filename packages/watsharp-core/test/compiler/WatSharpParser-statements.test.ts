@@ -309,6 +309,23 @@ describe("WatSharpParser - statements", () => {
     expect(wParser.errors[0].code).toBe("W017");
   });
 
+  it("if #9", () => {
+    // --- Arrange
+    const wParser = new WatSharpParser(`
+    void a() {
+      if (b & c) {
+        return;
+      }
+    }
+    `);
+
+    // --- Act
+    wParser.parseProgram();
+
+    // --- Assert
+    expect(wParser.hasErrors).toBe(false);
+  });
+
   it("do #1", () => {
     // --- Arrange
     const wParser = new WatSharpParser(`

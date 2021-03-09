@@ -350,6 +350,7 @@ export class FunctionCompiler {
     let leftType: TypeSpec | undefined;
     let idAddress = false;
     let varName: string | undefined;
+    let isParam = false;
     if (asgn.lval.type == "Identifier") {
       // --- A single identifier may be a global, a local, or a memory variable
       varName = asgn.lval.name;
@@ -375,6 +376,7 @@ export class FunctionCompiler {
               ? resolvedId.local.type.underlying
               : "i32",
         };
+        isParam = resolvedId.local.fromParameter;
       } else if (resolvedId.data) {
         // --- Left side is a data variable with a const address
         leftType = <IntrinsicType>{
@@ -437,7 +439,12 @@ export class FunctionCompiler {
           this.inject(globalGet(createGlobalName(varName)), body);
           break;
         case "local":
-          this.inject(localGet(createLocalName(varName)), body);
+          this.inject(
+            localGet(
+              isParam ? createParameterName(varName) : createLocalName(varName)
+            ),
+            body
+          );
           break;
         case "var":
           this.compileIntrinsicVariableGet(leftIntrinsic, body);
@@ -585,7 +592,12 @@ export class FunctionCompiler {
         this.inject(globalSet(createGlobalName(varName)), body);
         break;
       case "local":
-        this.inject(localSet(createLocalName(varName)), body);
+        this.inject(
+          localSet(
+            isParam ? createParameterName(varName) : createLocalName(varName)
+          ),
+          body
+        );
         break;
       case "var":
         this.compileIntrinsicVariableSet(leftIntrinsic, body);
@@ -805,13 +817,10 @@ export class FunctionCompiler {
     const loopMain: WaInstruction[] = [];
     const loopLabel = createLoopLabel(this._loopDepth);
     wLoop.loopBody.forEach((stmt) => this.compileStatement(stmt, loopMain));
+    this.inject(branch(loopLabel), loopMain);
 
     // --- Combine the test and the body into a loop
-    const loopToInject = loop(loopLabel, [
-      ...loopBody,
-      ifBlock(loopMain),
-      branch(loopLabel),
-    ]);
+    const loopToInject = loop(loopLabel, [...loopBody, ifBlock(loopMain)]);
 
     if (hasBreak) {
       // --- Encapsulate the loop into a break block
@@ -891,6 +900,9 @@ export class FunctionCompiler {
       invocation.invoked,
       body
     );
+    if (!resultTypeSpec) {
+      return;
+    }
 
     // --- Remove the result of a non-void function
     if (resultTypeSpec.type !== "Void") {
@@ -1367,6 +1379,23 @@ export class FunctionCompiler {
     id: Identifier,
     body: WaInstruction[]
   ): TypeSpec | null {
+    // --- Check for a constant value
+    const local = this._locals.get(id.name);
+    if (!local) {
+      // --- Ok, this name in not for a local
+      const decl = this.wsCompiler.declarations.get(id.name);
+      if (decl && decl.type === "ConstDeclaration") {
+        return this.compileLiteral(
+          <Literal>{
+            type: "Literal",
+            value: decl.value,
+          },
+          body
+        );
+      }
+    }
+
+    // --- Go on with a non-constant identifier
     const resolvedId = this.resolveIdentifier(id);
     if (!resolvedId) {
       return null;
@@ -2096,7 +2125,7 @@ export class FunctionCompiler {
   ): TypeSpec | null {
     // --- Check if the invoked function exists
     const calledDecl = this.wsCompiler.declarations.get(invoc.name);
-    if (calledDecl === null) {
+    if (!calledDecl) {
       this.reportError("W153", invoc, invoc.name);
       return null;
     }
@@ -2201,7 +2230,9 @@ export class FunctionCompiler {
       if (inlineIt) {
         // --- Just copy the locals and the body of the inline function
         this.wsCompiler.getFunctionLocals(calledDecl.name).forEach((loc) => {
-          this._builder.locals.push(loc);
+          if (!this._builder.locals.some((l) => l.id === loc.id)) {
+            this._builder.locals.push(loc);
+          }
         });
         this.wsCompiler
           .getFunctionBodyInstructions(calledDecl.name)
@@ -2436,7 +2467,7 @@ export class FunctionCompiler {
             this.inject(eqz(WaType.i32), body);
             this.inject(eqz(WaType.i32), body);
             return;
-          }
+        }
         break;
     }
 
@@ -2586,7 +2617,7 @@ export class FunctionCompiler {
         const field = leftAddress.spec.fields.filter(
           (fi) => fi.id === expr.member
         );
-        if (!field) {
+        if (!field || field.length === 0) {
           this.reportError("W147", expr);
           return null;
         }
@@ -2653,7 +2684,7 @@ export class FunctionCompiler {
     }
 
     // --- No inlining over 32 instructions
-    if (countInstructions(this._builder.body) > 32) {
+    if (countInstructions(this._builder.body) > 80) {
       return;
     }
 

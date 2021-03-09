@@ -49,7 +49,7 @@ export class WatSharpCompiler {
 
   constructor(
     public readonly source: string,
-    public readonly includeHandler?: (filename: string) => IncludeHandlerResult,
+    public readonly includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult,
     public readonly preprocessorSymbols?: string[],
     public readonly options?: CompilerOptions
   ) {
@@ -152,7 +152,7 @@ export class WatSharpCompiler {
    * Gets the locals of the specified function
    * @param name Function name
    */
-   getFunctionLocals(name: string): Local[] | undefined {
+  getFunctionLocals(name: string): Local[] | undefined {
     return this._functionBodies.get(name).builder.locals;
   }
 
@@ -247,7 +247,9 @@ export class WatSharpCompiler {
         case "DataDeclaration":
           decl.exprs.forEach((expr) => resolveExpression(expr));
           decl.address = nextMemoryAddress;
-          nextMemoryAddress = decl.exprs.length * intrinsicSizes[decl.underlyingType];
+          nextMemoryAddress =
+            decl.address +
+            decl.exprs.length * intrinsicSizes[decl.underlyingType];
           break;
 
         case "GlobalDeclaration":

@@ -684,7 +684,7 @@ function resetFileIndex(): void {
  * Emulate include file loading
  * @param filename File name to load
  */
-function includeHandler(filename: string): IncludeHandlerResult {
+function includeHandler(baseFileIndex: number, filename: string): IncludeHandlerResult {
   const source = includeFiles[filename];
   if (source === undefined) {
     throw new Error(`Cannot read file ${filename}`);

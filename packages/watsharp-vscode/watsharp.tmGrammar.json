@@ -21,15 +21,15 @@
     },
     {
       "name": "constant.numeric.hexadecimal.watsharp",
-      "match": "0x([0-9A-Fa-f](_*))+\\b"
+      "match": "0x[_']*([0-9A-Fa-f][_']*)+\\b"
     },
     {
       "name": "constant.numeric.binary.watsharp",
-      "match": "0b([01](_*))+\\b"
+      "match": "0b[_']*([01][_']*)+\\b"
     },
     {
       "name": "constant.numeric.real.whatsharp",
-      "match": "([0-9](_*))+\\.?([0-9](_*))*([eE][+-]?[0-9]+)?"
+      "match": "([0-9][_']*)+\\.?([0-9][_']*)*([eE][+-]?[0-9]+)?"
     },
     {
       "begin": "\"",
