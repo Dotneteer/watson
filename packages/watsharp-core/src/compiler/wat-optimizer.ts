@@ -10,6 +10,7 @@ import {
 import {
   Block,
   Branch,
+  BranchIf,
   ConstVal,
   If,
   LocalGet,
@@ -36,6 +37,7 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += removeDeadCode(instrs);
     changeCount += convertToBranchIf(instrs);
     changeCount += removeRedundantBranch(instrs);
+    changeCount += reduceBranchIf(instrs);
     changeCount += optimizeConstantOperations(instrs);
     changeCount += optimizeLocalAccessors(instrs);
     changeCount += optimizeLocalTees(instrs);
@@ -201,7 +203,7 @@ function removeDeadCode(instrs: WaInstruction[], depth = 0): number {
 }
 
 /**
- * Converts "if" instrcutions with a single "br" to "br_if"
+ * Converts "if" instructions with a single "br" to "br_if"
  * @param instrs Instructions to convert
  */
 function convertToBranchIf(instrs: WaInstruction[]): number {
@@ -215,6 +217,27 @@ function convertToBranchIf(instrs: WaInstruction[]): number {
       ) {
         ins[index] = branchIf(ifInstr.consequtive[0].label);
         return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Reduces "const" and "br_if" 
+ * @param instrs Instructions to convert
+ */
+function reduceBranchIf(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (isConstant(ins, index) && isBranchIf(ins, index + 1)) {
+      const constVal = ins[index] as ConstVal;
+      const branchIf = ins[index + 1] as BranchIf;
+      if (constVal.value) {
+        ins[index] = branch(branchIf.label);
+        ins.splice(index + 1, 1);
+        return true;
+      } else {
+        ins.splice(index, 2);
       }
     }
     return false;
@@ -400,7 +423,8 @@ function peelLoop(instrs: WaInstruction[]): number {
     if (isLoop(ins, index)) {
       const loop = ins[index] as Loop;
       if (
-        !loop.body.some(
+        !findInstruction(
+          loop.body,
           (item) =>
             (item.type === "Branch" || item.type === "BranchIf") &&
             item.label === loop.id
@@ -434,8 +458,23 @@ function peelBlock(instrs: WaInstruction[]): number {
               item.body,
               (it) =>
                 (it.type === "Branch" || it.type === "BranchIf") &&
-                it.label !== block.id
+                it.label === block.id
             );
+          } else if (item.type === "If") {
+            hasBranchOut ||= findInstruction(
+              item.consequtive,
+              (it) =>
+                (it.type === "Branch" || it.type === "BranchIf") &&
+                it.label === block.id
+            );
+            if (item.alternate) {
+              hasBranchOut ||= findInstruction(
+                item.alternate,
+                (it) =>
+                  (it.type === "Branch" || it.type === "BranchIf") &&
+                  it.label === block.id
+              );
+            }
           }
         }
       });
@@ -593,7 +632,10 @@ function reduceCascadedBinary(instrs: WaInstruction[], index: number): boolean {
  * @param index Constant value index (const, binary)
  * @returns true, if the operation has been reduced
  */
-function reduceSecondConstOfBinary(instrs: WaInstruction[], index: number): boolean {
+function reduceSecondConstOfBinary(
+  instrs: WaInstruction[],
+  index: number
+): boolean {
   const operand = instrs[index] as ConstVal;
   const opType = instrs[index + 1].type;
   switch (opType) {
@@ -655,12 +697,8 @@ function isBinary(instrs: WaInstruction[], index: number): boolean {
  * Tests if the specified instruction is "eqz"
  * @param index Instruction index in the function body
  */
- function isEqz(instrs: WaInstruction[], index: number): boolean {
-  return (
-    index >= 0 &&
-    index < instrs.length &&
-    instrs[index].type === "Eqz"
-  );
+function isEqz(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Eqz";
 }
 
 /**

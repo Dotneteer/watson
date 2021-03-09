@@ -49,7 +49,7 @@ export class PreprocessorParser implements PPEvaluationContext {
   constructor(
     public readonly source: string,
     public readonly fileIndex = 0,
-    public readonly includeHandler?: (filename: string) => IncludeHandlerResult
+    public readonly includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult
   ) {
     this._inputStream = new InputStream({
       fileIndex,
@@ -487,7 +487,7 @@ export class PreprocessorParser implements PPEvaluationContext {
     if (this.includeHandler) {
       let sourceInfo: IncludeHandlerResult | undefined;
       try {
-        sourceInfo = this.includeHandler(filename);
+        sourceInfo = this.includeHandler(this.fileIndex, filename);
       } catch (err) {
         this.reportError("P016", null, err.toString());
       }

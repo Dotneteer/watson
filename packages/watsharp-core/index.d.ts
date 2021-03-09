@@ -1254,10 +1254,10 @@ declare class WaTree {
 
 export declare class WatSharpCompiler {
   readonly source: string;
-  readonly includeHandler?: (filename: string) => IncludeHandlerResult;
+  readonly includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult;
   readonly preprocessorSymbols?: string[];
   readonly options?: CompilerOptions;
-  constructor(source: string, includeHandler?: (filename: string) => IncludeHandlerResult, preprocessorSymbols?: string[], options?: CompilerOptions);
+  constructor(source: string, includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult, preprocessorSymbols?: string[], options?: CompilerOptions);
   /**
    * Turn on comiler tracing
    */

@@ -433,7 +433,7 @@ export class WatSharpLexer {
           } else if (ch === "b") {
             phase = LexerPhase.BinaryFirst;
             tokenType = TokenType.Unknown;
-          } else if (isDecimalDigit(ch) || ch === "_") {
+          } else if (isDecimalDigit(ch) || ch === "_" || ch === "'") {
             phase = LexerPhase.DecimalOrReal;
           } else if (ch === ".") {
             phase = LexerPhase.RealFractionalFirst;
@@ -455,6 +455,9 @@ export class WatSharpLexer {
           break;
 
         case LexerPhase.HexaFirst:
+          if (ch === "_" || ch === "'") {
+            break;
+          }
           if (!isHexadecimalDigit(ch)) {
             return makeToken();
           }
@@ -463,12 +466,15 @@ export class WatSharpLexer {
           break;
 
         case LexerPhase.HexaTail:
-          if (!isHexadecimalDigit(ch) && ch !== "_") {
+          if (!isHexadecimalDigit(ch) && ch !== "_" && ch !== "'") {
             return makeToken();
           }
           break;
 
         case LexerPhase.BinaryFirst:
+          if (ch === "_" || ch === "'") {
+            break;
+          }
           if (!isBinaryDigit(ch)) {
             return makeToken();
           }
@@ -477,14 +483,14 @@ export class WatSharpLexer {
           break;
 
         case LexerPhase.BinaryTail:
-          if (!isBinaryDigit(ch) && ch !== "_") {
+          if (!isBinaryDigit(ch) && ch !== "_" && ch !== "'") {
             return makeToken();
           }
           tokenType = TokenType.BinaryLiteral;
           break;
 
         case LexerPhase.DecimalOrReal:
-          if (isDecimalDigit(ch) || ch === "_") {
+          if (isDecimalDigit(ch) || ch === "_" || ch === "'") {
             break;
           } else if (ch === ".") {
             phase = LexerPhase.RealFractionalFirst;
@@ -512,7 +518,7 @@ export class WatSharpLexer {
           if (ch === "e" || ch === "E") {
             phase = LexerPhase.RealExponent;
             tokenType = TokenType.Unknown;
-          } else if (!isDecimalDigit(ch) && ch !== "_") {
+          } else if (!isDecimalDigit(ch) && ch !== "_" && ch !== "'") {
             return makeToken();
           }
           break;
