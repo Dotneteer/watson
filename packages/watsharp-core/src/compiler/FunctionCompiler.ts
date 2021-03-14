@@ -2730,6 +2730,10 @@ export class FunctionCompiler {
           spec: arrayAddress.spec.spec,
         };
       }
+
+      default:
+        this.reportError("W170", expr);
+        break;
     }
     return null;
   }

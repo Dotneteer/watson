@@ -1096,7 +1096,7 @@ describe("WatSharpCompiler - emit pointer operations", () => {
       reg16[4] regs;
 
       void test(u32 block) {
-        local u32 ptr = -regs[block].h;
+        local *reg16 ptr = &(regs[2]);
       }
       `);
 
@@ -1108,11 +1108,8 @@ describe("WatSharpCompiler - emit pointer operations", () => {
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     console.log(JSON.stringify(instrs, null, 2));
-    expect(instrs[0].message).toBe("get_local $loc$ptr");
-    expect(instrs[1].message).toBe("i32.const 1");
-    expect(instrs[2].message).toBe("i32.add");
-    expect(instrs[3].message).toBe("i32.const 2");
-    expect(instrs[4].message).toBe("i32.store8");
+    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[1].message).toBe("set_local $loc$ptr");
   });
 
 });
