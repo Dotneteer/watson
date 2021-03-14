@@ -1,6 +1,7 @@
 import { TokenLocation } from "../core/tokens";
 import { ErrorCodes } from "../core/errors";
 import {
+  ArrayType,
   Assignment,
   BinaryExpression,
   BinaryOpSymbols,
@@ -10,10 +11,12 @@ import {
   DoStatement,
   Expression,
   FunctionInvocationExpression,
+  FunctionParameter,
   GlobalDeclaration,
   Identifier,
   IfStatement,
   IndirectAccessExpression,
+  instrisicSizes,
   Literal,
   LiteralSource,
   LocalFunctionInvocation,
@@ -129,6 +132,7 @@ import {
   visitInstructions,
 } from "./wat-helpers";
 import { types } from "util";
+import { resolveSoa } from "dns";
 
 /**
  * This class is responsible for compiling a function body
@@ -306,37 +310,81 @@ export class FunctionCompiler {
     if (this._locals.has(localVar.name)) {
       this.reportError("W140", this.func);
       return;
-    } else {
-      const localName = createLocalName(localVar.name);
-      let initExpr: ProcessedExpression | null = null;
-      if (localVar.initExpr) {
-        initExpr = this.processExpression(localVar.initExpr, body);
-        if (initExpr) {
-          this.castForStorage(
-            localVar.spec,
-            initExpr.exprType,
-            body,
-            initExpr?.expr.value
-          );
-          this.inject(localSet(localName), body);
-        }
+    }
+
+    const compiler = this.wsCompiler;
+
+    // --- Fix the type specification
+    compiler.resolveDependencies(localVar.spec);
+    const resolvedTypeSpec = resolveNamedTypes(localVar.spec);
+    if (resolvedTypeSpec) {
+      localVar.spec = resolvedTypeSpec;
+    }
+
+    // --- Start compilation
+    const localName = createLocalName(localVar.name);
+    let initExpr: ProcessedExpression | null = null;
+    if (localVar.initExpr) {
+      initExpr = this.processExpression(localVar.initExpr, body);
+      if (initExpr) {
+        this.castForStorage(
+          localVar.spec,
+          initExpr.exprType,
+          body,
+          initExpr?.expr.value
+        );
+        this.inject(localSet(localName), body);
       }
-      const paramType =
-        localVar.spec.type === "Pointer"
-          ? WaType.i32
-          : waTypeMappings[(localVar.spec as IntrinsicType).underlying];
-      this.locals.set(localVar.name, {
-        fromParameter: false,
-        name: localName,
-        type: localVar.spec,
-        waType: paramType,
-      });
-      const local = this._builder.addLocal(localName, paramType);
-      this.addTrace(() => [
-        "local",
-        0,
-        this.wsCompiler.waTree.renderLocal(local),
-      ]);
+    }
+    const paramType =
+      localVar.spec.type === "Pointer"
+        ? WaType.i32
+        : waTypeMappings[(localVar.spec as IntrinsicType).underlying];
+    this.locals.set(localVar.name, {
+      fromParameter: false,
+      name: localName,
+      type: localVar.spec,
+      waType: paramType,
+    });
+    const local = this._builder.addLocal(localName, paramType);
+    this.addTrace(() => [
+      "local",
+      0,
+      this.wsCompiler.waTree.renderLocal(local),
+    ]);
+
+    /**
+     * Resolves named types within the local type declaration
+     * @param spec Type specification to resolve
+     * @returns Resolved name type specification
+     */
+    function resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
+      switch (spec.type) {
+        case "Pointer":
+        case "Array":
+          const resolved = resolveNamedTypes(spec.spec);
+          if (resolved) {
+            spec.spec = resolved;
+          }
+          break;
+        case "Struct":
+          for (let i = 0; i < spec.fields.length; i++) {
+            const resolved = resolveNamedTypes(spec.fields[i].spec);
+            if (resolved) {
+              spec.fields[i].spec = resolved;
+            }
+          }
+          break;
+        case "NamedType":
+          const decl = compiler.declarations.get(spec.name);
+          if (decl) {
+            if (decl.type === "TypeDeclaration") {
+              return decl.spec;
+            }
+          }
+          break;
+      }
+      return null;
     }
   }
 
@@ -369,25 +417,11 @@ export class FunctionCompiler {
       } else if (resolvedId.local) {
         // --- Left side is a local
         leftSide = "local";
-        leftType = <IntrinsicType>{
-          type: "Intrinsic",
-          underlying:
-            resolvedId.local.type.type === "Intrinsic"
-              ? resolvedId.local.type.underlying
-              : "i32",
-        };
+        leftType = resolvedId.local.type;
         isParam = resolvedId.local.fromParameter;
       } else if (resolvedId.data) {
-        // --- Left side is a data variable with a const address
-        leftType = <IntrinsicType>{
-          type: "Intrinsic",
-          underlying: resolvedId.data.underlyingType,
-        };
-        this.inject(constVal(WaType.i32, resolvedId.data.address), body);
-        if (asgn.asgn !== "=" && asgn.asgn !== ":=") {
-          // --- We need to put this address to the stack twice
-          this.inject(constVal(WaType.i32, resolvedId.var.address), body);
-        }
+        this.reportError("W169", asgn);
+        return;
       } else {
         // --- Left side is a variable with a const address
         leftType = resolvedId.var.spec;
@@ -1425,10 +1459,8 @@ export class FunctionCompiler {
       return typeSpec;
     }
     if (resolvedId.data) {
-      const typeSpec = <IntrinsicType>{
-        type: "Intrinsic",
-        underlying: resolvedId.data.underlyingType,
-      };
+      const typeSpec = (resolvedId.data.spec as ArrayType)
+        .spec as IntrinsicType;
       this.inject(constVal(WaType.i32, resolvedId.data.address), body);
       this.compileIntrinsicVariableGet(typeSpec, body);
       return typeSpec;
@@ -2133,7 +2165,8 @@ export class FunctionCompiler {
     // --- Only function and table invocations are allowed
     if (
       calledDecl.type !== "FunctionDeclaration" &&
-      calledDecl.type !== "TableDeclaration"
+      calledDecl.type !== "TableDeclaration" &&
+      calledDecl.type !== "ImportedFunctionDeclaration"
     ) {
       this.reportError("W153", invoc, invoc.name);
       return null;
@@ -2148,7 +2181,16 @@ export class FunctionCompiler {
     }
 
     // --- Prepare the function parameters
-    const funcParams = calledDecl.params;
+    const funcParams =
+      calledDecl.type === "ImportedFunctionDeclaration"
+        ? calledDecl.parSpecs.map(
+            (sp, idx) =>
+              <FunctionParameter>{
+                name: `$param${idx}`,
+                spec: sp,
+              }
+          )
+        : calledDecl.params;
     const funcResult = calledDecl.resultType;
 
     // --- Check the dispatch expression
@@ -2187,6 +2229,10 @@ export class FunctionCompiler {
           ? WaType.i32
           : waTypeMappings[(par.spec as IntrinsicType).underlying];
       const argType = this.compileExpression(invoc.arguments[i], body);
+      if (!argType) {
+        this.reportError("W142", par);
+        return null;
+      }
       const waArgType =
         argType.type === "Pointer"
           ? WaType.i32
@@ -2225,7 +2271,9 @@ export class FunctionCompiler {
       }
     } else {
       // --- We call the function, count the invocations
-      calledDecl.invocationCount++;
+      if (calledDecl.type !== "ImportedFunctionDeclaration") {
+        calledDecl.invocationCount++;
+      }
 
       if (inlineIt) {
         // --- Just copy the locals and the body of the inline function
@@ -2253,7 +2301,10 @@ export class FunctionCompiler {
       }
       if (inlineIt) {
         // --- Obtain the return value from the inline function
-        if (calledDecl.hasReturn) {
+        if (
+          calledDecl.type !== "ImportedFunctionDeclaration" &&
+          calledDecl.hasReturn
+        ) {
           const resultName = `$${funcId}$res`;
           this.createCompileTimeLocal(resultName, calledDecl.resultType);
           this.inject(localGet(resultName), body);
@@ -2553,7 +2604,23 @@ export class FunctionCompiler {
       case "Identifier": {
         // --- Only variables have an address
         const resolvedId = this.resolveIdentifier(expr);
-        if (resolvedId === null || (!resolvedId.var && !resolvedId.data)) {
+        if (resolvedId === null) {
+          this.reportError("W146", expr);
+          return null;
+        }
+
+        // --- Is it a local pointer?
+        if (resolvedId.local && resolvedId.local.type.type === "Pointer") {
+          const local = resolvedId.local;
+          this.inject(localGet(local.name), body);
+          return {
+            address: 0,
+            spec: local.type,
+            getterCompiled: true,
+          };
+        }
+
+        if (!resolvedId.var && !resolvedId.data) {
           this.reportError("W146", expr);
           return null;
         }
@@ -2563,10 +2630,8 @@ export class FunctionCompiler {
           : resolvedId.data.address;
         const spec = resolvedId.var
           ? resolvedId.var.spec
-          : <IntrinsicType>{
-              type: "Intrinsic",
-              underlying: resolvedId.data.underlyingType,
-            };
+          : resolvedId.data.spec;
+
         // --- Inject variable address if requested
         this.inject(constVal(WaType.i32, address), body);
 
@@ -2591,7 +2656,9 @@ export class FunctionCompiler {
         }
 
         // --- Load the pointer from the address
-        this.inject(load(WaType.i32), body);
+        if (!operandAddr.getterCompiled) {
+          this.inject(load(WaType.i32), body);
+        }
 
         // --- Retrieve address/type information
         return {
@@ -2877,6 +2944,7 @@ interface ResolvedDeclaration {
 interface ResolvedAddress {
   address: number;
   spec: TypeSpec;
+  getterCompiled?: boolean;
 }
 
 /**

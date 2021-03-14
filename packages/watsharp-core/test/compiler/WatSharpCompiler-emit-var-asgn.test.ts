@@ -992,9 +992,7 @@ it("var/u16 #1", () => {
     expect(instrs[10].message).toBe("i32.load8_u");
     expect(instrs[11].message).toBe("i32.const 326");
     expect(instrs[12].message).toBe("i32.add");
-    expect(instrs[13].message).toBe("i32.const 255");
-    expect(instrs[14].message).toBe("i32.and");
-    expect(instrs[15].message).toBe("i32.store8");
+    expect(instrs[13].message).toBe("i32.store8");
   });
 
   it("var/pointer #1", () => {
@@ -1084,8 +1082,6 @@ it("var/u16 #1", () => {
     expect(instrs[6].message).toBe("i32.load8_u");
     expect(instrs[7].message).toBe("i32.const 326");
     expect(instrs[8].message).toBe("i32.mul");
-    expect(instrs[9].message).toBe("i32.const 255");
-    expect(instrs[10].message).toBe("i32.and");
-    expect(instrs[11].message).toBe("i32.store8");
+    expect(instrs[9].message).toBe("i32.store8");
   });
 });

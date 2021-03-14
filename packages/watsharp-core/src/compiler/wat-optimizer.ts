@@ -17,6 +17,8 @@ import {
   LocalSet,
   LocalTee,
   Loop,
+  Store,
+  WaBitSpec,
   WaInstruction,
   WaType,
 } from "../wa-ast/wa-nodes";
@@ -39,6 +41,7 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += removeRedundantBranch(instrs);
     changeCount += reduceBranchIf(instrs);
     changeCount += optimizeConstantOperations(instrs);
+    changeCount += reduceIntegerCasts(instrs);
     changeCount += optimizeLocalAccessors(instrs);
     changeCount += optimizeLocalTees(instrs);
     changeCount += optimizeConstantDuplication(instrs);
@@ -224,7 +227,7 @@ function convertToBranchIf(instrs: WaInstruction[]): number {
 }
 
 /**
- * Reduces "const" and "br_if" 
+ * Reduces "const" and "br_if"
  * @param instrs Instructions to convert
  */
 function reduceBranchIf(instrs: WaInstruction[]): number {
@@ -331,6 +334,31 @@ function optimizeConstantDuplication(instrs: WaInstruction[]): number {
           constantToDupl.value
         );
         ins.splice(index + 2, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Reduces "const" and "br_if"
+ * @param instrs Instructions to convert
+ */
+function reduceIntegerCasts(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (
+      isConstant(ins, index) &&
+      isAnd(ins, index + 1) &&
+      isStore(ins, index + 2)
+    ) {
+      const constVal = ins[index] as ConstVal;
+      const store = ins[index + 2] as Store;
+      if (
+        (constVal.value === 0xffff && store.bits === WaBitSpec.Bit16) ||
+        (constVal.value === 0xff && store.bits === WaBitSpec.Bit8)
+      ) {
+        ins.splice(index, 2);
         return true;
       }
     }
@@ -557,6 +585,20 @@ function reduceBinary(instrs: WaInstruction[], index: number): boolean {
           : BigInt(left) & BigInt(right);
       break;
 
+    case "Or":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left | right
+          : BigInt(left) | BigInt(right);
+      break;
+
+    case "Xor":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left ^ right
+          : BigInt(left) ^ BigInt(right);
+      break;
+
     case "Shl":
       value =
         typeof left === "number" && typeof right === "number"
@@ -771,6 +813,22 @@ function isBlock(instrs: WaInstruction[], index: number): boolean {
  */
 function isLoop(instrs: WaInstruction[], index: number): boolean {
   return index >= 0 && index < instrs.length && instrs[index].type === "Loop";
+}
+
+/**
+ * Tests if the specified instruction is a "store" operation
+ * @param index Instruction index in the function body
+ */
+function isStore(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Store";
+}
+
+/**
+ * Tests if the specified instruction is an "and" operation
+ * @param index Instruction index in the function body
+ */
+function isAnd(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "And";
 }
 
 /**

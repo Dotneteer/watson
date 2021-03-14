@@ -1614,7 +1614,7 @@ export class WatSharpParser {
 
   /**
    * unaryExpr
-   *   : ( | "+" | "-" | "~" | "!" | "&" ) unaryExpr
+   *   : ( | "+" | "-" | "~" | "!" | "&" ) primaryExpr
    *   ;
    */
   private parseUnaryExpr(): Expression | null {

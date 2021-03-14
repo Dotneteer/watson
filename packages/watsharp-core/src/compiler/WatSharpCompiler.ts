@@ -1,11 +1,15 @@
 import { ErrorCodes, errorMessages, ParserErrorMessage } from "../core/errors";
 import { IncludeHandlerResult } from "../preprocessor/PreprocessorParser";
 import {
+  ArrayType,
   Declaration,
   Expression,
   FunctionDeclaration,
   instrisicSizes as intrinsicSizes,
   Intrinsics,
+  IntrinsicType,
+  Literal,
+  LiteralSource,
   TableDeclaration,
   TypeSpec,
 } from "./source-tree";
@@ -20,6 +24,8 @@ import { FunctionCompiler } from "./FunctionCompiler";
 import { WaTree } from "../wa-ast/WaTree";
 import { Local, WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
 import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
+import { type } from "os";
+import { types } from "util";
 
 /**
  * This class implements the WAT# compiler
@@ -49,7 +55,10 @@ export class WatSharpCompiler {
 
   constructor(
     public readonly source: string,
-    public readonly includeHandler?: (baseFileIndex: number, filename: string) => IncludeHandlerResult,
+    public readonly includeHandler?: (
+      baseFileIndex: number,
+      filename: string
+    ) => IncludeHandlerResult,
     public readonly preprocessorSymbols?: string[],
     public readonly options?: CompilerOptions
   ) {
@@ -246,6 +255,19 @@ export class WatSharpCompiler {
 
         case "DataDeclaration":
           decl.exprs.forEach((expr) => resolveExpression(expr));
+          decl.spec = <ArrayType>{
+            type: "Array",
+            spec: <IntrinsicType>{
+              type: "Intrinsic",
+              underlying: decl.underlyingType,
+              sizeof: intrinsicSizes[decl.underlyingType],
+            },
+            size: <Literal>{
+              type: "Literal",
+              value: decl.exprs.length,
+              source: LiteralSource.Int,
+            },
+          };
           decl.address = nextMemoryAddress;
           nextMemoryAddress =
             decl.address +
@@ -317,16 +339,19 @@ export class WatSharpCompiler {
 
         case "Pointer":
           spec.sizeof = 4;
-          resolutionQueue.push({ typeSpec: spec.spec });
+          resolutionQueue.push({
+            typeSpec: spec.spec,
+          });
           break;
 
         case "Struct":
           spec.sizeof = 0;
           for (let i = 0; i < spec.fields.length; i++) {
             spec.fields[i].offset = spec.sizeof;
-            const typeSpec = spec.fields[i].spec;
-            resolveTypeSpecification(typeSpec);
-            spec.sizeof += compiler.getSizeof(typeSpec);
+            resolveTypeSpecification(
+              spec.fields[i].spec,
+            );
+            spec.sizeof += compiler.getSizeof(spec.fields[i].spec);
           }
           break;
 
@@ -354,16 +379,17 @@ export class WatSharpCompiler {
             } else {
               // --- Name is not a type declaration
               compiler.reportError("W102", spec, spec.name);
+              return null;
             }
           } else {
             // --- Unknown declaration
             compiler.reportError("W101", spec, spec.name);
+            return null;
           }
-          break;
 
         default:
           spec.resolved = false;
-          break;
+          return null;
       }
     }
 
@@ -707,7 +733,9 @@ export class WatSharpCompiler {
     for (const decl of this.declarations.values()) {
       if (decl.type === "DataDeclaration") {
         const bytes: number[] = [];
-        const size = intrinsicSizes[decl.underlyingType];
+        const dataType = ((decl.spec as ArrayType).spec as IntrinsicType)
+          .underlying;
+        const size = intrinsicSizes[dataType];
         for (const expr of decl.exprs) {
           let value = BigInt(expr.value);
           for (let i = 0; i < size; i++) {

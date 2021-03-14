@@ -8,7 +8,7 @@ export interface ParserErrorMessage {
   line: number;
   column: number;
 }
-export declare type ErrorCodes = "P001" | "P002" | "P003" | "P004" | "P005" | "P006" | "P007" | "P008" | "P009" | "P010" | "P011" | "P012" | "P013" | "P014" | "P015" | "P016" | "W001" | "W002" | "W003" | "W004" | "W005" | "W006" | "W007" | "W008" | "W009" | "W010" | "W011" | "W012" | "W013" | "W014" | "W015" | "W016" | "W017" | "W018" | "W019" | "W020" | "W021" | "W022" | "W023" | "W024" | "W025" | "W100" | "W101" | "W102" | "W103" | "W104" | "W105" | "W106" | "W107" | "W108" | "W109" | "W110" | "W111" | "W112" | "W140" | "W141" | "W142" | "W143" | "W144" | "W145" | "W146" | "W147" | "W148" | "W149" | "W150" | "W151" | "W152" | "W153" | "W154" | "W155" | "W156" | "W157" | "W158" | "W159" | "W160" | "W161" | "W162" | "W163" | "W164" | "W165" | "W166" | "W167" | "W168";
+export declare type ErrorCodes = "P001" | "P002" | "P003" | "P004" | "P005" | "P006" | "P007" | "P008" | "P009" | "P010" | "P011" | "P012" | "P013" | "P014" | "P015" | "P016" | "W001" | "W002" | "W003" | "W004" | "W005" | "W006" | "W007" | "W008" | "W009" | "W010" | "W011" | "W012" | "W013" | "W014" | "W015" | "W016" | "W017" | "W018" | "W019" | "W020" | "W021" | "W022" | "W023" | "W024" | "W025" | "W100" | "W101" | "W102" | "W103" | "W104" | "W105" | "W106" | "W107" | "W108" | "W109" | "W110" | "W111" | "W112" | "W140" | "W141" | "W142" | "W143" | "W144" | "W145" | "W146" | "W147" | "W148" | "W149" | "W150" | "W151" | "W152" | "W153" | "W154" | "W155" | "W156" | "W157" | "W158" | "W159" | "W160" | "W161" | "W162" | "W163" | "W164" | "W165" | "W166" | "W167" | "W168" | "W169";
 /**
  * Result of an include handler
  */
@@ -300,6 +300,7 @@ export interface TableDeclaration extends DeclarationBase {
 export interface DataDeclaration extends DeclarationBase {
   type: "DataDeclaration";
   address?: number;
+  spec?: TypeSpec;
   underlyingType?: Intrinsics;
   exprs: Expression[];
 }
