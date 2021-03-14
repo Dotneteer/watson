@@ -959,4 +959,157 @@ describe("WatSharpCompiler - emit pointer operations", () => {
     expect(instrs[8].message).toBe("i32.sub");
     expect(instrs[9].message).toBe("i32.store");
   });
+
+  it("local pointer assignment #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      u16[100] dt;
+
+      void test() {
+        local *u16 ptr;
+        ptr = &dt;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("set_local $loc$ptr");
+  });
+
+  it("local pointer addition #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      u16[100] dt;
+
+      void test() {
+        local *u16 ptr;
+        ptr = ptr + 3;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr");
+    expect(instrs[1].message).toBe("i32.const 6");
+    expect(instrs[2].message).toBe("i32.add");
+    expect(instrs[3].message).toBe("set_local $loc$ptr");
+  });
+
+  it("local pointer addition #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      u16[100] dt;
+
+      void test() {
+        local *u16 ptr;
+        ptr = ptr + 3 + 2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr");
+    expect(instrs[1].message).toBe("i32.const 10");
+    expect(instrs[2].message).toBe("i32.add");
+    expect(instrs[3].message).toBe("set_local $loc$ptr");
+  });
+
+  it("local pointer addition #3", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      u16[100] dt;
+
+      void test() {
+        local *u16 ptr;
+        local i32 a;
+        ptr = ptr + a;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr");
+    expect(instrs[1].message).toBe("get_local $loc$a");
+    expect(instrs[2].message).toBe("i32.const 2");
+    expect(instrs[3].message).toBe("i32.mul");
+    expect(instrs[4].message).toBe("i32.add");
+    expect(instrs[5].message).toBe("set_local $loc$ptr");
+  });
+
+  it("local dereference assignment #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+
+      void test() {
+        local *reg16 ptr;
+        (*ptr).h = 2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr");
+    expect(instrs[1].message).toBe("i32.const 1");
+    expect(instrs[2].message).toBe("i32.add");
+    expect(instrs[3].message).toBe("i32.const 2");
+    expect(instrs[4].message).toBe("i32.store8");
+  });
+
+  it("local dereference assignment #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+
+      reg16[4] regs;
+
+      void test(u32 block) {
+        local *reg16 ptr = &(regs[2]);
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    console.log(JSON.stringify(instrs, null, 2));
+    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[1].message).toBe("set_local $loc$ptr");
+  });
+
 });

@@ -13,10 +13,13 @@ import {
   BranchIf,
   ConstVal,
   If,
+  Load,
   LocalGet,
   LocalSet,
   LocalTee,
   Loop,
+  Store,
+  WaBitSpec,
   WaInstruction,
   WaType,
 } from "../wa-ast/wa-nodes";
@@ -39,8 +42,10 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += removeRedundantBranch(instrs);
     changeCount += reduceBranchIf(instrs);
     changeCount += optimizeConstantOperations(instrs);
+    changeCount += reduceIntegerCasts(instrs);
     changeCount += optimizeLocalAccessors(instrs);
     changeCount += optimizeLocalTees(instrs);
+    changeCount += optimizeMemoryOps(instrs);
     changeCount += optimizeConstantDuplication(instrs);
     changeCount += optimizeEmptyLoop(instrs);
     changeCount += optimizeEmptyBlock(instrs);
@@ -224,7 +229,7 @@ function convertToBranchIf(instrs: WaInstruction[]): number {
 }
 
 /**
- * Reduces "const" and "br_if" 
+ * Reduces "const" and "br_if"
  * @param instrs Instructions to convert
  */
 function reduceBranchIf(instrs: WaInstruction[]): number {
@@ -312,6 +317,28 @@ function optimizeLocalTees(instrs: WaInstruction[]): number {
 }
 
 /**
+ * Optimizes "load" and "store" operations by using an offset value
+ * @param instrs Instructions to convert
+ */
+function optimizeMemoryOps(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (
+      isConstant(ins, index) &&
+      isAdd(ins, index + 1) &&
+      (isLocalGet(ins, index + 2) || isGlobalGet(ins, index + 2)) &&
+      (isStore(ins, index + 3) || isLoad(ins, index + 3))
+    ) {
+      const offset = (ins[index] as ConstVal).value;
+      const memOp = ins[index + 3] as (Store | Load);
+      memOp.offset = Number(offset);
+      ins.splice(index, 2);
+        return true;
+    }
+    return false;
+  });
+}
+
+/**
  * Changes "const", "local_tee", and "local_get" to two "const" instructions
  * @param instrs Instructions to convert
  */
@@ -331,6 +358,31 @@ function optimizeConstantDuplication(instrs: WaInstruction[]): number {
           constantToDupl.value
         );
         ins.splice(index + 2, 1);
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * Reduces "const" and "br_if"
+ * @param instrs Instructions to convert
+ */
+function reduceIntegerCasts(instrs: WaInstruction[]): number {
+  return instructionsActionLoop(instrs, (ins, index) => {
+    if (
+      isConstant(ins, index) &&
+      isAnd(ins, index + 1) &&
+      isStore(ins, index + 2)
+    ) {
+      const constVal = ins[index] as ConstVal;
+      const store = ins[index + 2] as Store;
+      if (
+        (constVal.value === 0xffff && store.bits === WaBitSpec.Bit16) ||
+        (constVal.value === 0xff && store.bits === WaBitSpec.Bit8)
+      ) {
+        ins.splice(index, 2);
         return true;
       }
     }
@@ -557,6 +609,20 @@ function reduceBinary(instrs: WaInstruction[], index: number): boolean {
           : BigInt(left) & BigInt(right);
       break;
 
+    case "Or":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left | right
+          : BigInt(left) | BigInt(right);
+      break;
+
+    case "Xor":
+      value =
+        typeof left === "number" && typeof right === "number"
+          ? left ^ right
+          : BigInt(left) ^ BigInt(right);
+      break;
+
     case "Shl":
       value =
         typeof left === "number" && typeof right === "number"
@@ -665,7 +731,7 @@ function isConstant(instrs: WaInstruction[], index: number): boolean {
   return (
     index >= 0 &&
     index < instrs.length &&
-    instructionTraits[instrs[index].type] === InstructionType.Const
+    instrs[index].type === "ConstVal"
   );
 }
 
@@ -690,6 +756,18 @@ function isBinary(instrs: WaInstruction[], index: number): boolean {
     index >= 0 &&
     index < instrs.length &&
     instructionTraits[instrs[index].type] === InstructionType.Binary
+  );
+}
+
+/**
+ * Tests if the specified instruction is a constant
+ * @param index Instruction index in the function body
+ */
+ function isAdd(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 &&
+    index < instrs.length &&
+    instrs[index].type === "Add"
   );
 }
 
@@ -758,6 +836,16 @@ function isLocalTee(instrs: WaInstruction[], index: number): boolean {
 }
 
 /**
+ * Tests if the specified instruction is a "global_get" operation
+ * @param index Instruction index in the function body
+ */
+function isGlobalGet(instrs: WaInstruction[], index: number): boolean {
+  return (
+    index >= 0 && index < instrs.length && instrs[index].type === "GlobalGet"
+  );
+}
+
+/**
  * Tests if the specified instruction is a "block" operation
  * @param index Instruction index in the function body
  */
@@ -771,6 +859,30 @@ function isBlock(instrs: WaInstruction[], index: number): boolean {
  */
 function isLoop(instrs: WaInstruction[], index: number): boolean {
   return index >= 0 && index < instrs.length && instrs[index].type === "Loop";
+}
+
+/**
+ * Tests if the specified instruction is a "store" operation
+ * @param index Instruction index in the function body
+ */
+function isStore(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Store";
+}
+
+/**
+ * Tests if the specified instruction is a "store" operation
+ * @param index Instruction index in the function body
+ */
+ function isLoad(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "Load";
+}
+
+/**
+ * Tests if the specified instruction is an "and" operation
+ * @param index Instruction index in the function body
+ */
+function isAnd(instrs: WaInstruction[], index: number): boolean {
+  return index >= 0 && index < instrs.length && instrs[index].type === "And";
 }
 
 /**

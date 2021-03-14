@@ -116,7 +116,9 @@ export type ErrorCodes =
   | "W165"
   | "W166"
   | "W167"
-  | "W168";
+  | "W168"
+  | "W169"
+  | "W170";
 
 
 /**
@@ -218,4 +220,6 @@ export const errorMessages: ErrorText = {
   W166: "Copy assignment needs works only with array and struct types",
   W167: "Copy assignment requires an integer expression on its right side",
   W168: "Copy assignment does not support copying more than 256 bytes",
+  W169: "Data declaration identifier cannot be used on the left side of an assignment",
+  W170: "Expression cannot be an operand of item, member, or dereference access",
 };
