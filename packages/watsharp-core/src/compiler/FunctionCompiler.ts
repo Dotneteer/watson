@@ -1693,7 +1693,10 @@ export class FunctionCompiler {
     }
 
     // --- Special case: pointer arithmetic
-    if (left.type === "Pointer" && right.type === "Intrinsic") {
+    if (
+      left.type === "Pointer" &&
+      (right.type === "Intrinsic" || right.type === "Pointer")
+    ) {
       return this.compilePointerBinaryExpression(
         binary.left,
         left,
@@ -1845,36 +1848,83 @@ export class FunctionCompiler {
     left: Expression,
     leftType: PointerType,
     right: Expression,
-    rightType: IntrinsicType,
+    rightType: IntrinsicType | PointerType,
     op: BinaryOpSymbols,
     body: WaInstruction[]
   ): TypeSpec | null {
-    if (op !== "+" && op !== "-") {
-      this.reportError("W164", left);
-      return null;
-    }
-    if (rightType.underlying.startsWith("f")) {
-      this.reportError("W165", right);
-      return null;
+    // --- Check operands
+    switch (op) {
+      case "+":
+      case "-":
+        if (
+          rightType.type !== "Intrinsic" ||
+          rightType.underlying.startsWith("f")
+        ) {
+          this.reportError("W165", right);
+          return null;
+        }
+        break;
+      case "==":
+      case "!=":
+      case "<":
+      case "<=":
+      case ">":
+      case ">=":
+        if (rightType.type !== "Pointer") {
+          this.reportError("W171", right);
+          return null;
+        }
+        break;
+      default:
+        this.reportError("W164", left);
+        return null;
     }
 
-    // --- Get the pointer value
+    // --- Get the left pointer value
     this.compileExpression(left, body);
 
-    // --- Get the increment value
-    this.compileExpression(right, body);
-    this.castIntrinsicToIntrinsic(i32Desc, rightType, body);
+    if (rightType.type === "Intrinsic") {
+      // --- Pointer addition or subtraction
+      // --- Get the increment value
+      this.compileExpression(right, body);
+      this.castIntrinsicToIntrinsic(i32Desc, rightType, body);
 
-    // --- Get the multiplier value
-    this.inject(
-      constVal(WaType.i32, this.wsCompiler.getSizeof(leftType.spec)),
-      body
-    );
+      // --- Get the multiplier value
+      this.inject(
+        constVal(WaType.i32, this.wsCompiler.getSizeof(leftType.spec)),
+        body
+      );
 
-    // --- Calculate the result
-    this.inject(mul(WaType.i32), body);
-    this.inject(op === "+" ? add(WaType.i32) : sub(WaType.i32), body);
-    return leftType;
+      // --- Calculate the result
+      this.inject(mul(WaType.i32), body);
+      this.inject(op === "+" ? add(WaType.i32) : sub(WaType.i32), body);
+      return leftType;
+    } else {
+      // --- Pointer comparison
+      // --- Get the increment value
+      this.compileExpression(right, body);
+      switch (op) {
+        case "==":
+          this.inject(eq(WaType.i32), body);
+          break;
+        case "!=":
+          this.inject(ne(WaType.i32), body);
+          break;
+        case "<":
+          this.inject(lt(WaType.i32), body);
+          break;
+        case "<=":
+          this.inject(le(WaType.i32), body);
+          break;
+        case ">":
+          this.inject(gt(WaType.i32), body);
+          break;
+        case ">=":
+          this.inject(ge(WaType.i32), body);
+          break;
+      }
+      return i32Desc;
+    }
   }
 
   /**

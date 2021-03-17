@@ -1107,9 +1107,343 @@ describe("WatSharpCompiler - emit pointer operations", () => {
     // --- Assert
     expect(wComp.hasErrors).toBe(false);
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    console.log(JSON.stringify(instrs, null, 2));
     expect(instrs[0].message).toBe("i32.const 4");
     expect(instrs[1].message).toBe("set_local $loc$ptr");
   });
 
+  it("pointers == #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 == ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.eq");
+  });
+
+  it("pointers == #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 == ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.eq");
+  });
+
+  it("pointers != #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 != ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.ne");
+  });
+
+  it("pointers != #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 != ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.ne");
+  });
+
+  it("pointers < #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 < ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.lt_u");
+  });
+
+  it("pointers < #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 < ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.lt_u");
+  });
+
+  it("pointers <= #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 <= ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.le_u");
+  });
+
+  it("pointers <= #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 <= ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.le_u");
+  });
+
+  it("pointers > #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 > ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.gt_u");
+  });
+
+  it("pointers > #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 > ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.gt_u");
+  });
+
+  it("pointers >= #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        local *reg16 ptr2;
+        return ptr1 >= ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("get_local $loc$ptr2");
+    expect(instrs[2].message).toBe("i32.ge_u");
+  });
+
+  it("pointers >= #2", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg16 = struct {
+        u8 l,
+        u8 h
+      };
+      
+      reg16 dumy;
+      *reg16 ptr2;
+
+      i32 test(u32 block) {
+        local *reg16 ptr1;
+        return ptr1 >= ptr2;
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $loc$ptr1");
+    expect(instrs[1].message).toBe("i32.const 2");
+    expect(instrs[2].message).toBe("i32.load");
+    expect(instrs[3].message).toBe("i32.ge_u");
+  });
 });

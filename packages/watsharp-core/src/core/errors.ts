@@ -118,8 +118,8 @@ export type ErrorCodes =
   | "W167"
   | "W168"
   | "W169"
-  | "W170";
-
+  | "W170"
+  | "W171";
 
 /**
  * Error message type description
@@ -215,11 +215,12 @@ export const errorMessages: ErrorText = {
   W161: "Left values can be only intrinsic types or pointers",
   W162: "You can use only variable names for aliases",
   W163: "Variable {0} has not got an address yet, it cannot be an alias",
-  W164: "Pointer operations allow only '+' and '-' operators",
-  W165: "Pointer operations reguire an integer right operand",
+  W164: "Invalid pointer operation",
+  W165: "Pointer operations '+' and '-' require an integer right operand",
   W166: "Copy assignment needs works only with array and struct types",
   W167: "Copy assignment requires an integer expression on its right side",
   W168: "Copy assignment does not support copying more than 256 bytes",
   W169: "Data declaration identifier cannot be used on the left side of an assignment",
   W170: "Expression cannot be an operand of item, member, or dereference access",
+  W171: "Relational operators with a pointer and the left require a pointer on the right",
 };

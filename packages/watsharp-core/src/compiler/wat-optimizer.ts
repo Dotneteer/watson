@@ -45,7 +45,7 @@ export function optimizeWat(instrs: WaInstruction[]): void {
     changeCount += reduceIntegerCasts(instrs);
     changeCount += optimizeLocalAccessors(instrs);
     changeCount += optimizeLocalTees(instrs);
-    changeCount += optimizeMemoryOps(instrs);
+    changeCount += optimizeStoreOps(instrs);
     changeCount += optimizeConstantDuplication(instrs);
     changeCount += optimizeEmptyLoop(instrs);
     changeCount += optimizeEmptyBlock(instrs);
@@ -320,17 +320,17 @@ function optimizeLocalTees(instrs: WaInstruction[]): number {
  * Optimizes "load" and "store" operations by using an offset value
  * @param instrs Instructions to convert
  */
-function optimizeMemoryOps(instrs: WaInstruction[]): number {
+function optimizeStoreOps(instrs: WaInstruction[]): number {
   return instructionsActionLoop(instrs, (ins, index) => {
     if (
       isConstant(ins, index) &&
       isAdd(ins, index + 1) &&
       (isLocalGet(ins, index + 2) || isGlobalGet(ins, index + 2)) &&
-      (isStore(ins, index + 3) || isLoad(ins, index + 3))
+      (isStore(ins, index + 3))
     ) {
       const offset = (ins[index] as ConstVal).value;
-      const memOp = ins[index + 3] as (Store | Load);
-      memOp.offset = Number(offset);
+      const storeOp = ins[index + 3] as Store;
+      storeOp.offset = Number(offset);
       ins.splice(index, 2);
         return true;
     }
