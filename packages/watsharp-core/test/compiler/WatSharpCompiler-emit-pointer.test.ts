@@ -1446,4 +1446,37 @@ describe("WatSharpCompiler - emit pointer operations", () => {
     expect(instrs[2].message).toBe("i32.load");
     expect(instrs[3].message).toBe("i32.ge_u");
   });
+
+  it("pointer bool offset #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg = struct {
+        u8 f1,
+        bool f2,
+        u32 dummy
+      };
+
+      reg r1;
+      reg r2;
+
+      void test() {
+        local *reg ptr = &r2;
+        f((*ptr).f2);
+      }
+
+      void f(bool a) {}
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 7");
+    expect(instrs[1].message).toBe("i32.load8_u");
+    expect(instrs[2].message).toBe("call $f");
+  });
+
 });

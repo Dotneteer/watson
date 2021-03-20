@@ -451,5 +451,4 @@ describe("WatSharpCompiler - emit control flow", () => {
     expect(instrs[2].message).toBe("i32.add");
     expect(instrs[3].message).toBe("set_local $loc$a");
   });
-
 });

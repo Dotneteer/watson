@@ -993,8 +993,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.eq");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary != #1", () => {
@@ -1049,8 +1048,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.ne");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary < #1", () => {
@@ -1105,8 +1103,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.lt_s");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary < #3", () => {
@@ -1134,8 +1131,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.lt_u");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary <= #1", () => {
@@ -1190,8 +1186,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.le_s");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary <= #3", () => {
@@ -1219,8 +1214,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.le_u");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary > #1", () => {
@@ -1275,8 +1269,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.gt_s");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary > #3", () => {
@@ -1304,8 +1297,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.gt_u");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary >= #1", () => {
@@ -1360,8 +1352,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.ge_s");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
   it("binary >= #3", () => {
@@ -1389,8 +1380,7 @@ describe("WatSharpCompiler - emit binary", () => {
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("i64.load");
     expect(instrs[5].message).toBe("i64.ge_u");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[6].message).toBe("set_local $loc$a");
   });
 
 });

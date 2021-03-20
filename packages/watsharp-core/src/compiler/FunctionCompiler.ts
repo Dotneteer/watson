@@ -1478,6 +1478,9 @@ export class FunctionCompiler {
   ): void {
     const waType = waTypeMappings[typeSpec.underlying];
     switch (typeSpec.underlying) {
+      case "bool":
+        this.inject(load(waType, WaBitSpec.Bit8), body);
+        break;
       case "f32":
       case "f64":
         this.inject(load(waType), body);
@@ -1718,22 +1721,36 @@ export class FunctionCompiler {
       left.underlying.startsWith("i") || right.underlying.startsWith("i");
 
     // --- Calculate operation type
-    let resultType = i32Desc;
+    const op = binary.operator;
+    let operationType = i32Desc;
     if (left.underlying.startsWith("f") || right.underlying.startsWith("f")) {
-      resultType = f64Desc;
+      operationType = f64Desc;
     } else if (
       left.underlying.endsWith("64") ||
       right.underlying.endsWith("64")
     ) {
-      resultType = i64Desc;
+      operationType = i64Desc;
+    }
+
+    // --- Calculate result type
+    let resultType = i32Desc;
+    if (
+      op !== "==" &&
+      op !== "!=" &&
+      op !== "<" &&
+      op !== "<=" &&
+      op !== ">" &&
+      op !== ">="
+    ) {
+      resultType = operationType;
     }
 
     // --- Compile the operands and cast them to the appropriate type
     this.compileExpression(binary.left, body);
-    this.castIntrinsicToIntrinsic(resultType, left, body);
+    this.castIntrinsicToIntrinsic(operationType, left, body);
     this.compileExpression(binary.right, body);
-    this.castIntrinsicToIntrinsic(resultType, right, body);
-    const waType = waTypeMappings[resultType.underlying];
+    this.castIntrinsicToIntrinsic(operationType, right, body);
+    const waType = waTypeMappings[operationType.underlying];
 
     // --- Process operations
     switch (binary.operator) {
@@ -1754,7 +1771,7 @@ export class FunctionCompiler {
         break;
 
       case "%":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "remainder (%)");
           return null;
         }
@@ -1762,7 +1779,7 @@ export class FunctionCompiler {
         break;
 
       case "&":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "bitwise AND");
           return null;
         }
@@ -1770,7 +1787,7 @@ export class FunctionCompiler {
         break;
 
       case "|":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "bitwise OR");
           return null;
         }
@@ -1778,7 +1795,7 @@ export class FunctionCompiler {
         break;
 
       case "^":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "bitwise XOR");
           return null;
         }
@@ -1786,7 +1803,7 @@ export class FunctionCompiler {
         break;
 
       case "<<":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "shift left");
           return null;
         }
@@ -1794,7 +1811,7 @@ export class FunctionCompiler {
         break;
 
       case ">>":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "signed shift right");
           return null;
         }
@@ -1802,7 +1819,7 @@ export class FunctionCompiler {
         break;
 
       case ">>>":
-        if (resultType.underlying.startsWith("f")) {
+        if (operationType.underlying.startsWith("f")) {
           this.reportError("W145", binary, "shift right");
           return null;
         }

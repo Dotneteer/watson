@@ -13,7 +13,6 @@ import {
   BranchIf,
   ConstVal,
   If,
-  Load,
   LocalGet,
   LocalSet,
   LocalTee,
