@@ -1479,4 +1479,36 @@ describe("WatSharpCompiler - emit pointer operations", () => {
     expect(instrs[2].message).toBe("call $f");
   });
 
+  it("struct pointer parameter #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      type reg = struct {
+        u8 f1,
+        bool f2,
+        u32 dummy
+      };
+
+      reg r1;
+      reg r2;
+
+      void test(*reg ptr) {
+        f((*ptr).f2);
+      }
+
+      void f(bool a) {}
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("get_local $par$ptr");
+    expect(instrs[1].message).toBe("i32.const 1");
+    expect(instrs[2].message).toBe("i32.add");
+    expect(instrs[3].message).toBe("i32.load8_u");
+    expect(instrs[4].message).toBe("call $f");
+  });
 });

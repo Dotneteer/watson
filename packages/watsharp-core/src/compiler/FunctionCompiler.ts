@@ -239,7 +239,13 @@ export class FunctionCompiler {
       if (this._locals.has(param.name)) {
         this.reportError("W140", this.func);
       } else {
-        const paramType = mapFunctionParameterType(param.spec);
+        // --- Fix the type specification
+        this.wsCompiler.resolveDependencies(param.spec);
+        const resolvedTypeSpec = this.resolveNamedTypes(param.spec);
+        if (resolvedTypeSpec) {
+          param.spec = resolvedTypeSpec;
+        }
+            const paramType = mapFunctionParameterType(param.spec);
         const paramName = createParameterName(param.name);
         this.locals.set(param.name, {
           fromParameter: true,
@@ -316,7 +322,7 @@ export class FunctionCompiler {
 
     // --- Fix the type specification
     compiler.resolveDependencies(localVar.spec);
-    const resolvedTypeSpec = resolveNamedTypes(localVar.spec);
+    const resolvedTypeSpec = this.resolveNamedTypes(localVar.spec);
     if (resolvedTypeSpec) {
       localVar.spec = resolvedTypeSpec;
     }
@@ -353,41 +359,42 @@ export class FunctionCompiler {
       this.wsCompiler.waTree.renderLocal(local),
     ]);
 
-    /**
+  }
+
+      /**
      * Resolves named types within the local type declaration
      * @param spec Type specification to resolve
      * @returns Resolved name type specification
      */
-    function resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
-      switch (spec.type) {
-        case "Pointer":
-        case "Array":
-          const resolved = resolveNamedTypes(spec.spec);
-          if (resolved) {
-            spec.spec = resolved;
-          }
-          break;
-        case "Struct":
-          for (let i = 0; i < spec.fields.length; i++) {
-            const resolved = resolveNamedTypes(spec.fields[i].spec);
+private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
+        switch (spec.type) {
+          case "Pointer":
+          case "Array":
+            const resolved = this.resolveNamedTypes(spec.spec);
             if (resolved) {
-              spec.fields[i].spec = resolved;
+              spec.spec = resolved;
             }
-          }
-          break;
-        case "NamedType":
-          const decl = compiler.declarations.get(spec.name);
-          if (decl) {
-            if (decl.type === "TypeDeclaration") {
-              return decl.spec;
+            break;
+          case "Struct":
+            for (let i = 0; i < spec.fields.length; i++) {
+              const resolved = this.resolveNamedTypes(spec.fields[i].spec);
+              if (resolved) {
+                spec.fields[i].spec = resolved;
+              }
             }
-          }
-          break;
+            break;
+          case "NamedType":
+            const decl = this.wsCompiler.declarations.get(spec.name);
+            if (decl) {
+              if (decl.type === "TypeDeclaration") {
+                return decl.spec;
+              }
+            }
+            break;
+        }
+        return null;
       }
-      return null;
-    }
-  }
-
+  
   /**
    * Processes the specified assignment
    * @param body Body to put the statements in
