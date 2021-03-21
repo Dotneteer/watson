@@ -1163,9 +1163,6 @@ export class WatSharpParser {
     if (next.type !== TokenType.Semicolon) {
       // --- Try to obtain the return expression
       expr = this.parseExpr();
-      if (!expr) {
-        return;
-      }
     }
     const semicolon = this.expectToken(TokenType.Semicolon, "W006");
     this.createStatementNode<ReturnStatement>(

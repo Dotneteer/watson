@@ -452,4 +452,56 @@ describe("WatSharpCompiler - emit control flow", () => {
     expect(instrs[3].message).toBe("set_local $loc$a");
   });
 
+  it("nested while #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void test() {
+        local i32 l1 = 0;
+        while (l1 < 10) {
+          local i32 l2 = 0;
+          while (l2 < 10) {
+            l2 += 1;
+          }
+          l1 += 1;
+        }
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("set_local $loc$l1");
+    expect(instrs[2].message).toBe("loop $loop$1");
+    expect(instrs[3].message).toBe("get_local $loc$l1");
+    expect(instrs[4].message).toBe("i32.const 10");
+    expect(instrs[5].message).toBe("i32.lt_s");
+    expect(instrs[6].message).toBe("if");
+    expect(instrs[7].message).toBe("i32.const 0");
+    expect(instrs[8].message).toBe("set_local $loc$l2");
+    expect(instrs[9].message).toBe("loop $loop$2");
+    expect(instrs[10].message).toBe("get_local $loc$l2");
+    expect(instrs[11].message).toBe("i32.const 10");
+    expect(instrs[12].message).toBe("i32.lt_s");
+    expect(instrs[13].message).toBe("if");
+    expect(instrs[14].message).toBe("get_local $loc$l2");
+    expect(instrs[15].message).toBe("i32.const 1");
+    expect(instrs[16].message).toBe("i32.add");
+    expect(instrs[17].message).toBe("set_local $loc$l2");
+    expect(instrs[18].message).toBe("br $loop$2");
+    expect(instrs[19].message).toBe("end");
+    expect(instrs[20].message).toBe("end");
+    expect(instrs[21].message).toBe("get_local $loc$l1");
+    expect(instrs[22].message).toBe("i32.const 1");
+    expect(instrs[23].message).toBe("i32.add");
+    expect(instrs[24].message).toBe("set_local $loc$l1");
+    expect(instrs[25].message).toBe("br $loop$1");
+    expect(instrs[26].message).toBe("end");
+    expect(instrs[27].message).toBe("end");
+  });
+
 });

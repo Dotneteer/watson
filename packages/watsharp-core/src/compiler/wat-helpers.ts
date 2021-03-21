@@ -90,12 +90,17 @@ export function findInstruction(
         }
         break;
       case "Block":
-      case "Loop":
-        return findInstruction(instr.body, predicate);
+      case "Loop": {
+        let found = findInstruction(instr.body, predicate);
+        if (found) {
+          return true;
+        }
+      }
       default:
         if (predicate(instr)) {
           return true;
         }
+        break;
     }
   }
   return false;
