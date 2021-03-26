@@ -1,9 +1,9 @@
 {
-  "name": "@dotneteer/watsharp-cli",
+  "name": "tpwatson",
   "version": "0.1.0",
   "description": "WAT# compiler CLI package",
   "bin": {
-    "watsc": "./bin/watsc.js"
+    "tpwatson": "./bin/tpwatson.js"
   },
   "scripts": {
     "build": "npm run clean && tsc -p tsconfig.build.json",
@@ -14,17 +14,20 @@
   },
   "keywords": [
     "WebAssembly",
-    "WAT#"
+    "WATson",
+    "watson",
+    "Watson",
+    "Watson transpiler"
   ],
   "author": "Istvan Novak",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Dotneteer/watsharp/issues"
+    "url": "https://github.com/Dotneteer/watson/issues"
   },
-  "homepage": "https://github.com/Dotneteer/watsharp#readme",
+  "homepage": "https://github.com/Dotneteer/watson#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Dotneteer/watsharp.git"
+    "url": "git+https://github.com/Dotneteer/watson.git"
   },
   "dependencies": {
     "import-local": "^3.0.2"
@@ -33,7 +36,6 @@
     "@dotneteer/watsharp-core": ">=0.1.0"
   },
   "devDependencies": {
-    "@dotneteer/watsharp-core": ">=0.1.0",
     "@types/node": "^14.14.31",
     "rimraf": "^3.0.2",
     "typescript": "^4.2.2"

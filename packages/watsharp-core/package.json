@@ -15,18 +15,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Dotneteer/watsharp.git"
+    "url": "git+https://github.com/Dotneteer/watson.git"
   },
   "keywords": [
     "WebAssembly",
-    "WAT#"
+    "WATson",
+    "watson",
+    "Watson",
+    "Watson transpiler"
   ],
   "author": "Istvan Novak",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Dotneteer/watsharp/issues"
+    "url": "https://github.com/Dotneteer/watson/issues"
   },
-  "homepage": "https://github.com/Dotneteer/watsharp#readme",
+  "homepage": "https://github.com/Dotneteer/watson#readme",
   "devDependencies": {
     "@dotneteer/watsharp-public-dts-bundle-webpack-plugin": "^0.1.0",
     "@types/expect": "^24.3.0",
