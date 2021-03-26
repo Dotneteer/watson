@@ -1,6 +1,6 @@
 {
   "name": "@dotneteer/watsharp-public-dts-bundle-webpack-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A webpack plugin for creating a .d.ts bundle which contains only the top level exported and public members of a project",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

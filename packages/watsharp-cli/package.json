@@ -1,6 +1,6 @@
 {
   "name": "tpwatson",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "WAT# compiler CLI package",
   "bin": {
     "tpwatson": "./bin/tpwatson.js"
