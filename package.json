@@ -10,7 +10,8 @@
     "clean": "lerna run clean",
     "link": "lerna run link",
     "bump": "lerna version --no-push --no-git-tag-version",
-    "test": "lerna run test"
+    "test": "lerna run test",
+    "publish": "lerna publish"
   },
   "repository": {
     "type": "git",
