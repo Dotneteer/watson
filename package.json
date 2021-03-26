@@ -1,5 +1,5 @@
 {
-  "name": "watsharp",
+  "name": "tpwatson",
   "version": "0.1.0",
   "description": "This utility is a prototype design and implementation of the WAT# programming language. WAT# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.",
   "main": "index.js",
@@ -14,11 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Dotneteer/watsharp.git"
+    "url": "git+https://github.com/Dotneteer/watson.git"
   },
   "keywords": [
     "WebAssembly",
-    "WAT#"
+    "WATson",
+    "watson",
+    "Watson",
+    "Watson transpiler"
   ],
   "author": "Istvan Novak",
   "license": "MIT",

@@ -14,7 +14,7 @@ const filesIncluded: Record<number, string> = {};
  * Runs the watsc command line tool
  */
 export function run(): void {
-  console.log(`WAT# Compiler (v${getVersion()})`);
+  console.log(`WATson Transpiler (v${getVersion()})`);
 
   // --- Input and output file information
   const inFile = process.argv[2];
