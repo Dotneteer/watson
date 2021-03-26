@@ -2486,7 +2486,7 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
             return;
           case "bool":
             this.inject(eqz(WaType.i64), body);
-            this.inject(eqz(WaType.i64), body);
+            this.inject(eqz(WaType.i32), body);
             return;
         }
         break;
@@ -2555,7 +2555,7 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
           case "bool":
             this.inject(trunc64(WaType.f64, true), body);
             this.inject(eqz(WaType.i64), body);
-            this.inject(eqz(WaType.i64), body);
+            this.inject(eqz(WaType.i32), body);
             return;
         }
         break;
