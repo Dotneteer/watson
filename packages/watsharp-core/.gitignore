@@ -1,7 +1,0 @@
-node_modules
-test/**/*.wat
-test/**/*.wasm
-index.js
-index.js.map
-
-

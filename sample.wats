@@ -1,7 +1,0 @@
-u8 a;
-
-#include "sample.winc"
-
-export void dummy() {
-  local i32 b = 2*a;
-};

@@ -29,7 +29,7 @@ import {
   VariableDeclaration,
   VoidType,
   WhileStatement,
-} from "../compiler/source-tree";
+} from "./source-tree";
 import {
   ConstVal,
   WaBitSpec,

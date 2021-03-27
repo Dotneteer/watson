@@ -1,16 +1,20 @@
 {
   "name": "tpwatson",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "This utility is a prototype design and implementation of the WAT# programming language. WAT# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.",
-  "main": "index.js",
+  "bin": {
+    "tpwatson": "./bin/tpwatson.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "bootstrap": "npm install && lerna bootstrap",
-    "build": "lerna run build",
-    "build:prod": "lerna run build:prod",
-    "clean": "lerna run clean",
-    "link": "lerna run link",
-    "bump": "lerna version --no-push --no-git-tag-version",
-    "test": "lerna run test"
+    "build": "npm run clean && webpack",
+    "build:prod": "npm run build -- --mode=production",
+    "clean": "rimraf ./index.*",
+    "test": "ts-mocha -p ./tsconfig.json ./test/**/*.test.ts",
+    "pack": "npm pack",
+    "link": "npm link --only=production"
   },
   "repository": {
     "type": "git",
@@ -34,10 +38,13 @@
     "@types/mocha": "^8.2.0",
     "@types/node": "^14.14.20",
     "expect": "^26.6.2",
-    "lerna": "^4.0.0",
     "mocha": "^8.2.1",
+    "rimraf": "^3.0.2",
+    "ts-loader": "^8.0.18",
     "ts-mocha": "^8.0.0",
-    "typescript": "^4.2.3"
+    "typescript": "^4.2.3",
+    "webpack": "^5.28.0",
+    "webpack-cli": "^4.5.0"
   },
   "dependencies": {
     "import-local": "^3.0.2"
