@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.build.json",
-  "compilerOptions": {
-    "declaration": true,
-    "experimentalDecorators": true,
-    "esModuleInterop": true
-  },
-  "include": ["./src"]
-}

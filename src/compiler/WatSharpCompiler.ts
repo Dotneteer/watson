@@ -14,7 +14,7 @@ import {
   TypeSpec,
 } from "./source-tree";
 import { WatSharpParser } from "./WatSharpParser";
-import { Node } from "../compiler/source-tree";
+import { Node } from "./source-tree";
 import { TokenLocation } from "../core/tokens";
 import {
   applyTypeCast,

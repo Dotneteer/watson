@@ -14,6 +14,7 @@
     "**/*.test.ts",
     "**/test.config.ts",
     "node_modules",
+    "vscode-ext",
     "**/build/*",
     "**/lib/*",
     "**/dist/*",

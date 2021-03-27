@@ -1,11 +1,8 @@
 import * as path from "path";
 import * as fs from "fs";
-
-import {
-  WatSharpCompiler,
-  getVersion,
-  IncludeHandlerResult,
-} from "@dotneteer/watsharp-core";
+import { getVersion } from "./version";
+import { WatSharpCompiler } from "./compiler/WatSharpCompiler";
+import { IncludeHandlerResult } from "./preprocessor/PreprocessorParser";
 
 // The files used in this compilation
 const filesIncluded: Record<number, string> = {};
