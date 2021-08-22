@@ -88,7 +88,7 @@ describe("WatSharpCompiler - emit function call", () => {
 
     // myFunc
     expect(instrs[0].message).toBe("get_local $par$val");
-    expect(instrs[1].message).toBe("f64.convert_u/i32");
+    expect(instrs[1].message).toBe("f64.convert_s/i32");
     expect(instrs[2].message).toBe("get_local $par$other");
     expect(instrs[3].message).toBe("f64.promote/f32");
     expect(instrs[4].message).toBe("f64.add");

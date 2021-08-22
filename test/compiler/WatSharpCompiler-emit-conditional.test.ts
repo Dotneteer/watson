@@ -184,7 +184,7 @@ describe("WatSharpCompiler - emit conditional", () => {
     expect(instrs[2].message).toBe("f64.promote/f32");
     expect(instrs[3].message).toBe("i32.const 8");
     expect(instrs[4].message).toBe("i64.load");
-    expect(instrs[5].message).toBe("f64.convert_u/i64");
+    expect(instrs[5].message).toBe("f64.convert_s/i64");
     expect(instrs[6].message).toBe("i32.const 0");
     expect(instrs[7].message).toBe("i32.load");
     expect(instrs[8].message).toBe("select");
@@ -216,7 +216,7 @@ describe("WatSharpCompiler - emit conditional", () => {
     expect(instrs[1].message).toBe("f64.load");
     expect(instrs[2].message).toBe("i32.const 12");
     expect(instrs[3].message).toBe("i64.load");
-    expect(instrs[4].message).toBe("f64.convert_u/i64");
+    expect(instrs[4].message).toBe("f64.convert_s/i64");
     expect(instrs[5].message).toBe("i32.const 0");
     expect(instrs[6].message).toBe("i32.load");
     expect(instrs[7].message).toBe("select");
@@ -278,7 +278,7 @@ describe("WatSharpCompiler - emit conditional", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 4");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 8");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("f64.promote/f32");
@@ -311,7 +311,7 @@ describe("WatSharpCompiler - emit conditional", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 4");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 8");
     expect(instrs[4].message).toBe("f64.load");
     expect(instrs[5].message).toBe("i32.const 0");

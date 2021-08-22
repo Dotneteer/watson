@@ -1064,7 +1064,7 @@ export class WatSharpParser {
     this.parseStatement(loopBody, loopDepth);
     this.expectToken(TokenType.While, "W022");
     this.expectToken(TokenType.LParent, "W016");
-    const test = this.parseEquExpr();
+    const test = this.parseExpr();
     if (test === null) {
       this.reportError("W002");
       return;
@@ -1091,7 +1091,7 @@ export class WatSharpParser {
   private parseWhileStatement(body: Statement[], loopDepth: number): void {
     const start = this._lexer.get();
     this.expectToken(TokenType.LParent, "W016");
-    const test = this.parseEquExpr();
+    const test = this.parseExpr();
     if (test === null) {
       this.reportError("W002");
       return;

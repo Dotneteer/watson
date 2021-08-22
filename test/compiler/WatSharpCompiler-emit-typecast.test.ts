@@ -242,10 +242,10 @@ describe("WatSharpCompiler - emit typecast", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("f64.promote/f32");
     expect(instrs[4].message).toBe("i32.const 3");
-    expect(instrs[5].message).toBe("f64.convert_u/i32");
+    expect(instrs[5].message).toBe("f64.convert_s/i32");
     expect(instrs[6].message).toBe("f64.add");
     expect(instrs[7].message).toBe("set_local $loc$a");
   });
@@ -270,9 +270,9 @@ describe("WatSharpCompiler - emit typecast", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 3");
-    expect(instrs[4].message).toBe("f64.convert_u/i32");
+    expect(instrs[4].message).toBe("f64.convert_s/i32");
     expect(instrs[5].message).toBe("f64.add");
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
@@ -330,4 +330,30 @@ describe("WatSharpCompiler - emit typecast", () => {
     expect(instrs[5].message).toBe("i32.add");
     expect(instrs[6].message).toBe("set_local $loc$a");
   });
+
+  it("typecast regression #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void retro() {
+        local float rx;
+        local float stepX;
+        rx += stepX;
+      }
+    `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    console.log(instrs);
+
+    expect(instrs[0].message).toBe("get_local $loc$rx");
+    expect(instrs[1].message).toBe("get_local $loc$stepX");
+    expect(instrs[2].message).toBe("f32.add");
+    expect(instrs[3].message).toBe("set_local $loc$rx");
+  });
+
 });
