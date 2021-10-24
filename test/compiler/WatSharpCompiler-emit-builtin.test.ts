@@ -1356,7 +1356,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("set_local $loc$a");
   });
 
@@ -1427,7 +1427,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("f32.min");
@@ -1455,7 +1455,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f64.load");
     expect(instrs[5].message).toBe("f64.min");
@@ -1484,7 +1484,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("i32.const 8");
@@ -1515,7 +1515,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("f64.promote/f32");
@@ -1545,7 +1545,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("set_local $loc$a");
   });
 
@@ -1616,7 +1616,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("f32.max");
@@ -1644,7 +1644,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f64.load");
     expect(instrs[5].message).toBe("f64.max");
@@ -1673,7 +1673,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f32.convert_u/i32");
+    expect(instrs[2].message).toBe("f32.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("i32.const 8");
@@ -1704,7 +1704,7 @@ describe("WatSharpCompiler - emit built-in function", () => {
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
     expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_u/i32");
+    expect(instrs[2].message).toBe("f64.convert_s/i32");
     expect(instrs[3].message).toBe("i32.const 4");
     expect(instrs[4].message).toBe("f32.load");
     expect(instrs[5].message).toBe("f64.promote/f32");

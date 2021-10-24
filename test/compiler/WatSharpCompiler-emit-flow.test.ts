@@ -504,4 +504,73 @@ describe("WatSharpCompiler - emit control flow", () => {
     expect(instrs[27].message).toBe("end");
   });
 
+
+  it("while regression #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void test() {
+        local i32 a;
+        while (a < 3 & a > 0) {
+          a += 1;
+        }
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("loop $loop$1");
+    expect(instrs[1].message).toBe("get_local $loc$a");
+    expect(instrs[2].message).toBe("i32.const 3");
+    expect(instrs[3].message).toBe("i32.lt_s");
+    expect(instrs[4].message).toBe("get_local $loc$a");
+    expect(instrs[5].message).toBe("i32.const 0");
+    expect(instrs[6].message).toBe("i32.gt_s");
+    expect(instrs[7].message).toBe("i32.and");
+    expect(instrs[8].message).toBe("if");
+    expect(instrs[9].message).toBe("get_local $loc$a");
+    expect(instrs[10].message).toBe("i32.const 1");
+    expect(instrs[11].message).toBe("i32.add");
+    expect(instrs[12].message).toBe("set_local $loc$a");
+    expect(instrs[13].message).toBe("br $loop$1");
+    expect(instrs[14].message).toBe("end");
+    expect(instrs[15].message).toBe("end");
+  });
+
+  it("do..while regression #1", () => {
+    // --- Arrange
+    const wComp = new WatSharpCompiler(`
+      void test() {
+        local i32 a;
+        do {
+          a += 1;
+        } while (a < 3 & a > 0);
+      }
+      `);
+
+    // --- Act
+    wComp.trace();
+    wComp.compile();
+
+    // --- Assert
+    expect(wComp.hasErrors).toBe(false);
+    const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
+    expect(instrs[0].message).toBe("loop $loop$1");
+    expect(instrs[1].message).toBe("get_local $loc$a");
+    expect(instrs[2].message).toBe("i32.const 1");
+    expect(instrs[3].message).toBe("i32.add");
+    expect(instrs[4].message).toBe("tee_local $loc$a");
+    expect(instrs[5].message).toBe("i32.const 3");
+    expect(instrs[6].message).toBe("i32.lt_s");
+    expect(instrs[7].message).toBe("get_local $loc$a");
+    expect(instrs[8].message).toBe("i32.const 0");
+    expect(instrs[9].message).toBe("i32.gt_s");
+    expect(instrs[10].message).toBe("i32.and");
+    expect(instrs[11].message).toBe("br_if $loop$1");
+    expect(instrs[12].message).toBe("end");
+  });
 });

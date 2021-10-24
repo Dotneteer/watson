@@ -530,6 +530,11 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
       // --- Calculate operation type
       let resultType = i32Desc;
       if (
+        leftIntrinsic.underlying === "f32" &&
+        rightIntrinsic.underlying === "f32"
+      ) {
+        resultType = f32Desc;
+      } else if (
         leftIntrinsic.underlying.startsWith("f") ||
         rightIntrinsic.underlying.startsWith("f")
       ) {
@@ -2465,10 +2470,10 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
       case "u64":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i64), body);
+            this.inject(convert32(WaType.i64, right.underlying === "i64"), body);
             return;
           case "f64":
-            this.inject(convert64(WaType.i64), body);
+            this.inject(convert64(WaType.i64, right.underlying === "i64"), body);
             return;
           case "i32":
           case "u32":
@@ -2499,10 +2504,10 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
       case "u8":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i32), body);
+            this.inject(convert32(WaType.i32, right.underlying.startsWith("i")), body);
             return;
           case "f64":
-            this.inject(convert64(WaType.i32), body);
+            this.inject(convert64(WaType.i32, right.underlying.startsWith("i")), body);
             return;
           case "i64":
             this.inject(extend32(true), body);

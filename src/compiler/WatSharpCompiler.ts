@@ -24,8 +24,6 @@ import { FunctionCompiler } from "./FunctionCompiler";
 import { WaTree } from "../wa-ast/WaTree";
 import { Local, WaInstruction, WaParameter, WaType } from "../wa-ast/wa-nodes";
 import { FunctionBuilder } from "../wa-ast/FunctionBuilder";
-import { type } from "os";
-import { types } from "util";
 
 /**
  * This class implements the WAT# compiler
