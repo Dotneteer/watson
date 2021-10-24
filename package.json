@@ -1,6 +1,6 @@
 {
   "name": "tpwatson",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "This utility is a prototype design and implementation of the WAT# programming language. WAT# is a lightweight programming language that transpiles its output to WebAssembly text format. Its aim is that you can easily add powerful WebAssembly code to your JavaScript code, which rely on the performance of native WA.",
   "bin": {
     "tpwatson": "./bin/tpwatson.js"

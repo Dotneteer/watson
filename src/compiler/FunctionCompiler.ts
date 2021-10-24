@@ -245,7 +245,7 @@ export class FunctionCompiler {
         if (resolvedTypeSpec) {
           param.spec = resolvedTypeSpec;
         }
-            const paramType = mapFunctionParameterType(param.spec);
+        const paramType = mapFunctionParameterType(param.spec);
         const paramName = createParameterName(param.name);
         this.locals.set(param.name, {
           fromParameter: true,
@@ -358,43 +358,42 @@ export class FunctionCompiler {
       0,
       this.wsCompiler.waTree.renderLocal(local),
     ]);
-
   }
 
-      /**
-     * Resolves named types within the local type declaration
-     * @param spec Type specification to resolve
-     * @returns Resolved name type specification
-     */
-private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
-        switch (spec.type) {
-          case "Pointer":
-          case "Array":
-            const resolved = this.resolveNamedTypes(spec.spec);
-            if (resolved) {
-              spec.spec = resolved;
-            }
-            break;
-          case "Struct":
-            for (let i = 0; i < spec.fields.length; i++) {
-              const resolved = this.resolveNamedTypes(spec.fields[i].spec);
-              if (resolved) {
-                spec.fields[i].spec = resolved;
-              }
-            }
-            break;
-          case "NamedType":
-            const decl = this.wsCompiler.declarations.get(spec.name);
-            if (decl) {
-              if (decl.type === "TypeDeclaration") {
-                return decl.spec;
-              }
-            }
-            break;
+  /**
+   * Resolves named types within the local type declaration
+   * @param spec Type specification to resolve
+   * @returns Resolved name type specification
+   */
+  private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
+    switch (spec.type) {
+      case "Pointer":
+      case "Array":
+        const resolved = this.resolveNamedTypes(spec.spec);
+        if (resolved) {
+          spec.spec = resolved;
         }
-        return null;
-      }
-  
+        break;
+      case "Struct":
+        for (let i = 0; i < spec.fields.length; i++) {
+          const resolved = this.resolveNamedTypes(spec.fields[i].spec);
+          if (resolved) {
+            spec.fields[i].spec = resolved;
+          }
+        }
+        break;
+      case "NamedType":
+        const decl = this.wsCompiler.declarations.get(spec.name);
+        if (decl) {
+          if (decl.type === "TypeDeclaration") {
+            return decl.spec;
+          }
+        }
+        break;
+    }
+    return null;
+  }
+
   /**
    * Processes the specified assignment
    * @param body Body to put the statements in
@@ -2015,15 +2014,28 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
     }
 
     // --- Compile the operands and cast them to the appropriate type
-    this.compileExpression(conditional.consequent, body);
-    this.castIntrinsicToIntrinsic(resultType, consequent, body);
-    this.compileExpression(conditional.alternate, body);
-    this.castIntrinsicToIntrinsic(resultType, alternate, body);
     this.compileExpression(conditional.condition, body);
     this.castIntrinsicToIntrinsic(i32Desc, condition, body);
 
-    // --- Inject the "select" operation
-    this.inject(select(), body);
+    // --- Consequent branch
+    const consequentBody: WaInstruction[] = [];
+    this.compileExpression(conditional.consequent, consequentBody);
+    this.castIntrinsicToIntrinsic(resultType, consequent, consequentBody);
+
+    // --- Alternate branch
+    const alternateBody: WaInstruction[] = [];
+    this.compileExpression(conditional.alternate, alternateBody);
+    this.castIntrinsicToIntrinsic(resultType, alternate, alternateBody);
+
+    // --- Combined if statement
+    this.inject(
+      ifBlock(
+        consequentBody,
+        alternateBody,
+        waTypeMappings[resultType.underlying]
+      ),
+      body
+    );
 
     // --- Done
     return resultType;
@@ -2470,10 +2482,16 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
       case "u64":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i64, right.underlying === "i64"), body);
+            this.inject(
+              convert32(WaType.i64, right.underlying === "i64"),
+              body
+            );
             return;
           case "f64":
-            this.inject(convert64(WaType.i64, right.underlying === "i64"), body);
+            this.inject(
+              convert64(WaType.i64, right.underlying === "i64"),
+              body
+            );
             return;
           case "i32":
           case "u32":
@@ -2504,10 +2522,16 @@ private resolveNamedTypes(spec: TypeSpec): TypeSpec | null {
       case "u8":
         switch (left.underlying) {
           case "f32":
-            this.inject(convert32(WaType.i32, right.underlying.startsWith("i")), body);
+            this.inject(
+              convert32(WaType.i32, right.underlying.startsWith("i")),
+              body
+            );
             return;
           case "f64":
-            this.inject(convert64(WaType.i32, right.underlying.startsWith("i")), body);
+            this.inject(
+              convert64(WaType.i32, right.underlying.startsWith("i")),
+              body
+            );
             return;
           case "i64":
             this.inject(extend32(true), body);

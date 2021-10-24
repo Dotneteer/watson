@@ -24,14 +24,15 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("i32.const 8");
-    expect(instrs[3].message).toBe("i32.load");
-    expect(instrs[4].message).toBe("i32.const 0");
-    expect(instrs[5].message).toBe("i32.load");
-    expect(instrs[6].message).toBe("select");
-    expect(instrs[7].message).toBe("set_local $loc$a");
+    expect(instrs[2].message).toBe("if (result i32)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i32.load");
+    expect(instrs[5].message).toBe("else");
+    expect(instrs[6].message).toBe("i32.const 8");
+    expect(instrs[7].message).toBe("i32.load");
+    expect(instrs[8].message).toBe("end");
   });
 
   it("conditional #2", () => {
@@ -54,15 +55,17 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 8");
-    expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("i32.const 12");
-    expect(instrs[3].message).toBe("i32.load");
-    expect(instrs[4].message).toBe("i32.const 0");
-    expect(instrs[5].message).toBe("i64.load");
-    expect(instrs[6].message).toBe("i32.wrap/i64");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i64.load");
+    expect(instrs[2].message).toBe("i32.wrap/i64");
+    expect(instrs[3].message).toBe("if (result i32)");
+    expect(instrs[4].message).toBe("i32.const 8");
+    expect(instrs[5].message).toBe("i32.load");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 12");
+    expect(instrs[8].message).toBe("i32.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("set_local $loc$a");
   });
 
   it("conditional #3", () => {
@@ -85,15 +88,17 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("i64.load");
-    expect(instrs[2].message).toBe("i32.wrap/i64");
-    expect(instrs[3].message).toBe("i32.const 12");
-    expect(instrs[4].message).toBe("i32.load");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result i32)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i64.load");
+    expect(instrs[5].message).toBe("i32.wrap/i64");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 12");
+    expect(instrs[8].message).toBe("i32.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("set_local $loc$a");
   });
 
   it("conditional #4", () => {
@@ -116,15 +121,17 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("i64.load");
-    expect(instrs[2].message).toBe("i32.wrap/i64");
-    expect(instrs[3].message).toBe("i32.const 12");
-    expect(instrs[4].message).toBe("i32.load");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result i32)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i64.load");
+    expect(instrs[5].message).toBe("i32.wrap/i64");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 12");
+    expect(instrs[8].message).toBe("i32.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("set_local $loc$a");
   });
 
   it("conditional #5", () => {
@@ -147,16 +154,18 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("i64.extend_s/i32");
-    expect(instrs[3].message).toBe("i32.const 8");
-    expect(instrs[4].message).toBe("i64.load");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("i32.wrap/i64");
-    expect(instrs[9].message).toBe("set_local $loc$a");
+    expect(instrs[2].message).toBe("if (result i64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i32.load");
+    expect(instrs[5].message).toBe("i64.extend_s/i32");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 8");
+    expect(instrs[8].message).toBe("i64.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("i32.wrap/i64");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 
   it("conditional #6", () => {
@@ -179,17 +188,19 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("f32.load");
-    expect(instrs[2].message).toBe("f64.promote/f32");
-    expect(instrs[3].message).toBe("i32.const 8");
-    expect(instrs[4].message).toBe("i64.load");
-    expect(instrs[5].message).toBe("f64.convert_s/i64");
-    expect(instrs[6].message).toBe("i32.const 0");
-    expect(instrs[7].message).toBe("i32.load");
-    expect(instrs[8].message).toBe("select");
-    expect(instrs[9].message).toBe("i32.trunc_s/f64");
-    expect(instrs[10].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("f32.load");
+    expect(instrs[5].message).toBe("f64.promote/f32");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 8");
+    expect(instrs[8].message).toBe("i64.load");
+    expect(instrs[9].message).toBe("f64.convert_s/i64");
+    expect(instrs[10].message).toBe("end");
+    expect(instrs[11].message).toBe("i32.trunc_s/f64");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("conditional #7", () => {
@@ -212,16 +223,18 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("f64.load");
-    expect(instrs[2].message).toBe("i32.const 12");
-    expect(instrs[3].message).toBe("i64.load");
-    expect(instrs[4].message).toBe("f64.convert_s/i64");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("i32.trunc_s/f64");
-    expect(instrs[9].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("f64.load");
+    expect(instrs[5].message).toBe("else");
+    expect(instrs[6].message).toBe("i32.const 12");
+    expect(instrs[7].message).toBe("i64.load");
+    expect(instrs[8].message).toBe("f64.convert_s/i64");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("i32.trunc_s/f64");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 
   it("conditional #8", () => {
@@ -244,16 +257,18 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("f64.load");
-    expect(instrs[2].message).toBe("i32.const 12");
-    expect(instrs[3].message).toBe("f32.load");
-    expect(instrs[4].message).toBe("f64.promote/f32");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("i32.trunc_s/f64");
-    expect(instrs[9].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("f64.load");
+    expect(instrs[5].message).toBe("else");
+    expect(instrs[6].message).toBe("i32.const 12");
+    expect(instrs[7].message).toBe("f32.load");
+    expect(instrs[8].message).toBe("f64.promote/f32");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("i32.trunc_s/f64");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 
   it("conditional #9", () => {
@@ -276,17 +291,19 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_s/i32");
-    expect(instrs[3].message).toBe("i32.const 8");
-    expect(instrs[4].message).toBe("f32.load");
-    expect(instrs[5].message).toBe("f64.promote/f32");
-    expect(instrs[6].message).toBe("i32.const 0");
-    expect(instrs[7].message).toBe("i32.load");
-    expect(instrs[8].message).toBe("select");
-    expect(instrs[9].message).toBe("i32.trunc_s/f64");
-    expect(instrs[10].message).toBe("set_local $loc$a");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i32.load");
+    expect(instrs[5].message).toBe("f64.convert_s/i32");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 8");
+    expect(instrs[8].message).toBe("f32.load");
+    expect(instrs[9].message).toBe("f64.promote/f32");
+    expect(instrs[10].message).toBe("end");
+    expect(instrs[11].message).toBe("i32.trunc_s/f64");
+    expect(instrs[12].message).toBe("set_local $loc$a");
   });
 
   it("conditional #10", () => {
@@ -309,16 +326,18 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
+    expect(instrs[0].message).toBe("i32.const 0");
     expect(instrs[1].message).toBe("i32.load");
-    expect(instrs[2].message).toBe("f64.convert_s/i32");
-    expect(instrs[3].message).toBe("i32.const 8");
-    expect(instrs[4].message).toBe("f64.load");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("i32.trunc_s/f64");
-    expect(instrs[9].message).toBe("set_local $loc$a");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("i32.load");
+    expect(instrs[5].message).toBe("f64.convert_s/i32");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 8");
+    expect(instrs[8].message).toBe("f64.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("i32.trunc_s/f64");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 
   it("conditional #11", () => {
@@ -341,15 +360,17 @@ describe("WatSharpCompiler - emit conditional", () => {
     const locals = wComp.traceMessages.filter((t) => t.source === "local");
     expect(locals[0].message).toBe("(local $loc$a i32)");
     const instrs = wComp.traceMessages.filter((t) => t.source === "inject");
-    expect(instrs[0].message).toBe("i32.const 4");
-    expect(instrs[1].message).toBe("f32.load");
-    expect(instrs[2].message).toBe("f64.promote/f32");
-    expect(instrs[3].message).toBe("i32.const 8");
-    expect(instrs[4].message).toBe("f64.load");
-    expect(instrs[5].message).toBe("i32.const 0");
-    expect(instrs[6].message).toBe("i32.load");
-    expect(instrs[7].message).toBe("select");
-    expect(instrs[8].message).toBe("i32.trunc_s/f64");
-    expect(instrs[9].message).toBe("set_local $loc$a");
+    expect(instrs[0].message).toBe("i32.const 0");
+    expect(instrs[1].message).toBe("i32.load");
+    expect(instrs[2].message).toBe("if (result f64)");
+    expect(instrs[3].message).toBe("i32.const 4");
+    expect(instrs[4].message).toBe("f32.load");
+    expect(instrs[5].message).toBe("f64.promote/f32");
+    expect(instrs[6].message).toBe("else");
+    expect(instrs[7].message).toBe("i32.const 8");
+    expect(instrs[8].message).toBe("f64.load");
+    expect(instrs[9].message).toBe("end");
+    expect(instrs[10].message).toBe("i32.trunc_s/f64");
+    expect(instrs[11].message).toBe("set_local $loc$a");
   });
 });
